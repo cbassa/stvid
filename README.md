@@ -24,3 +24,4 @@ Features to be implemented.
 * Migrate to [python based SGP4/SDP4 algorithms](https://github.com/brandon-rhodes/python-sgp4)
 * Use masks to mask unilluminated CCD areas.
 * Investigate automatic submission of IOD measurements to [SeeSat-L](http://www.satobs.org/seesat/).
+* Migrate user settings to a configuration file.
