@@ -1,13 +1,16 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import sys
 import numpy as np
 import cv2
 import time
 import ctypes
 import multiprocessing
+from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from astropy.io import fits
-from sun import get_sunriseset
+import astropy.units as u
+from utils import get_sunset_and_sunrise
 
 # Capture images
 def capture(buf,z1,t1,z2,t2,device,nx,ny,nz,tend):
@@ -137,20 +140,37 @@ def compress(buf,z1,t1,z2,t2,nx,ny,nz,tend):
  # Main function
 if __name__ == '__main__':
     # Current time
-    tnow=float(time.time())
-    tnow=1520573400.0
-    tnow=1520510226.281413,
+    tnow=Time.now()
+
+    # Set location
+    loc=EarthLocation(lat=52.8344*u.deg,lon=6.3785*u.deg,height=10*u.m)
+
+    # Reference altitude
+    refalt=-6.0*u.deg
     
     # Get sunrise and sunset times
-    trise,tset=get_sunriseset(tnow,52.8344,6.3785,10,-6.0)
+    state,tset,trise=get_sunset_and_sunrise(tnow,loc,refalt)
 
-    print(tnow,trise,tset)
-    # Wait until sunset
-    if (tset<trise) & (tnow<tset):
-        print("Waiting for sunset at %s"%time.strftime("%FT%T",time.gmtime(tset)))
+    # Start/end logic
+    if state=="sun never rises":
+        print("The sun never rises. Exiting program.")
+        sys.exit()
+    elif state=="sun never sets":
+        print("The sun never sets.")
+        tend=tnow+24*u.h
+    elif (trise<tset):
+        print("The sun is below the horizon.")
+        tend=trise
+    elif (trise>=tset):
+        dt=np.floor((tset-tnow).to(u.s).value)
+        print("The sun is above the horizon. Waiting %.0f seconds."%dt)
+        tend=trise
+        try:
+            time.sleep(dt)
+        except KeyboardInterrupt:
+            sys.exit()
 
-    sys.exit()
-
+    print("Starting data acquisition. Acquisition will end at "+tend.isot)
 
     # Settings
     devid=int(sys.argv[1])
@@ -176,12 +196,9 @@ if __name__ == '__main__':
     t2=np.ctypeslib.as_array(t2base.get_obj())
     buf=multiprocessing.Value('i',0)
 
-    
-    tend=float(time.time())+31.0
-    
     # Set processes
-    pcapture=multiprocessing.Process(target=capture,args=(buf,z1,t1,z2,t2,device,nx,ny,nz,tend))
-    pcompress=multiprocessing.Process(target=compress,args=(buf,z1,t1,z2,t2,nx,ny,nz,tend))
+    pcapture=multiprocessing.Process(target=capture,args=(buf,z1,t1,z2,t2,device,nx,ny,nz,tend.unix))
+    pcompress=multiprocessing.Process(target=compress,args=(buf,z1,t1,z2,t2,nx,ny,nz,tend.unix))
 
     # Start
     pcapture.start()
