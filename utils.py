@@ -21,8 +21,8 @@ def get_sunset_and_sunrise(tnow,loc,refalt):
     
     # Compute altitude extrema
     de=np.mean(pos.dec)
-    minalt=np.arcsin(np.sin(loc.latitude)*np.sin(de)-np.cos(loc.latitude)*np.cos(de))
-    maxalt=np.arcsin(np.sin(loc.latitude)*np.sin(de)+np.cos(loc.latitude)*np.cos(de))
+    minalt=np.arcsin(np.sin(loc.lat)*np.sin(de)-np.cos(loc.lat)*np.cos(de))
+    maxalt=np.arcsin(np.sin(loc.lat)*np.sin(de)+np.cos(loc.lat)*np.cos(de))
    
     # Never sets, never rises?
     if minalt>refalt:
@@ -38,11 +38,11 @@ def get_sunset_and_sunrise(tnow,loc,refalt):
     gmst0=Time(mjd0,format='mjd',scale='utc').sidereal_time('mean','greenwich')
 
     # Get transit time
-    mtransit=np.mod((fra(mjd0)*u.degree-loc.longitude-gmst0)/(360.0*u.degree),1.0)
+    mtransit=np.mod((fra(mjd0)*u.degree-loc.lon-gmst0)/(360.0*u.degree),1.0)
     while True:
         gmst=gmst0+360.985647*u.deg*mtransit
         ra=fra(mjd0+mtransit)*u.deg
-        ha=gmst+loc.longitude-ra
+        ha=gmst+loc.lon-ra
         mtransit-=ha/(360.0*u.deg)
         if np.abs(ha.degree)<1e-9:
             break
@@ -51,7 +51,7 @@ def get_sunset_and_sunrise(tnow,loc,refalt):
     ttransit=Time(mjd0+mtransit.value,format='mjd',scale='utc')
 
     # Hour angle offset
-    ha0=np.arccos((np.sin(refalt)-np.sin(loc.latitude)*np.sin(np.mean(pos.dec)))/(np.cos(loc.latitude)*np.cos(np.mean(pos.dec))))
+    ha0=np.arccos((np.sin(refalt)-np.sin(loc.lat)*np.sin(np.mean(pos.dec)))/(np.cos(loc.lat)*np.cos(np.mean(pos.dec))))
 
     # Get rise time
     mrise=mtransit-ha0/(360.0*u.deg)
@@ -61,9 +61,9 @@ def get_sunset_and_sunrise(tnow,loc,refalt):
         gmst=gmst0+360.985647*u.deg*mrise
         ra=fra(mjd0+mrise)*u.deg
         de=fde(mjd0+mrise)*u.deg
-        ha=gmst+loc.longitude-ra
-        alt=np.arcsin(np.sin(loc.latitude)*np.sin(de)+np.cos(loc.latitude)*np.cos(de)*np.cos(ha))
-        dm=(alt-refalt)/(360.0*u.deg*np.cos(de)*np.cos(loc.latitude)*np.sin(ha))
+        ha=gmst+loc.lon-ra
+        alt=np.arcsin(np.sin(loc.lat)*np.sin(de)+np.cos(loc.lat)*np.cos(de)*np.cos(ha))
+        dm=(alt-refalt)/(360.0*u.deg*np.cos(de)*np.cos(loc.lat)*np.sin(ha))
         mrise+=dm
         if np.abs(dm)<1e-9:
             break
@@ -79,9 +79,9 @@ def get_sunset_and_sunrise(tnow,loc,refalt):
         gmst=gmst0+360.985647*u.deg*mset
         ra=fra(mjd0+mset)*u.deg
         de=fde(mjd0+mset)*u.deg
-        ha=gmst+loc.longitude-ra
-        alt=np.arcsin(np.sin(loc.latitude)*np.sin(de)+np.cos(loc.latitude)*np.cos(de)*np.cos(ha))
-        dm=(alt-refalt)/(360.0*u.deg*np.cos(de)*np.cos(loc.latitude)*np.sin(ha))
+        ha=gmst+loc.lon-ra
+        alt=np.arcsin(np.sin(loc.lat)*np.sin(de)+np.cos(loc.lat)*np.cos(de)*np.cos(ha))
+        dm=(alt-refalt)/(360.0*u.deg*np.cos(de)*np.cos(loc.lat)*np.sin(ha))
         mset+=dm
         if np.abs(dm)<1e-9:
             break
