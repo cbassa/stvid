@@ -214,7 +214,7 @@ def extract_tracks(fname,trkrmin,drdtmin,trksig,ntrkmin):
             ppgplot.pgmtxt("T",4.8,0.0,0.0,"R.A.: %10.5f (%4.1f'') Decl.: %10.5f (%4.1f'')"%(ff.crval[0],3600.0*ff.crres[0],ff.crval[1],3600.0*ff.crres[1]))
             ppgplot.pgsci(1)
             ppgplot.pgmtxt("T",3.6,0.0,0.0,"FoV: %.2f\\(2218)x%.2f\\(2218) Scale: %.2f''x%.2f'' pix\\u-1\\d"%(ff.wx,ff.wy,3600.0*ff.sx,3600.0*ff.sy))
-            ppgplot.pgmtxt("T",2.4,0.0,0.0,"Stat: %5.1f+-%.1f (%.1f-%.1f)"%(np.mean(ff.zmax),np.std(ff.zmax),ff.vmin,ff.vmax))
+            ppgplot.pgmtxt("T",2.4,0.0,0.0,"Stat: %5.1f+-%.1f (%.1f-%.1f)"%(np.mean(ff.zmax),np.std(ff.zmax),ff.zmaxmin,ff.zmaxmax))
             ppgplot.pgmtxt("T",0.3,0.0,0.0,iod_line)
         
             ppgplot.pgsch(1.0)
@@ -222,7 +222,7 @@ def extract_tracks(fname,trkrmin,drdtmin,trksig,ntrkmin):
             ppgplot.pglab("x (pix)","y (pix)"," ")
             ppgplot.pgctab(heat_l,heat_r,heat_g,heat_b,5,1.0,0.5)
             
-            ppgplot.pgimag(ff.zmax,ff.nx,ff.ny,0,ff.nx-1,0,ff.ny-1,ff.vmax,ff.vmin,tr)
+            ppgplot.pgimag(ff.zmax,ff.nx,ff.ny,0,ff.nx-1,0,ff.ny-1,ff.zmaxmax,ff.zmaxmin,tr)
             ppgplot.pgbox("BCTSNI",0.,0,"BCTSNI",0.,0)
             ppgplot.pgstbg(1)
 

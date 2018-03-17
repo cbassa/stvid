@@ -115,8 +115,10 @@ class fourframe:
         self.sy=np.sqrt(self.cd[0,1]**2+self.cd[1,1]**2)
         self.wx=self.nx*self.sx
         self.wy=self.ny*self.sy
-        self.vmin=np.mean(self.zmax)-2.0*np.std(self.zmax)
-        self.vmax=np.mean(self.zmax)+6.0*np.std(self.zmax)
+        self.zmaxmin=np.mean(self.zmax)-2.0*np.std(self.zmax)
+        self.zmaxmax=np.mean(self.zmax)+6.0*np.std(self.zmax)
+        self.zavgmin=np.mean(self.zavg)-2.0*np.std(self.zavg)
+        self.zavgmax=np.mean(self.zavg)+6.0*np.std(self.zavg)
 
         # Setup WCS
         self.w=wcs.WCS(naxis=2)
