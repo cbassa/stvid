@@ -116,7 +116,7 @@ def compress(buf,z1,t1,z2,t2,nx,ny,nz,tend):
         hdr['CUNIT2']="deg"
         hdr['CRRES1']=0.0
         hdr['CRRES2']=0.0
-        hdr['EQUINIX']=2000.0
+        hdr['EQUINOX']=2000.0
         hdr['RADECSYS']="ICRS"
         hdr['COSPAR']=4171
         hdr['OBSERVER']="Cees Bassa"
