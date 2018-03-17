@@ -1,0 +1,5 @@
+# Python compiled objects
+*.pyc
+
+# Emacs backup files
+*~
