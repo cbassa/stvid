@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
-import sys,os,glob
+import time
+import sys,os,glob,shutil
 from stio import fourframe,satid,observation
 import numpy as np
 import ppgplot
-import matplotlib.pyplot as plt
 from scipy import optimize,ndimage
 from astropy import wcs
 from astropy.coordinates import SkyCoord
@@ -120,8 +120,15 @@ def format_iod_line(norad,cospar,site_id,t,ra,de):
 
     return "%05d %-9s %04d G %s 17 25 %s 37 S"%(norad,cospar,site_id,tstr,pstr)
 
+def copy_files(fname,dest):
+    files=glob.glob(fname)
+    for file in files:
+        shutil.copy2(file,dest)
+
+    return
+
 # Extract tracks
-def extract_tracks(fname,trkrmin,drdtmin,trksig,ntrkmin):
+def extract_tracks(fname,trkrmin,drdtmin,trksig,ntrkmin,path):
     # Read four frame
     ff=fourframe(fname)
 
@@ -189,11 +196,11 @@ def extract_tracks(fname,trkrmin,drdtmin,trksig,ntrkmin):
             print(iod_line)
 
             if id.catalog.find("classfd.tle")>0:
-                outfname="classfd.dat"
+                outfname=path+"/classfd/classfd.dat"
             elif id.catalog.find("inttles.tle")>0:
-                outfname="inttles.dat"
+                outfname=path+"/classfd/inttles.dat"
             else:
-                outfname="catalog.dat"
+                outfname=path+"/catalog/catalog.dat"
 
             f=open(outfname,"a")
             f.write("%s\n"%iod_line);
@@ -201,7 +208,6 @@ def extract_tracks(fname,trkrmin,drdtmin,trksig,ntrkmin):
             
             # Plot
             ppgplot.pgopen(fname.replace(".fits","")+"_%05d.png/png"%id.norad)
-            #ppgplot.pgopen("/xs")
             ppgplot.pgpap(0.0,1.0)
             ppgplot.pgsvp(0.1,0.95,0.1,0.8)
             
@@ -241,7 +247,14 @@ def extract_tracks(fname,trkrmin,drdtmin,trksig,ntrkmin):
             
             ppgplot.pgend()
 
-
+            # Copy files
+            if id.catalog.find("classfd.tle")>0:
+                copy_files(fname.replace(".fits","*"),path+"/classfd")
+            elif id.catalog.find("inttles.tle")>0:
+                copy_files(fname.replace(".fits","*"),path+"/classfd")
+            else:
+                copy_files(fname.replace(".fits","*"),path+"/catalog")                
+                
         elif id.catalog.find("classfd.tle")>0:
             # Track and stack
             t=np.linspace(0.0,ff.texp)
@@ -342,6 +355,14 @@ def extract_tracks(fname,trkrmin,drdtmin,trksig,ntrkmin):
             
             ppgplot.pgend()
 
+            # Copy files
+            if id.catalog.find("classfd.tle")>0:
+                copy_files(fname.replace(".fits","*"),path+"/classfd")
+            elif id.catalog.find("inttles.tle")>0:
+                copy_files(fname.replace(".fits","*"),path+"/classfd")
+            else:
+                copy_files(fname.replace(".fits","*"),path+"/catalog")                
+
 
 if __name__ == '__main__':
     # Minimum predicted velocity (pixels/s)
@@ -356,11 +377,18 @@ if __name__ == '__main__':
     # Minimum track points
     ntrkmin=10
 
-#    extract_tracks("2018-02-26T05:26:15.801.fits",trkrmin,drdtmin,trksig,ntrkmin)
+  
+    # Create output dirs
+    path=os.getenv("ST_OBSDIR")+"/"+time.strftime("%Y%m%d/%H%M%S",time.gmtime())
+    os.makedirs(path+"/classfd")
+    os.makedirs(path+"/catalog")
+    os.makedirs(path+"/unid")
     
+    # Get files
     files=sorted(glob.glob("2*.fits"))
 
+    # Process files
     for file in files:
-        extract_tracks(file,trkrmin,drdtmin,trksig,ntrkmin)
+        extract_tracks(file,trkrmin,drdtmin,trksig,ntrkmin,path)
 
 
