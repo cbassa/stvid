@@ -163,7 +163,7 @@ if __name__ == '__main__':
         tend=trise
     elif (trise>=tset):
         dt=np.floor((tset-tnow).to(u.s).value)
-        print("The sun is above the horizon. Waiting %.0f seconds."%dt)
+        print("The sun is above the horizon. Sunset at %s.\nWaiting %.0f seconds."%(tset.isot,dt))
         tend=trise
         try:
             time.sleep(dt)
