@@ -10,7 +10,7 @@ This repository will primarily be used for development, and will rely, for the m
 Features to be implemented.
 
 #### High priority
-* ~~se sunset/sunrise times for starting/stopping data acquisition.~~
+* ~~Use sunset/sunrise times for starting/stopping data acquisition.~~
 * Manual and automatic astrometric calibration.
 * Recognize unidentified satellite/meteor tracks using [3D Hough transform](http://www.ipol.im/pub/art/2017/208/).
 
