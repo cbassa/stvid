@@ -129,8 +129,8 @@ class fourframe:
         self.w.wcs.set_pv([(2,1,45.0)])
         
 
-    def significant(self,sigma,x0,y0,dxdt,dydt,rmin=10.0):
-        """Extract significant points"""
+    def significant_pixels_along_track(self,sigma,x0,y0,dxdt,dydt,rmin=10.0):
+        """Extract significant pixels along a track"""
 
         # Generate sigma frame
         zsig=(self.zmax-self.zavg)/(self.zstd+1e-9)
@@ -153,6 +153,25 @@ class fourframe:
 
         return x[c],y[c],t[c],sig[c]
 
+    def significant_pixels(self,sigma):
+        """Extract significant pixels"""
+
+        # Generate sigma frame
+        zsig=(self.zmax-self.zavg)/(self.zstd+1e-9)
+
+        # Select
+        c=(zsig>sigma)
+
+        # Positions
+        xm,ym=np.meshgrid(np.arange(self.nx),np.arange(self.ny))
+        x,y=np.ravel(xm[c]),np.ravel(ym[c])
+        inum=np.ravel(self.znum[c]).astype('int')
+        sig=np.ravel(zsig[c])
+        t=np.array([self.dt[i] for i in inum])
+
+        return x,y,t,sig
+
+    
     def track(self,dxdt,dydt,tref):
         """Track and stack"""
         # Empty frame

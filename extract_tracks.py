@@ -162,8 +162,8 @@ def extract_tracks(fname,trkrmin,drdtmin,trksig,ntrkmin,path):
         if drdt<drdtmin:
             continue
 
-        # Extract significant pixels
-        x,y,t,sig=ff.significant(trksig,id.x0,id.y0,id.dxdt,id.dydt,trkrmin)
+        # Extract significant pixels along a track
+        x,y,t,sig=ff.significant_pixels_along_track(trksig,id.x0,id.y0,id.dxdt,id.dydt,trkrmin)
 
         # Fit tracks
         if len(t)>ntrkmin:
