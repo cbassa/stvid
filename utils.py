@@ -15,10 +15,10 @@ def get_sunset_and_sunrise(tnow,loc,refalt):
     
     # Get sun position
     psun=get_sun(t)
-    
+
     # Correct for precession by converting to FK5
     pos=SkyCoord(ra=psun.ra.degree,dec=psun.dec.degree,frame='icrs',unit='deg').transform_to(FK5(equinox=t))
-    
+
     # Compute altitude extrema
     de=np.mean(pos.dec)
     minalt=np.arcsin(np.sin(loc.lat)*np.sin(de)-np.cos(loc.lat)*np.cos(de))
@@ -30,8 +30,15 @@ def get_sunset_and_sunrise(tnow,loc,refalt):
     elif maxalt<refalt:
         return "sun never rises",t[0],t[0]
 
+    # Prevent discontinuities in right ascension
+    dra=pos[-1].ra-pos[0].ra
+    ra=pos.ra.degree
+    if dra<0.0:
+        c=pos.ra.degree<180.0
+        ra[c]=pos[c].ra.degree+360.0
+
     # Set up interpolating function
-    fra=interpolate.interp1d(t.mjd,pos.ra.degree)
+    fra=interpolate.interp1d(t.mjd,ra)
     fde=interpolate.interp1d(t.mjd,pos.dec.degree)
 
     # Get GMST
@@ -53,24 +60,6 @@ def get_sunset_and_sunrise(tnow,loc,refalt):
     # Hour angle offset
     ha0=np.arccos((np.sin(refalt)-np.sin(loc.lat)*np.sin(np.mean(pos.dec)))/(np.cos(loc.lat)*np.cos(np.mean(pos.dec))))
 
-    # Get rise time
-    mrise=mtransit-ha0/(360.0*u.deg)
-    if mrise<mnow:
-        mrise+=1.0
-    while True:
-        gmst=gmst0+360.985647*u.deg*mrise
-        ra=fra(mjd0+mrise)*u.deg
-        de=fde(mjd0+mrise)*u.deg
-        ha=gmst+loc.lon-ra
-        alt=np.arcsin(np.sin(loc.lat)*np.sin(de)+np.cos(loc.lat)*np.cos(de)*np.cos(ha))
-        dm=(alt-refalt)/(360.0*u.deg*np.cos(de)*np.cos(loc.lat)*np.sin(ha))
-        mrise+=dm
-        if np.abs(dm)<1e-9:
-            break
-
-    # Set rise time
-    trise=Time(mjd0+mrise.value,format='mjd',scale='utc')
-
     # Get set time
     mset=mtransit+ha0/(360.0*u.deg)
     if mset<mnow:
@@ -89,4 +78,25 @@ def get_sunset_and_sunrise(tnow,loc,refalt):
     # Set set time
     tset=Time(mjd0+mset.value,format='mjd',scale='utc')
 
+    # Get rise time
+    mrise=mtransit-ha0/(360.0*u.deg)
+    if mrise<mnow:
+        mrise+=1.0
+    if mrise<mset:
+        mrise+=1.0
+    while True:
+        gmst=gmst0+360.985647*u.deg*mrise
+        ra=fra(mjd0+mrise)*u.deg
+        de=fde(mjd0+mrise)*u.deg
+        ha=gmst+loc.lon-ra
+        alt=np.arcsin(np.sin(loc.lat)*np.sin(de)+np.cos(loc.lat)*np.cos(de)*np.cos(ha))
+        dm=(alt-refalt)/(360.0*u.deg*np.cos(de)*np.cos(loc.lat)*np.sin(ha))
+        mrise+=dm
+        if np.abs(dm)<1e-9:
+            break
+
+    # Set rise time
+    trise=Time(mjd0+mrise.value,format='mjd',scale='utc')
+
+    
     return "sun rises and sets",tset,trise

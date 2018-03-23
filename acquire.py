@@ -150,7 +150,7 @@ if __name__ == '__main__':
     
     # Get sunrise and sunset times
     state,tset,trise=get_sunset_and_sunrise(tnow,loc,refalt)
-
+    
     # Start/end logic
     if state=="sun never rises":
         print("The sun never rises. Exiting program.")
