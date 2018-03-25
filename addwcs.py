@@ -8,7 +8,7 @@ from astropy import wcs
 import astropy.units as u
 import warnings
 from astropy.utils.exceptions import AstropyWarning
-from astropy.coordinates import SkyCoord,FK5,ICRS
+from astropy.coordinates import SkyCoord,FK5,ICRS,GCRS,AltAz,EarthLocation
 from astropy.time import Time
 import ppgplot
 from scipy import optimize
@@ -62,6 +62,35 @@ def estimate_wcs_from_reference(ref,fname):
     w.wcs.crval=np.array([p.ra.degree,p.dec.degree])
 
     return w
+
+def estimate_wcs_from_altaz(loc,az,alt,sx,sy,fname):
+    # Read time from target
+    hdu=fits.open(fname)
+    t=Time(hdu[0].header["MJD-OBS"],format="mjd",scale="utc")
+    nx,ny=hdu[0].header["NAXIS1"],hdu[0].header["NAXIS2"]
+    
+    # Compute position
+    p=AltAz(az=az,alt=alt,obstime=t,location=loc)
+
+    # Transform to GCRS, FK5 and ICRS
+    pgcrs=p.transform_to(GCRS)
+    pfk5=p.transform_to(FK5(equinox=t))
+    p=pfk5.transform_to(ICRS)
+
+    # Compute parallactic angle
+    h=t.sidereal_time('mean','greenwich')+loc.lon-pfk5.ra
+    q=np.arctan2(np.sin(h),np.tan(loc.lat)*np.cos(pfk5.dec)-np.sin(pfk5.dec)*np.cos(h))
+
+    # setup wcs
+    w=wcs.WCS(naxis=2)
+    w.wcs.crval=np.array([p.ra.degree,p.dec.degree])
+    w.wcs.crpix=np.array([nx//2,ny//2])
+    w.wcs.cd=np.array([[-sx*np.cos(q),sx*np.sin(q)],[sy*np.sin(q),sy*np.cos(q)]])
+    w.wcs.ctype=["RA---TAN","DEC--TAN"]
+    w.wcs.set_pv([(2,1,45.0)])
+    
+    return w
+
 
 def match_catalogs(ast_catalog,pix_catalog,w,rmin):
     # Select stars towards pointing center
@@ -170,6 +199,16 @@ if __name__ == "__main__":
     warnings.filterwarnings("ignore", category=UserWarning, append=True)
     warnings.simplefilter("ignore", AstropyWarning)
 
+    # Set location
+    loc=EarthLocation(lat=52.8344*u.deg,lon=6.3785*u.deg,height=10*u.m)
+
+    # Default position
+    az,alt=31.21*u.deg,29.60*u.deg
+
+    # Scales
+    sx,sy=36.0/3600.0,33.0/3600.0
+    
+    
     # Files
     ref="2018-03-14T19:00:03.086.fits"
 
@@ -178,14 +217,17 @@ if __name__ == "__main__":
 #    fname="2018-03-14T19:00:03.086.fits"
 #    fname="../20180225a/tmp/2018-02-25T20:29:55.944.fits"
 
-    for fname in files[0:10]:
+    for fname in files[0:1]:
         # Generate star catalog
         if not os.path.exists(fname+".cat"):
             generate_star_catalog(fname)
 
+        w=estimate_wcs_from_altaz(loc,az,alt,sx,sy,fname)
+        print(w)
         # Estimated WCS
-        w=estimate_wcs_from_reference(ref,fname)
-
+#        w=estimate_wcs_from_reference(ref,fname)
+        print(w)
+        
         # Read catalogs
         ast_catalog=tycho2_catalog(10.0)
         pix_catalog=pixel_catalog(fname+".cat")
@@ -202,26 +244,26 @@ if __name__ == "__main__":
         print("%s %8.4f %8.4f %3d/%3d %6.1f %6.1f %6.1f"%(fname,w.wcs.crval[0],w.wcs.crval[1],nused,nstars,3600.0*rmsx,3600.0*rmsy,3600.0*np.sqrt(rmsx**2+rmsy**2)))
 
     
-#        hdu=fits.open(fname)
-#        img=hdu[0].data[0]
-#        ny,nx=img.shape
+        hdu=fits.open(fname)
+        img=hdu[0].data[0]
+        ny,nx=img.shape
 
+        c=pix_catalog.flag==1
+        ppgplot.pgopen("/xs")
+        ppgplot.pgwnad(0.0,nx,0.0,ny)
+
+        vmin=np.mean(img)-2.0*np.std(img)
+        vmax=np.mean(img)+3.0*np.std(img)
     
-#        ppgplot.pgopen("/xs")
-#        ppgplot.pgwnad(0.0,nx,0.0,ny)
+        ppgplot.pgimag(img,nx,ny,0,nx-1,0,ny-1,vmax,vmin,np.array([-0.5,1.0,0.0,-0.5,0.0,1.0]))
 
-#        vmin=np.mean(img)-2.0*np.std(img)
-#        vmax=np.mean(img)+3.0*np.std(img)
-    
-#        ppgplot.pgimag(img,nx,ny,0,nx-1,0,ny-1,vmax,vmin,np.array([-0.5,1.0,0.0,-0.5,0.0,1.0]))
+        ppgplot.pgbox("BCTSNI",0.,0,"BCTSNI",0.,0)
 
-#        ppgplot.pgbox("BCTSNI",0.,0,"BCTSNI",0.,0)
-
-#        ppgplot.pgsci(3)
-#        ppgplot.pgpt(pix_catalog.x,pix_catalog.y,4)
-#        ppgplot.pgsci(4)
-#        ppgplot.pgpt(x,y,24)
-#        ppgplot.pgsci(2)
-#        ppgplot.pgpt(pix_catalog.x[c],pix_catalog.y[c],6)
-#        ppgplot.pgend()
+        ppgplot.pgsci(3)
+        ppgplot.pgpt(pix_catalog.x,pix_catalog.y,4)
+        ppgplot.pgsci(4)
+        ppgplot.pgpt(x,y,24)
+        ppgplot.pgsci(2)
+        ppgplot.pgpt(pix_catalog.x[c],pix_catalog.y[c],6)
+        ppgplot.pgend()
     
