@@ -10,7 +10,7 @@ def get_sunset_and_sunrise(tnow,loc,refalt):
     nmjd=64
     mjd0=np.floor(tnow.mjd)
     mnow=tnow.mjd-mjd0
-    mjd=np.linspace(mjd0-1.0,mjd0+2.0,nmjd)
+    mjd=np.linspace(mjd0-1.0,mjd0+3.0,nmjd)
     t=Time(mjd,format='mjd',scale='utc')
     
     # Get sun position
@@ -59,11 +59,9 @@ def get_sunset_and_sunrise(tnow,loc,refalt):
 
     # Hour angle offset
     ha0=np.arccos((np.sin(refalt)-np.sin(loc.lat)*np.sin(np.mean(pos.dec)))/(np.cos(loc.lat)*np.cos(np.mean(pos.dec))))
-
+   
     # Get set time
     mset=mtransit+ha0/(360.0*u.deg)
-    if mset<mnow:
-        mset+=1.0
     while True:
         gmst=gmst0+360.985647*u.deg*mset
         ra=fra(mjd0+mset)*u.deg
@@ -72,18 +70,19 @@ def get_sunset_and_sunrise(tnow,loc,refalt):
         alt=np.arcsin(np.sin(loc.lat)*np.sin(de)+np.cos(loc.lat)*np.cos(de)*np.cos(ha))
         dm=(alt-refalt)/(360.0*u.deg*np.cos(de)*np.cos(loc.lat)*np.sin(ha))
         mset+=dm
+
+        # Break loop or find sunset on next day
         if np.abs(dm)<1e-9:
-            break
+            if mset>=mnow:
+                break
+            else:
+                mset+=1.0
 
     # Set set time
     tset=Time(mjd0+mset.value,format='mjd',scale='utc')
 
     # Get rise time
     mrise=mtransit-ha0/(360.0*u.deg)
-    if mrise<mnow:
-        mrise+=1.0
-    if mrise<mset:
-        mrise+=1.0
     while True:
         gmst=gmst0+360.985647*u.deg*mrise
         ra=fra(mjd0+mrise)*u.deg
@@ -92,8 +91,13 @@ def get_sunset_and_sunrise(tnow,loc,refalt):
         alt=np.arcsin(np.sin(loc.lat)*np.sin(de)+np.cos(loc.lat)*np.cos(de)*np.cos(ha))
         dm=(alt-refalt)/(360.0*u.deg*np.cos(de)*np.cos(loc.lat)*np.sin(ha))
         mrise+=dm
+
+        # Break loop or find sunrise on next day
         if np.abs(dm)<1e-9:
-            break
+            if mrise>=mnow:
+                break
+            else:
+                mrise+=1.0
 
     # Set rise time
     trise=Time(mjd0+mrise.value,format='mjd',scale='utc')
