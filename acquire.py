@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from __future__ import print_function
-import sys
+import sys, os
 import numpy as np
 import cv2
 import time
@@ -11,6 +11,7 @@ from astropy.time import Time
 from astropy.io import fits
 import astropy.units as u
 from utils import get_sunset_and_sunrise
+import logging
 
 # Capture images
 def capture(buf,z1,t1,z2,t2,device,nx,ny,nz,tend):
@@ -52,9 +53,9 @@ def capture(buf,z1,t1,z2,t2,device,nx,ny,nz,tend):
         # Swap flag
         first=not first
 
-    print("Exiting capture")    
+    logging.info("Exiting capture")    
         
-def compress(buf,z1,t1,z2,t2,nx,ny,nz,tend):
+def compress(buf,z1,t1,z2,t2,nx,ny,nz,tend,path):
     # Flag to keep track of processed buffer
     process_buf=1
 
@@ -127,20 +128,33 @@ def compress(buf,z1,t1,z2,t2,nx,ny,nz,tend):
         
         # Write fits file
         hdu=fits.PrimaryHDU(data=np.array([zavg,zstd,zmax,znum]),header=hdr)
-        hdu.writeto(fname)
-        print("Compressed",fname)
+        hdu.writeto(path+"/"+fname)
+        logging.info("Compressed %s"%fname)
 
         # Exit on end of capture
         if t[-1]>tend:
             break
 
     # Exiting
-    print("Exiting compress")
+    logging.info("Exiting compress")
         
  # Main function
 if __name__ == '__main__':
+    # Read device ID
+    devid=int(sys.argv[1])
+
     # Current time
     tnow=Time.now()
+
+    # Get obsid
+    obsid=time.strftime("%Y%m%d_%H%M%S",time.gmtime())+"_%d"%devid
+
+    # Generate directory
+    path=os.getenv("ST_OBSDIR")+"/"+obsid
+    os.makedirs(path)
+    
+    # Setup logging
+    logging.basicConfig(filename=path+"/acquire.log",level=logging.DEBUG)
 
     # Set location
     loc=EarthLocation(lat=52.8344*u.deg,lon=6.3785*u.deg,height=10*u.m)
@@ -153,27 +167,27 @@ if __name__ == '__main__':
     
     # Start/end logic
     if state=="sun never rises":
-        print("The sun never rises. Exiting program.")
+        logging.info("The sun never rises. Exiting program.")
         sys.exit()
     elif state=="sun never sets":
-        print("The sun never sets.")
+        logging.info("The sun never sets.")
         tend=tnow+24*u.h
     elif (trise<tset):
-        print("The sun is below the horizon.")
+        logging.info("The sun is below the horizon.")
         tend=trise
     elif (trise>=tset):
         dt=np.floor((tset-tnow).to(u.s).value)
-        print("The sun is above the horizon. Sunset at %s.\nWaiting %.0f seconds."%(tset.isot,dt))
+        logging.info("The sun is above the horizon. Sunset at %s. Waiting %.0f seconds."%(tset.isot,dt))
         tend=trise
-        try:
-            time.sleep(dt)
-        except KeyboardInterrupt:
-            sys.exit()
+#        try:
+#            time.sleep(dt)
+#        except KeyboardInterrupt:
+#            sys.exit()
 
-    print("Starting data acquisition. Acquisition will end at "+tend.isot)
+    tend=tnow+31.0*u.s
+    logging.info("Starting data acquisition. Acquisition will end at "+tend.isot)
 
     # Settings
-    devid=int(sys.argv[1])
     nx=720
     ny=576
     nz=250
@@ -198,7 +212,7 @@ if __name__ == '__main__':
 
     # Set processes
     pcapture=multiprocessing.Process(target=capture,args=(buf,z1,t1,z2,t2,device,nx,ny,nz,tend.unix))
-    pcompress=multiprocessing.Process(target=compress,args=(buf,z1,t1,z2,t2,nx,ny,nz,tend.unix))
+    pcompress=multiprocessing.Process(target=compress,args=(buf,z1,t1,z2,t2,nx,ny,nz,tend.unix,path))
 
     # Start
     pcapture.start()
