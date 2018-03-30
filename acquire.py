@@ -150,7 +150,7 @@ if __name__ == '__main__':
     obsid=time.strftime("%Y%m%d_%H%M%S",time.gmtime())+"_%d"%devid
 
     # Generate directory
-    path=os.getenv("ST_OBSDIR")+"/"+obsid
+    path="/home/bassa/satobs/"+obsid
     os.makedirs(path)
     
     # Setup logging
@@ -177,7 +177,8 @@ if __name__ == '__main__':
         tend=trise
     elif (trise>=tset):
         dt=np.floor((tset-tnow).to(u.s).value)
-        logging.info("The sun is above the horizon. Sunset at %s. Waiting %.0f seconds."%(tset.isot,dt))
+        logging.info("The sun is above the horizon. Sunset at %s.")
+        logging.info("Waiting %.0f seconds."%(tset.isot,dt))
         tend=trise
 #        try:
 #            time.sleep(dt)
@@ -185,7 +186,8 @@ if __name__ == '__main__':
 #            sys.exit()
 
     tend=tnow+31.0*u.s
-    logging.info("Starting data acquisition. Acquisition will end at "+tend.isot)
+    logging.info("Starting data acquisition.")
+    logging.info("Acquisition will end at "+tend.isot)
 
     # Settings
     nx=720
