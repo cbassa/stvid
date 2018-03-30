@@ -28,6 +28,6 @@ Features to be implemented.
 
 ## Run acquisition at startup
 
-1 Add user to video group (`sudo adduser <username> video`).
-2 Add video device to udev rules (add `SUBSYSTEM=="video1", GROUP="video", MODE="0660"` in `/etc/udev/rules.d/10-webcam.rules`).
-3 Create start up script in `/etc/init.d`. Call capture script as user with `su <username> -c "capture_1.sh"`.
+* Add user to video group (`sudo adduser <username> video`).
+* Add video device to udev rules (add `SUBSYSTEM=="video1", GROUP="video", MODE="0660"` in `/etc/udev/rules.d/10-webcam.rules`).
+* Create start up script in `/etc/init.d`. Call capture script as user with `su <username> -c "capture_1.sh"`.
