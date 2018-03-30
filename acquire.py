@@ -177,15 +177,15 @@ if __name__ == '__main__':
         tend=trise
     elif (trise>=tset):
         dt=np.floor((tset-tnow).to(u.s).value)
-        logging.info("The sun is above the horizon. Sunset at %s.")
-        logging.info("Waiting %.0f seconds."%(tset.isot,dt))
+        logging.info("The sun is above the horizon. Sunset at %s."%tset.isot)
+        logging.info("Waiting %.0f seconds."%dt)
         tend=trise
-#        try:
-#            time.sleep(dt)
-#        except KeyboardInterrupt:
-#            sys.exit()
+        try:
+            time.sleep(dt)
+        except KeyboardInterrupt:
+            sys.exit()
 
-    tend=tnow+31.0*u.s
+
     logging.info("Starting data acquisition.")
     logging.info("Acquisition will end at "+tend.isot)
 
