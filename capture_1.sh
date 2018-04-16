@@ -10,4 +10,4 @@ ls -l /dev/video1 >/tmp/camera_1.log 2>&1
 mplayer -frames 10 tv:// -tv device=/dev/video1 >/tmp/camera_1.log 2>&1
 
 # Start script
-python /home/bassa/software/stvid/acquire.py 1 >/tmp/camera_1.log 2>&1 &
+python ./acquire.py 1 >/tmp/camera_1.log 2>&1 &

@@ -3,3 +3,6 @@
 
 # Emacs backup files
 *~
+
+# Configuration file
+configuration.ini
