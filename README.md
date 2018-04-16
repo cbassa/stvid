@@ -6,6 +6,9 @@ This software will take over the satellite tracking functionality of my [sattool
 
 This repository will primarily be used for development, and will rely, for the moment, on programs from the [sattools](https://github.com/cbassa/sattools) repository.
 
+## Installation
+**stvid** handles requirements using pip. You can install requirements by running `pip install -r requirements.txt`. You should consider using a VirtualEnv to run stvid on a separate python virtual environment.
+
 ## Todo
 Features to be implemented.
 
