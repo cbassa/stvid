@@ -6,6 +6,10 @@ This software will take over the satellite tracking functionality of my [sattool
 
 This repository will primarily be used for development, and will rely, for the moment, on programs from the [sattools](https://github.com/cbassa/sattools) repository.
 
+## Configuration
+* Copy the `configuration.ini-dist` file to `configuration.ini`
+* Edit `configuration.ini` with your preferred settings
+
 ## Todo
 Features to be implemented.
 
@@ -31,3 +35,8 @@ Features to be implemented.
 * Add user to video group (`sudo adduser <username> video`).
 * Add video device to udev rules (add `SUBSYSTEM=="video1", GROUP="video", MODE="0660"` in `/etc/udev/rules.d/10-webcam.rules`).
 * Create start up script in `/etc/init.d`. Call capture script as user with `su <username> -c "capture_1.sh"`.
+
+## License
+&copy; 2018 Cees Bassa
+
+Licensed under the [GPLv3](LICENSE).
