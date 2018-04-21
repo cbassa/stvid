@@ -9,14 +9,8 @@ observer_el = 100             # Elevation of location in meters
 
 observations_path = /path/to/obs/
 
-[Camera 1]
+[Camera]
+device_id = 0
 camera_x = 720                # Camera horizontal pixel count
 camera_y = 576                # Camera vertical pixel count
 camera_frames = 250           # Camera frames for each image (25fps*10sec=250)
-
-
-# You can add multiple Camera sections like this:
-#[Camera 2]
-#camera_x = 720
-#camera_y = 576
-#camera_frames = 250
