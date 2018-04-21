@@ -6,7 +6,6 @@ from astropy.time import Time
 import astropy.units as u
 import numpy as np
 from scipy import interpolate
-import configparser
 
 
 # Sunrise/sunset algorithm from Astronomical Algorithms by Jean Meeus
@@ -131,7 +130,3 @@ def get_sunset_and_sunrise(tnow, loc, refalt):
 
     return "sun rises and sets", tset, trise
 
-
-# Confiration Parsing
-cfg = configparser.ConfigParser(inline_comment_prefixes=('#', ';'))
-cfg.read("./configuration.ini")

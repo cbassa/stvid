@@ -11,9 +11,9 @@ from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from astropy.io import fits
 import astropy.units as u
-from utils import get_sunset_and_sunrise, cfg
+from utils import get_sunset_and_sunrise
 import logging
-
+import configparser
 
 # Capture images
 def capture(buf, z1, t1, z2, t2, device, nx, ny, nz, tend):
@@ -134,7 +134,7 @@ def compress(buf, z1, t1, z2, t2, nx, ny, nz, tend, path):
         # Write fits file
         hdu = fits.PrimaryHDU(data=np.array([zavg, zstd, zmax, znum]),
                               header=hdr)
-        hdu.writeto(path+"/"+fname)
+        hdu.writeto(os.path.join(path,fname))
         logging.info("Compressed %s" % fname)
 
         # Exit on end of capture
@@ -147,9 +147,20 @@ def compress(buf, z1, t1, z2, t2, nx, ny, nz, tend, path):
 
 # Main function
 if __name__ == '__main__':
-    # Read device ID
-    devid = int(sys.argv[1])
+    # Read commandline options (TODO; move to argparse?)
+    cfgfile = sys.argv[1]
+    if sys.argv[2] == "test":
+        testing = True
+    else:
+        testing = False
 
+    # Confiration Parsing
+    cfg = configparser.ConfigParser(inline_comment_prefixes=('#', ';'))
+    cfg.read(cfgfile)
+
+    # Get device id
+    devid = cfg.getint('Camera', 'device_id')
+    
     # Current time
     tnow = Time.now()
 
@@ -157,50 +168,54 @@ if __name__ == '__main__':
     obsid = time.strftime("%Y%m%d_%H%M%S", time.gmtime())+"_%d" % devid
 
     # Generate directory
-    path = cfg.get('Common', 'observations_path')+obsid
+    path = os.path.join(cfg.get('Common', 'observations_path'),obsid)
     os.makedirs(path)
 
     # Setup logging
-    logging.basicConfig(filename=path+"/acquire.log", level=logging.DEBUG)
+    logging.basicConfig(filename=os.path.join(path,"acquire.log"), level=logging.DEBUG)
 
     # Set location
     loc = EarthLocation(lat=cfg.getfloat('Common', 'observer_lat')*u.deg,
                         lon=cfg.getfloat('Common', 'observer_lon')*u.deg,
                         height=cfg.getfloat('Common', 'observer_el')*u.m)
 
-    # Reference altitude
-    refalt = -6.0 * u.deg
+    if testing == False:
+        # Reference altitude
+        refalt = -6.0 * u.deg
 
-    # Get sunrise and sunset times
-    state, tset, trise = get_sunset_and_sunrise(tnow, loc, refalt)
+        # Get sunrise and sunset times
+        state, tset, trise = get_sunset_and_sunrise(tnow, loc, refalt)
 
-    # Start/end logic
-    if state == "sun never rises":
-        logging.info("The sun never rises. Exiting program.")
-        sys.exit()
-    elif state == "sun never sets":
-        logging.info("The sun never sets.")
-        tend = tnow+24*u.h
-    elif (trise < tset):
-        logging.info("The sun is below the horizon.")
-        tend = trise
-    elif (trise >= tset):
-        dt = np.floor((tset-tnow).to(u.s).value)
-        logging.info("The sun is above the horizon. Sunset at %s." % tset.isot)
-        logging.info("Waiting %.0f seconds." % dt)
-        tend = trise
-        try:
-            time.sleep(dt)
-        except KeyboardInterrupt:
+        # Start/end logic
+        if state == "sun never rises":
+            logging.info("The sun never rises. Exiting program.")
             sys.exit()
+        elif state == "sun never sets":
+            logging.info("The sun never sets.")
+            tend = tnow+24*u.h
+        elif (trise < tset):
+            logging.info("The sun is below the horizon.")
+            tend = trise
+        elif (trise >= tset):
+            dt = np.floor((tset-tnow).to(u.s).value)
+            logging.info("The sun is above the horizon. Sunset at %s." % tset.isot)
+            logging.info("Waiting %.0f seconds." % dt)
+            tend = trise
+            try:
+                time.sleep(dt)
+            except KeyboardInterrupt:
+                sys.exit()
+    else:
+        tend=tnow+31.0*u.s
+
 
     logging.info("Starting data acquisition.")
     logging.info("Acquisition will end at "+tend.isot)
 
     # Settings
-    nx = cfg.getint('Camera '+str(devid), 'camera_x')
-    ny = cfg.getint('Camera '+str(devid), 'camera_y')
-    nz = cfg.getint('Camera '+str(devid), 'camera_frames')
+    nx = cfg.getint('Camera', 'camera_x')
+    ny = cfg.getint('Camera', 'camera_y')
+    nz = cfg.getint('Camera', 'camera_frames')
 
     # Initialize device
     device = cv2.VideoCapture(devid)
