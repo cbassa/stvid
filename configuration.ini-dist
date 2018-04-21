@@ -1,0 +1,22 @@
+# Configuration file
+
+[Common]
+observer_cospar = 9999        # COSPAR number of observer's site
+observer_name = Sample Name   # Name of observer
+observer_lat = 19.8956        # Latitude of location in decimal degrees
+observer_lon = -155.2342      # Longitude of location in decimal degrees
+observer_el = 100             # Elevation of location in meters
+
+observations_path = /path/to/obs/
+
+[Camera 1]
+camera_x = 720                # Camera horizontal pixel count
+camera_y = 576                # Camera vertical pixel count
+camera_frames = 250           # Camera frames for each image (25fps*10sec=250)
+
+
+# You can add multiple Camera sections like this:
+#[Camera 2]
+#camera_x = 720
+#camera_y = 576
+#camera_frames = 250
