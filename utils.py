@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # Common Utilities
 
-from astropy.coordinates import SkyCoord, EarthLocation, AltAz, FK5, get_sun
+from astropy.coordinates import SkyCoord, FK5, get_sun
 from astropy.time import Time
 import astropy.units as u
 import numpy as np
@@ -129,4 +129,3 @@ def get_sunset_and_sunrise(tnow, loc, refalt):
     trise = Time(mjd0+mrise.value, format='mjd', scale='utc')
 
     return "sun rises and sets", tset, trise
-

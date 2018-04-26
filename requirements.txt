@@ -2,3 +2,4 @@ astropy==3.0.1
 numpy==1.14.2
 opencv-python==3.4.0.12
 scipy==1.0.1
+git+https://github.com/cbassa/ppgplot.git@master

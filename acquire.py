@@ -14,6 +14,8 @@ import astropy.units as u
 from utils import get_sunset_and_sunrise
 import logging
 import configparser
+import argparse
+
 
 # Capture images
 def capture(buf, z1, t1, z2, t2, device, nx, ny, nz, tend):
@@ -134,7 +136,7 @@ def compress(buf, z1, t1, z2, t2, nx, ny, nz, tend, path):
         # Write fits file
         hdu = fits.PrimaryHDU(data=np.array([zavg, zstd, zmax, znum]),
                               header=hdr)
-        hdu.writeto(os.path.join(path,fname))
+        hdu.writeto(os.path.join(path, fname))
         logging.info("Compressed %s" % fname)
 
         # Exit on end of capture
@@ -147,20 +149,35 @@ def compress(buf, z1, t1, z2, t2, nx, ny, nz, tend, path):
 
 # Main function
 if __name__ == '__main__':
-    # Read commandline options (TODO; move to argparse?)
-    cfgfile = sys.argv[1]
-    if sys.argv[2] == "test":
+
+    # Read commandline options
+    conf_parser = argparse.ArgumentParser(description='Capture and compress' +
+                                                      ' live video frames.')
+    conf_parser.add_argument("-c", "--conf_file",
+                             help="Specify configuration file. If no file" +
+                             " is specified 'configuration.ini' is used.",
+                             metavar="FILE")
+    conf_parser.add_argument('--test', action='store_true',
+                             help='Testing mode - Start capturing immediately')
+
+    args = conf_parser.parse_args()
+
+    # Process commandline options and parse configuration
+    cfg = configparser.ConfigParser(inline_comment_prefixes=('#', ';'))
+    if args.conf_file:
+        cfg.read([args.conf_file])
+    else:
+        cfg.read('configuration.ini')
+
+    # Testing mode
+    if args.test:
         testing = True
     else:
         testing = False
 
-    # Confiration Parsing
-    cfg = configparser.ConfigParser(inline_comment_prefixes=('#', ';'))
-    cfg.read(cfgfile)
-
     # Get device id
     devid = cfg.getint('Camera', 'device_id')
-    
+
     # Current time
     tnow = Time.now()
 
@@ -168,18 +185,19 @@ if __name__ == '__main__':
     obsid = time.strftime("%Y%m%d_%H%M%S", time.gmtime())+"_%d" % devid
 
     # Generate directory
-    path = os.path.join(cfg.get('Common', 'observations_path'),obsid)
+    path = os.path.join(cfg.get('Common', 'observations_path'), obsid)
     os.makedirs(path)
 
     # Setup logging
-    logging.basicConfig(filename=os.path.join(path,"acquire.log"), level=logging.DEBUG)
+    logging.basicConfig(filename=os.path.join(path, "acquire.log"),
+                        level=logging.DEBUG)
 
     # Set location
     loc = EarthLocation(lat=cfg.getfloat('Common', 'observer_lat')*u.deg,
                         lon=cfg.getfloat('Common', 'observer_lon')*u.deg,
                         height=cfg.getfloat('Common', 'observer_el')*u.m)
 
-    if testing == False:
+    if not testing:
         # Reference altitude
         refalt = -6.0 * u.deg
 
@@ -198,7 +216,8 @@ if __name__ == '__main__':
             tend = trise
         elif (trise >= tset):
             dt = np.floor((tset-tnow).to(u.s).value)
-            logging.info("The sun is above the horizon. Sunset at %s." % tset.isot)
+            logging.info("The sun is above the horizon. Sunset at %s."
+                         % tset.isot)
             logging.info("Waiting %.0f seconds." % dt)
             tend = trise
             try:
@@ -206,8 +225,7 @@ if __name__ == '__main__':
             except KeyboardInterrupt:
                 sys.exit()
     else:
-        tend=tnow+31.0*u.s
-
+        tend = tnow+31.0*u.s
 
     logging.info("Starting data acquisition.")
     logging.info("Acquisition will end at "+tend.isot)
