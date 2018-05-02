@@ -7,7 +7,7 @@ This software will take over the satellite tracking functionality of my [sattool
 This repository will primarily be used for development, and will rely, for the moment, on programs from the [sattools](https://github.com/cbassa/sattools) repository.
 
 ## Installation
-**stvid** handles requirements using pip. You can install requirements by running `pip install -r requirements.txt`. You should consider using a VirtualEnv to run stvid on a separate python virtual environment.
+**stvid** handles requirements using pip. You can install requirements by running `pip install -r requirements.txt`. You should consider using a VirtualEnv to run stvid on a separate python virtual environment. You will also need to download the [Tycho 2 catalog](https://www.dropbox.com/s/isbq1wsmfr24zx5/tyc2.fits?dl=0).
 
 ## Configuration
 * Copy the `configuration.ini-dist` file to `configuration.ini`
