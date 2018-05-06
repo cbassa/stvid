@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 
-import time
 import os
 import glob
 import shutil
-from stio import fourframe, satid, observation
+from stvid.stio import fourframe, satid, observation
 import numpy as np
 import ppgplot as ppg
 from scipy import optimize, ndimage
+import configparser
+import argparse
 
 
 # Gaussian model
@@ -454,15 +455,35 @@ if __name__ == '__main__':
     # Minimum track points
     ntrkmin = 10
 
+    # Read commandline options
+    conf_parser = argparse.ArgumentParser(description='Extract satellite' +
+                                                      ' tracks from frames.')
+    conf_parser.add_argument("-c", "--conf_file",
+                             help="Specify configuration file. If no file" +
+                             " is specified 'configuration.ini' is used.",
+                             metavar="FILE")
+    conf_parser.add_argument("-d", "--directory",
+                             help="Specify directory of observations. If no" +
+                             " directory is specified parent will be used.",
+                             metavar='DIR', dest='file_dir', default=".")
+
+    args = conf_parser.parse_args()
+
+    # Process commandline options and parse configuration
+    cfg = configparser.ConfigParser(inline_comment_prefixes=('#', ';'))
+    if args.conf_file:
+        cfg.read([args.conf_file])
+    else:
+        cfg.read('configuration.ini')
+
     # Create output dirs
-    path = os.getenv("ST_OBSDIR")+"/"+time.strftime("%Y%m%d/%H%M%S",
-                                                    time.gmtime())
-    os.makedirs(path+"/classfd")
-    os.makedirs(path+"/catalog")
-    os.makedirs(path+"/unid")
+    path = args.file_dir
+    os.makedirs(path+"classfd")
+    os.makedirs(path+"catalog")
+    os.makedirs(path+"unid")
 
     # Get files
-    files = sorted(glob.glob("2*.fits"))
+    files = sorted(glob.glob(path+"2*.fits"))
 
     # Process files
     for file in files:

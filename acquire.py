@@ -11,7 +11,7 @@ from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from astropy.io import fits
 import astropy.units as u
-from utils import get_sunset_and_sunrise
+from stvid.utils import get_sunset_and_sunrise
 import logging
 import configparser
 import argparse
