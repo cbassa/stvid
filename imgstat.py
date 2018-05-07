@@ -4,38 +4,66 @@ import numpy as np
 from astropy.io import ascii
 import matplotlib.pyplot as plt
 import astropy.units as u
-from astropy.coordinates import SkyCoord,FK5,AltAz,EarthLocation
+from astropy.coordinates import SkyCoord, AltAz, EarthLocation
 from astropy.time import Time
+import configparser
+import argparse
 
-table=ascii.read("imgstat.csv",format="csv")
+# Read commandline options
+conf_parser = argparse.ArgumentParser(description='Plot image statistics')
+conf_parser.add_argument("-c", "--conf_file",
+                         help="Specify configuration file. If no file" +
+                         " is specified 'configuration.ini' is used.",
+                         metavar="FILE")
+conf_parser.add_argument("-i", "--input",
+                         help="Specify file to be processed. If no file" +
+                         " is specified ./imgstat.csv will be used.",
+                         metavar='FILE', default="./imgstat.csv")
+conf_parser.add_argument("-o", "--output",
+                         help="Specify output file. Default is 'imgstat.png'",
+                         metavar='FILE', default="./imgstat.png")
 
-t=Time(table['mjd'],format="mjd",scale="utc")
-pos=SkyCoord(ra=table['ra'],dec=table['de'],frame="icrs",unit="deg")
+args = conf_parser.parse_args()
 
-loc=EarthLocation(lat=52.8344*u.deg,lon=6.3785*u.deg,height=10*u.m)
+# Process commandline options and parse configuration
+cfg = configparser.ConfigParser(inline_comment_prefixes=('#', ';'))
+if args.conf_file:
+    cfg.read([args.conf_file])
+else:
+    cfg.read('configuration.ini')
 
-pa=pos.transform_to(AltAz(obstime=t,location=loc))
+table = ascii.read(args.input, format="csv")
 
-mjd0=np.floor(np.min(table['mjd']))
+t = Time(table['mjd'], format="mjd", scale="utc")
+pos = SkyCoord(ra=table['ra'], dec=table['de'], frame="icrs", unit="deg")
 
-plt.figure(figsize=(20,10))
+# Set location
+loc = EarthLocation(lat=cfg.getfloat('Common', 'observer_lat')*u.deg,
+                    lon=cfg.getfloat('Common', 'observer_lon')*u.deg,
+                    height=cfg.getfloat('Common', 'observer_el')*u.m)
+
+pa = pos.transform_to(AltAz(obstime=t, location=loc))
+
+mjd0 = np.floor(np.min(table['mjd']))
+
+plt.figure(figsize=(20, 10))
 plt.subplot(411)
 
-plt.plot(table['mjd']-mjd0,table['mean'],label='Brightness')
-plt.plot(table['mjd']-mjd0,table['std'],label='Variation')
+plt.plot(table['mjd']-mjd0, table['mean'], label='Brightness')
+plt.plot(table['mjd']-mjd0, table['std'], label='Variation')
 plt.ylabel("ADU")
 plt.legend()
 plt.subplot(412)
-plt.plot(table['mjd']-mjd0,pa.az.degree)
+plt.plot(table['mjd']-mjd0, pa.az.degree)
 plt.ylabel("Azimuth (deg)")
 plt.subplot(413)
-plt.plot(table['mjd']-mjd0,pa.alt.degree)
+plt.plot(table['mjd']-mjd0, pa.alt.degree)
 plt.ylabel("Altitude (deg)")
 plt.subplot(414)
-plt.plot(table['mjd']-mjd0,table['rmsx'],label='RA')
-plt.plot(table['mjd']-mjd0,table['rmsy'],label='Dec')
-plt.ylim(0,60)
+plt.plot(table['mjd']-mjd0, table['rmsx'], label='RA')
+plt.plot(table['mjd']-mjd0, table['rmsy'], label='Dec')
+plt.ylim(0, 60)
 plt.ylabel("Residual (arcseconds)")
-plt.xlabel("MJD - %.0f"%mjd0)
+plt.xlabel("MJD - %.0f" % mjd0)
 plt.legend()
-plt.savefig("imgstat.png")
+plt.savefig(args.output)
