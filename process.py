@@ -11,6 +11,7 @@ from astropy.coordinates import EarthLocation
 import warnings
 import configparser
 import argparse
+import os
 
 if __name__ == "__main__":
 
@@ -45,10 +46,10 @@ if __name__ == "__main__":
                         height=cfg.getfloat('Common', 'observer_el')*u.m)
 
     # Get files
-    files = sorted(glob.glob(args.file_dir+"2*.fits"))
+    files = sorted(glob.glob(os.path.join(args.file_dir, "2*.fits")))
 
     # Statistics file
-    fstat = open(args.file_dir+"imgstat.csv", "w")
+    fstat = open(os.path.join(args.file_dir, "imgstat.csv"), "w")
     fstat.write("fname,mjd,ra,de,rmsx,rmsy,mean,std,nstars,nused\n")
 
     # Loop over files
@@ -57,7 +58,9 @@ if __name__ == "__main__":
         pix_catalog = generate_star_catalog(fname)
 
         # Calibrate astrometry
-        calibrate_from_reference(fname, args.file_dir+"test.fits", pix_catalog)
+        calibrate_from_reference(fname,
+                                 os.path.join(args.file_dir, "test.fits"),
+                                 pix_catalog)
 
         # Stars available and used
         nused = np.sum(pix_catalog.flag == 1)

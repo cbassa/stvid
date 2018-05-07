@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+from __future__ import print_function
 import os
 import glob
 import shutil
@@ -228,18 +228,22 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path):
             print(iod_line)
 
             if id.catalog.find("classfd.tle") > 0:
-                outfname = path+"/classfd/classfd.dat"
+                outfname = os.path.join(path,
+                                        "classfd/classfd.dat")
             elif id.catalog.find("inttles.tle") > 0:
-                outfname = path+"/classfd/inttles.dat"
+                outfname = os.path.join(path,
+                                        "/classfd/inttles.dat")
             else:
-                outfname = path+"/catalog/catalog.dat"
+                outfname = os.path.join(path,
+                                        "/catalog/catalog.dat")
 
             f = open(outfname, "a")
             f.write("%s\n" % iod_line)
             f.close()
 
             # Plot
-            ppg.pgopen(fname.replace(".fits", "")+"_%05d.png/png" % id.norad)
+            ppg.pgopen(os.path.joine(fname.replace(".fits", ""),
+                                     "_%05d.png/png" % id.norad))
             ppg.pgpap(0.0, 1.0)
             ppg.pgsvp(0.1, 0.95, 0.1, 0.8)
 
@@ -300,11 +304,14 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path):
 
             # Copy files
             if id.catalog.find("classfd.tle") > 0:
-                copy_files(fname.replace(".fits", "*"), path+"/classfd")
+                copy_files(fname.replace(".fits", "*"),
+                           os.path.join(path, "/classfd"))
             elif id.catalog.find("inttles.tle") > 0:
-                copy_files(fname.replace(".fits", "*"), path+"/classfd")
+                copy_files(fname.replace(".fits", "*"),
+                           os.path.join(path, "/classfd"))
             else:
-                copy_files(fname.replace(".fits", "*"), path+"/catalog")
+                copy_files(fname.replace(".fits", "*"),
+                           os.path.join(path, "/catalog"))
 
         elif id.catalog.find("classfd.tle") > 0:
             # Track and stack
@@ -366,18 +373,19 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path):
             print(iod_line)
 
             if id.catalog.find("classfd.tle") > 0:
-                outfname = path+"/classfd/classfd.dat"
+                outfname = os.path.join(path, "/classfd/classfd.dat")
             elif id.catalog.find("inttles.tle") > 0:
-                outfname = path+"/classfd/inttles.dat"
+                outfname = os.path.join(path, "/classfd/inttles.dat")
             else:
-                outfname = path+"/catalog/catalog.dat"
+                outfname = os.path.join(path, "/catalog/catalog.dat")
 
             f = open(outfname, "a")
             f.write("%s\n" % iod_line)
             f.close()
 
             # Plot
-            ppg.pgopen(fname.replace(".fits", "")+"_%05d.png/png" % id.norad)
+            ppg.pgopen(os.path.join(fname.replace(".fits", ""),
+                                    "_%05d.png/png" % id.norad))
             ppg.pgpap(0.0, 1.0)
             ppg.pgsvp(0.1, 0.95, 0.1, 0.8)
 
@@ -435,11 +443,14 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path):
 
             # Copy files
             if id.catalog.find("classfd.tle") > 0:
-                copy_files(fname.replace(".fits", "*"), path+"/classfd")
+                copy_files(fname.replace(".fits", "*"),
+                           os.path.join(path, "/classfd"))
             elif id.catalog.find("inttles.tle") > 0:
-                copy_files(fname.replace(".fits", "*"), path+"/classfd")
+                copy_files(fname.replace(".fits", "*"),
+                           os.path.join(path, "/classfd"))
             else:
-                copy_files(fname.replace(".fits", "*"), path+"/catalog")
+                copy_files(fname.replace(".fits", "*"),
+                           os.path.joine(path, "/catalog"))
 
 
 if __name__ == '__main__':
@@ -478,12 +489,12 @@ if __name__ == '__main__':
 
     # Create output dirs
     path = args.file_dir
-    os.makedirs(path+"classfd")
-    os.makedirs(path+"catalog")
-    os.makedirs(path+"unid")
+    os.makedirs(os.path.join(path, "classfd"))
+    os.makedirs(os.path.join(path, "catalog"))
+    os.makedirs(os.path.join(path, "unid"))
 
     # Get files
-    files = sorted(glob.glob(path+"2*.fits"))
+    files = sorted(glob.glob(os.path.join(path, "2*.fits")))
 
     # Process files
     for file in files:
