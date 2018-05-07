@@ -1,10 +1,10 @@
 # STVID
 
-**stvid** will be a set of *python* programs to detect and identify satellite tracks on video observations of the night sky, and measure the satellite positions to determine and/or update their orbits.
+**stvid** is a set of *python* programs to detect and identify satellite tracks on video observations of the night sky, and measure the satellite positions to determine and/or update their orbits.
 
-This software will take over the satellite tracking functionality of my [sattools](https://github.com/cbassa/sattools). By porting the functionality to *python*, and using [astropy](https://github.com/astropy/astropy), and [opencv](https://opencv-python-tutroals.readthedocs.io/en/latest/), the software will be easier to install and operate.
+This software will take over the satellite tracking functionality of my [sattools](https://github.com/cbassa/sattools). By porting the functionality to *python*, and using [astropy](https://github.com/astropy/astropy), and [opencv](https://opencv-python-tutroals.readthedocs.io/en/latest/), the software is easier to install and operate.
 
-This repository will primarily be used for development, and will rely, for the moment, on programs from the [sattools](https://github.com/cbassa/sattools) repository.
+This repository is currently used for development, and relies, for the moment, on programs from the [sattools](https://github.com/cbassa/sattools) repository.
 
 ## Installation
 **stvid** handles requirements using pip. You can install requirements by running `pip install -r requirements.txt`. You should consider using a VirtualEnv to run stvid on a separate python virtual environment. You will also need to download the [Tycho 2 catalog](https://www.dropbox.com/s/isbq1wsmfr24zx5/tyc2.fits?dl=0).
@@ -12,6 +12,9 @@ This repository will primarily be used for development, and will rely, for the m
 ## Configuration
 * Copy the `configuration.ini-dist` file to `configuration.ini`
 * Edit `configuration.ini` with your preferred settings
+
+## Running
+TBD
 
 ## Todo
 Features to be implemented.
@@ -31,7 +34,7 @@ Features to be implemented.
 * Migrate to [python based SGP4/SDP4 algorithms](https://github.com/brandon-rhodes/python-sgp4)
 * Use masks to mask unilluminated CCD areas.
 * Investigate automatic submission of IOD measurements to [SeeSat-L](http://www.satobs.org/seesat/).
-* Migrate user settings to a configuration file.
+* ~~Migrate user settings to a configuration file.~~
 
 ## Run acquisition at startup
 
