@@ -8,6 +8,7 @@ from astropy.coordinates import SkyCoord, AltAz, EarthLocation
 from astropy.time import Time
 import configparser
 import argparse
+import os
 
 # Read commandline options
 conf_parser = argparse.ArgumentParser(description='Plot image statistics')
@@ -19,6 +20,10 @@ conf_parser.add_argument("-i", "--input",
                          help="Specify file to be processed. If no file" +
                          " is specified ./imgstat.csv will be used.",
                          metavar='FILE', default="./imgstat.csv")
+conf_parser.add_argument("-d", "--directory",
+                         help="Specify directory of observations. If no" +
+                         " directory is specified parent will be used.",
+                         metavar='DIR', dest='file_dir', default=".")
 conf_parser.add_argument("-o", "--output",
                          help="Specify output file. Default is 'imgstat.png'",
                          metavar='FILE', default="./imgstat.png")
@@ -32,6 +37,9 @@ if args.conf_file:
 else:
     cfg.read('configuration.ini')
 
+# Move to processing directory
+os.chdir(args.file_dir)
+    
 table = ascii.read(args.input, format="csv")
 
 t = Time(table['mjd'], format="mjd", scale="utc")

@@ -4,7 +4,6 @@ import os
 import subprocess
 import numpy as np
 
-
 class pixel_catalog:
     """Pixel catalog"""
 
@@ -32,7 +31,7 @@ class pixel_catalog:
 
 def generate_star_catalog(fname):
     # Skip if file already exists
-    if not os.path.exists(fname+".cat"):
+    if not os.path.exists(os.path.join(fname, ".cat")):
         # Get sextractor location
         env = os.getenv("ST_DATADIR")
 
