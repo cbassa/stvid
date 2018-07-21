@@ -41,6 +41,40 @@ def capture(buf, z1, t1, z2, t2, device, nx, ny, nz, tend):
                 # Store buffer
                 z = gray
 
+                # Display Frame
+                cv2.imshow("Capture", gray)
+                cv2.waitKey(1)
+
+                # # Motion Detection
+                # gray = cv2.GaussianBlur(gray, (21, 21), 0)
+
+                # # if the first frame is None, initialize it
+                # if first is True:
+                #     firstFrame = gray
+                #     continue
+
+                # # compute the absolute difference between the current frame and
+                # # first frame
+                # frameDelta = cv2.absdiff(firstFrame, gray)
+                # thresh = cv2.threshold(frameDelta, 25, 255, cv2.THRESH_BINARY)[1]
+
+                # # dilate the thresholded image to fill in holes, then find contours
+                # # on thresholded image
+                # thresh = cv2.dilate(thresh, None, iterations=2)
+                # cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
+                #     cv2.CHAIN_APPROX_SIMPLE)
+
+                # # loop over the contours
+                # for c in cnts:
+                #     # if the contour is too small, ignore it
+                #     if cv2.contourArea(c) < 25:
+                #         continue
+
+                #     # compute the bounding box for the contour, draw it on the frame,
+                #     # and update the text
+                #     (x, y, w, h) = cv2.boundingRect(c)
+                #     cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
                 # Store results
                 if first:
                     z1[i] = z
@@ -274,4 +308,5 @@ if __name__ == '__main__':
         pcompress.terminate()
 
     # Release device
+    cv2.destroyAllWindows()
     device.release()
