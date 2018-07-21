@@ -18,7 +18,7 @@ import argparse
 
 
 # Capture images
-def capture(buf, z1, t1, z2, t2, device, nx, ny, nz, tend):
+def capture(buf, z1, t1, z2, t2, device, nx, ny, nz, tend, live):
     # Array flag
     first = True
 
@@ -42,38 +42,9 @@ def capture(buf, z1, t1, z2, t2, device, nx, ny, nz, tend):
                 z = gray
 
                 # Display Frame
-                cv2.imshow("Capture", gray)
-                cv2.waitKey(1)
-
-                # # Motion Detection
-                # gray = cv2.GaussianBlur(gray, (21, 21), 0)
-
-                # # if the first frame is None, initialize it
-                # if first is True:
-                #     firstFrame = gray
-                #     continue
-
-                # # compute the absolute difference between the current frame and
-                # # first frame
-                # frameDelta = cv2.absdiff(firstFrame, gray)
-                # thresh = cv2.threshold(frameDelta, 25, 255, cv2.THRESH_BINARY)[1]
-
-                # # dilate the thresholded image to fill in holes, then find contours
-                # # on thresholded image
-                # thresh = cv2.dilate(thresh, None, iterations=2)
-                # cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
-                #     cv2.CHAIN_APPROX_SIMPLE)
-
-                # # loop over the contours
-                # for c in cnts:
-                #     # if the contour is too small, ignore it
-                #     if cv2.contourArea(c) < 25:
-                #         continue
-
-                #     # compute the bounding box for the contour, draw it on the frame,
-                #     # and update the text
-                #     (x, y, w, h) = cv2.boundingRect(c)
-                #     cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                if live is True:
+                    cv2.imshow("Capture", gray)
+                    cv2.waitKey(1)
 
                 # Store results
                 if first:
@@ -187,12 +158,14 @@ if __name__ == '__main__':
     # Read commandline options
     conf_parser = argparse.ArgumentParser(description='Capture and compress' +
                                                       ' live video frames.')
-    conf_parser.add_argument("-c", "--conf_file",
+    conf_parser.add_argument('-c', '--conf_file',
                              help="Specify configuration file. If no file" +
                              " is specified 'configuration.ini' is used.",
                              metavar="FILE")
-    conf_parser.add_argument('--test', action='store_true',
+    conf_parser.add_argument('-t', '--test', action='store_true',
                              help='Testing mode - Start capturing immediately')
+    conf_parser.add_argument('-l', '--live', action='store_true',
+                             help='Display live image while capturing')
 
     args = conf_parser.parse_args()
 
@@ -208,6 +181,12 @@ if __name__ == '__main__':
         testing = True
     else:
         testing = False
+
+    # Live mode
+    if args.live:
+        live = True
+    else:
+        live = False
 
     # Get device id
     devid = cfg.getint('Camera', 'device_id')
@@ -290,7 +269,7 @@ if __name__ == '__main__':
     # Set processes
     pcapture = multiprocessing.Process(target=capture,
                                        args=(buf, z1, t1, z2, t2, device,
-                                             nx, ny, nz, tend.unix))
+                                             nx, ny, nz, tend.unix, live))
     pcompress = multiprocessing.Process(target=compress,
                                         args=(buf, z1, t1, z2, t2, nx, ny,
                                               nz, tend.unix, path))
@@ -308,5 +287,6 @@ if __name__ == '__main__':
         pcompress.terminate()
 
     # Release device
-    cv2.destroyAllWindows()
+    if live is True:
+        cv2.destroyAllWindows()
     device.release()
