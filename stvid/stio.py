@@ -6,6 +6,7 @@ from astropy.time import Time
 from astropy import wcs
 from scipy import ndimage
 
+
 class observation:
     """Satellite observation"""
 
@@ -94,8 +95,8 @@ class fourframe:
             self.zavg, self.zstd, self.zmax, self.znum = hdu[0].data
 
             # Generate sigma frame
-            self.zsig=(self.zmax-self.zavg)/(self.zstd+1e-9)
-            
+            self.zsig = (self.zmax-self.zavg)/(self.zstd+1e-9)
+
             # Frame properties
             self.ny, self.nx = self.zavg.shape
             self.nz = hdu[0].header['NFRAMES']
@@ -144,46 +145,46 @@ class fourframe:
         self.w.wcs.ctype = self.ctype
         self.w.wcs.set_pv([(2, 1, 45.0)])
 
+    def mask(self, xmin, xmax, ymin, ymax):
+        x, y = np.meshgrid(np.arange(self.nx), np.arange(self.ny))
+        c = (x >= xmin) & (x <= self.nx-xmax)\
+                        & (y >= ymin)\
+                        & (y <= self.ny-ymax)
+        self.mask = np.ones_like(self.zavg)
+        self.mask[~c] = 0.0
+        self.zavg *= self.mask
+        self.zstd *= self.mask
+        self.zmax *= self.mask
+        self.znum *= self.mask
+        self.zsig *= self.mask
 
-    def mask(self,xmin,xmax,ymin,ymax):
-        x,y=np.meshgrid(np.arange(self.nx),np.arange(self.ny))
-        c=(x>=xmin) & (x<=self.nx-xmax) & (y>=ymin) & (y<=self.ny-ymax)
-        self.mask=np.ones_like(self.zavg)
-        self.mask[~c]=0.0
-        self.zavg*=self.mask
-        self.zstd*=self.mask
-        self.zmax*=self.mask
-        self.znum*=self.mask
-        self.zsig*=self.mask
-
-    def selection_mask(self,sigma,zstd):
+    def selection_mask(self, sigma, zstd):
         """Create a selection mask"""
-        c1=ndimage.uniform_filter(self.znum,3,mode='constant')
-        c2=ndimage.uniform_filter(self.znum*self.znum,3,mode='constant')
-        z=np.sqrt(c2-c1*c1)
+        c1 = ndimage.uniform_filter(self.znum, 3, mode='constant')
+        c2 = ndimage.uniform_filter(self.znum*self.znum, 3, mode='constant')
+        z = np.sqrt(c2-c1*c1)
 
         # Standard deviation mask
-        c=z<zstd
-        m1=np.zeros_like(self.zavg)
-        m1[c]=1.0
+        c = z < zstd
+        m1 = np.zeros_like(self.zavg)
+        m1[c] = 1.0
 
         # Sigma mask
-        c=self.zsig<sigma
-        m2=np.zeros_like(self.zavg)
-        m2[~c]=1.0
-        self.zsel=m1*m2
+        c = self.zsig < sigma
+        m2 = np.zeros_like(self.zavg)
+        m2[~c] = 1.0
+        self.zsel = m1*m2
 
         # Generate points
-        c=self.zsel==1.0
-        xm,ym=np.meshgrid(np.arange(self.nx),np.arange(self.ny))
-        x,y=np.ravel(xm[c]),np.ravel(ym[c])
-        inum=np.ravel(self.znum[c]).astype('int')
-        sig=np.ravel(self.zsig[c])
-        t=np.array([self.dt[i] for i in inum])
+        c = self.zsel == 1.0
+        xm, ym = np.meshgrid(np.arange(self.nx), np.arange(self.ny))
+        x, y = np.ravel(xm[c]), np.ravel(ym[c])
+        inum = np.ravel(self.znum[c]).astype('int')
+        sig = np.ravel(self.zsig[c])
+        t = np.array([self.dt[i] for i in inum])
 
-        return x,y,inum,t,sig
+        return x, y, inum, t, sig
 
-        
     def significant_pixels_along_track(self, sigma, x0, y0,
                                        dxdt, dydt, rmin=10.0):
         """Extract significant pixels along a track"""

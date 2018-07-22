@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
     # Move to processing directory
     os.chdir(args.file_dir)
-    
+
     # Get files
     files = sorted(glob.glob("2*.fits"))
 
@@ -70,8 +70,8 @@ if __name__ == "__main__":
         generate_satellite_predictions(fname)
 
         # Extract lines with 3D Hough transform
-        ids=find_hough3d_lines(fname)
-        
+        ids = find_hough3d_lines(fname)
+
         # Stars available and used
         nused = np.sum(pix_catalog.flag == 1)
         nstars = pix_catalog.nstars
