@@ -39,7 +39,7 @@ else:
 
 # Move to processing directory
 os.chdir(args.file_dir)
-    
+
 table = ascii.read(args.input, format="csv")
 
 t = Time(table['mjd'], format="mjd", scale="utc")

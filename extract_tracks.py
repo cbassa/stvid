@@ -232,10 +232,10 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path):
                                         "classfd/classfd.dat")
             elif id.catalog.find("inttles.tle") > 0:
                 outfname = os.path.join(path,
-                                        "/classfd/inttles.dat")
+                                        "classfd/inttles.dat")
             else:
                 outfname = os.path.join(path,
-                                        "/catalog/catalog.dat")
+                                        "catalog/catalog.dat")
 
             f = open(outfname, "a")
             f.write("%s\n" % iod_line)
@@ -305,13 +305,13 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path):
             # Copy files
             if id.catalog.find("classfd.tle") > 0:
                 copy_files(fname.replace(".fits", "*"),
-                           os.path.join(path, "/classfd"))
+                           os.path.join(path, "classfd"))
             elif id.catalog.find("inttles.tle") > 0:
                 copy_files(fname.replace(".fits", "*"),
-                           os.path.join(path, "/classfd"))
+                           os.path.join(path, "classfd"))
             else:
                 copy_files(fname.replace(".fits", "*"),
-                           os.path.join(path, "/catalog"))
+                           os.path.join(path, "catalog"))
 
         elif id.catalog.find("classfd.tle") > 0:
             # Track and stack
@@ -373,11 +373,11 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path):
             print(iod_line)
 
             if id.catalog.find("classfd.tle") > 0:
-                outfname = os.path.join(path, "/classfd/classfd.dat")
+                outfname = os.path.join(path, "classfd/classfd.dat")
             elif id.catalog.find("inttles.tle") > 0:
-                outfname = os.path.join(path, "/classfd/inttles.dat")
+                outfname = os.path.join(path, "classfd/inttles.dat")
             else:
-                outfname = os.path.join(path, "/catalog/catalog.dat")
+                outfname = os.path.join(path, "catalog/catalog.dat")
 
             f = open(outfname, "a")
             f.write("%s\n" % iod_line)
@@ -444,13 +444,13 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path):
             # Copy files
             if id.catalog.find("classfd.tle") > 0:
                 copy_files(fname.replace(".fits", "*"),
-                           os.path.join(path, "/classfd"))
+                           os.path.join(path, "classfd"))
             elif id.catalog.find("inttles.tle") > 0:
                 copy_files(fname.replace(".fits", "*"),
-                           os.path.join(path, "/classfd"))
+                           os.path.join(path, "classfd"))
             else:
                 copy_files(fname.replace(".fits", "*"),
-                           os.path.joine(path, "/catalog"))
+                           os.path.joine(path, "catalog"))
 
 
 if __name__ == '__main__':
@@ -489,9 +489,12 @@ if __name__ == '__main__':
 
     # Create output dirs
     path = args.file_dir
-    os.makedirs(os.path.join(path, "classfd"))
-    os.makedirs(os.path.join(path, "catalog"))
-    os.makedirs(os.path.join(path, "unid"))
+    if not os.path.exists(os.path.join(path, "classfd")):
+        os.makedirs(os.path.join(path, "classfd"))
+    if not os.path.exists(os.path.join(path, "catalog")):
+        os.makedirs(os.path.join(path, "catalog"))
+    if not os.path.exists(os.path.join(path, "unid")):
+        os.makedirs(os.path.join(path, "unid"))
 
     # Get files
     files = sorted(glob.glob(os.path.join(path, "2*.fits")))

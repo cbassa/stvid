@@ -4,6 +4,7 @@ import os
 import subprocess
 import numpy as np
 
+
 class pixel_catalog:
     """Pixel catalog"""
 
