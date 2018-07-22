@@ -18,7 +18,7 @@ import argparse
 
 
 # Capture images
-def capture(buf, z1, t1, z2, t2, device, nx, ny, nz, tend):
+def capture(buf, z1, t1, z2, t2, device, nx, ny, nz, tend, live):
     # Array flag
     first = True
 
@@ -40,6 +40,11 @@ def capture(buf, z1, t1, z2, t2, device, nx, ny, nz, tend):
 
                 # Store buffer
                 z = gray
+
+                # Display Frame
+                if live is True:
+                    cv2.imshow("Capture", gray)
+                    cv2.waitKey(1)
 
                 # Store results
                 if first:
@@ -153,12 +158,14 @@ if __name__ == '__main__':
     # Read commandline options
     conf_parser = argparse.ArgumentParser(description='Capture and compress' +
                                                       ' live video frames.')
-    conf_parser.add_argument("-c", "--conf_file",
+    conf_parser.add_argument('-c', '--conf_file',
                              help="Specify configuration file. If no file" +
                              " is specified 'configuration.ini' is used.",
                              metavar="FILE")
-    conf_parser.add_argument('--test', action='store_true',
+    conf_parser.add_argument('-t', '--test', action='store_true',
                              help='Testing mode - Start capturing immediately')
+    conf_parser.add_argument('-l', '--live', action='store_true',
+                             help='Display live image while capturing')
 
     args = conf_parser.parse_args()
 
@@ -174,6 +181,12 @@ if __name__ == '__main__':
         testing = True
     else:
         testing = False
+
+    # Live mode
+    if args.live:
+        live = True
+    else:
+        live = False
 
     # Get device id
     devid = cfg.getint('Camera', 'device_id')
@@ -256,7 +269,7 @@ if __name__ == '__main__':
     # Set processes
     pcapture = multiprocessing.Process(target=capture,
                                        args=(buf, z1, t1, z2, t2, device,
-                                             nx, ny, nz, tend.unix))
+                                             nx, ny, nz, tend.unix, live))
     pcompress = multiprocessing.Process(target=compress,
                                         args=(buf, z1, t1, z2, t2, nx, ny,
                                               nz, tend.unix, path))
@@ -274,4 +287,6 @@ if __name__ == '__main__':
         pcompress.terminate()
 
     # Release device
+    if live is True:
+        cv2.destroyAllWindows()
     device.release()
