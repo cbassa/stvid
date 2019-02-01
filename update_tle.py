@@ -9,6 +9,8 @@ import datetime
 from io import BytesIO
 from zipfile import ZipFile
 from urllib.request import urlopen
+import re
+import os
 
 if __name__ == '__main__':
     # Read commandline options
@@ -31,10 +33,10 @@ if __name__ == '__main__':
     tle_path = cfg.get('Common', 'tle_path')
 
     now = datetime.datetime.utcnow()
-    time = now.strftime("%Y-%m-%d_%H:%M:%S")
+    time = now.strftime("%Y%m%d_%H%M%S")
 
     # Get Space Track TLEs
-    catalog_tle = tle_path + 'catalog.tle'
+    catalog_tle = os.path.join(tle_path, 'catalog.tle')
     st = SpaceTrackClient(identity=cfg.get('Credentials', 'st-username'),
                           password=cfg.get('Credentials', 'st-password'))
 
@@ -43,19 +45,28 @@ if __name__ == '__main__':
 
     with open(catalog_tle, 'w') as fp:
         for line in data:
+            # Fix missing leading zeros
+            line = re.sub("^1     ", "1 0000", line)
+            line = re.sub("^2     ", "2 0000", line)
+            line = re.sub("^1    ", "1 000", line)
+            line = re.sub("^2    ", "2 000", line)
+            line = re.sub("^1   ", "1 00", line)
+            line = re.sub("^2   ", "2 00", line)
+            line = re.sub("^1  ", "1 0", line)
+            line = re.sub("^2  ", "2 0", line)
             fp.write(line + '\n')
 
-    subprocess.call(['sed -i -e "s/^1     /1 0000/g" -e "s/^2     /2 0000/g" -e "s/^1  ' +
-                     '  /1 000/g" -e "s/^2    /2 000/g" -e "s/^1   /1 00/g" -e "s/^2  ' +
-                     ' /2 00/g" -e "s/^1  /1 0/g" -e "s/^2  /2 0/g" ' + catalog_tle], shell=True)
+#    subprocess.call(['sed -i -e "s/^1     /1 0000/g" -e "s/^2     /2 0000/g" -e "s/^1  ' +
+#                     '  /1 000/g" -e "s/^2    /2 000/g" -e "s/^1   /1 00/g" -e "s/^2  ' +
+#                     ' /2 00/g" -e "s/^1  /1 0/g" -e "s/^2  /2 0/g" ' + catalog_tle], shell=True)
 
-    copyfile(catalog_tle, tle_path + time + '_catalog.txt')
+    copyfile(catalog_tle, os.path.join(tle_path, time + '_catalog.txt'))
 
     # Get classified TLEs
     resp = urlopen("http://www.prismnet.com/~mmccants/tles/classfd.zip")
     zipfile = ZipFile(BytesIO(resp.read()))
     zipfile.extractall(path=tle_path)
-    classfd_tle = tle_path + 'classfd.tle'
+    classfd_tle = os.path.join(tle_path, 'classfd.tle')
 
     content = ''
     outsize = 0
@@ -66,13 +77,13 @@ if __name__ == '__main__':
             outsize += len(line) + 1
             output.write(line + b'\n')
 
-    copyfile(classfd_tle, tle_path + time + '_classfd.txt')
+    copyfile(classfd_tle, os.path.join(tle_path, time + '_classfd.txt'))
 
     # Get int TLEs
     resp = urlopen("http://www.prismnet.com/~mmccants/tles/inttles.zip")
     zipfile = ZipFile(BytesIO(resp.read()))
     zipfile.extractall(path=tle_path)
-    int_tle = tle_path + 'inttles.tle'
+    int_tle = os.path.join(tle_path, 'inttles.tle')
 
     content = ''
     outsize = 0
@@ -83,11 +94,11 @@ if __name__ == '__main__':
             outsize += len(line) + 1
             output.write(line + b'\n')
 
-    copyfile(int_tle, tle_path + time + '_inttles.txt')
+    copyfile(int_tle, os.path.join(tle_path, time + '_inttles.txt'))
 
     # Create bulk catalog
     catalogs = [catalog_tle, classfd_tle]
-    with open(tle_path + 'bulk.tle', 'w') as outfile:
+    with open(os.path.join(tle_path, 'bulk.tle'), 'w') as outfile:
         for fname in catalogs:
             with open(fname) as infile:
                 outfile.write(infile.read())
