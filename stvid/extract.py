@@ -8,6 +8,7 @@ import numpy as np
 import ppgplot as ppg
 from scipy import optimize, ndimage
 from termcolor import colored
+import datetime
 
 # Gaussian model
 def model(a, nx, ny):
@@ -89,15 +90,17 @@ def inside_selection(ident, tmid, x0, y0, dt=2.0, w=10.0):
         return False
 
 # Get COSPAR ID
-def get_cospar(norad):
-    f = open(os.getenv("ST_DATADIR")+"/data/desig.txt")
+def get_cospar(norad, nfd):
+    f = open(os.path.join(os.getenv("ST_DATADIR"), "data/desig.txt"))
     lines = f.readlines()
     f.close()
-
+    
     try:
         cospar = ([line for line in lines if str(norad) in line])[0].split()[1]
     except IndexError:
-        cospar = "18500A"
+        t = datetime.datetime.strptime(nfd[:-4], "%Y-%m-%dT%H:%M:%S")
+        doy = int(t.strftime("%y%j"))+500
+        cospar = "%sA"%doy
 
     return "%2s %s" % (cospar[0:2], cospar[2:])
 
@@ -307,7 +310,7 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path):
             xmax = x0+dxdt*(tmax-tmid)
             ymax = y0+dydt*(tmax-tmid)
 
-            cospar = get_cospar(ident.norad)
+            cospar = get_cospar(ident.norad, ff.nfd)
             obs = observation(ff, mjd, x0, y0)
             iod_line = "%s" % format_iod_line(ident.norad,
                                               cospar,
@@ -391,7 +394,7 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path):
                 continue
 
             # Format IOD line
-            cospar = get_cospar(ident.norad)
+            cospar = get_cospar(ident.norad, ff.nfd)
             obs = observation(ff, mjd, x0, y0)
             iod_line = "%s" % format_iod_line(ident.norad,
                                               cospar,
