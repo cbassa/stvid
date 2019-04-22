@@ -164,7 +164,9 @@ class fourframe:
         """Create a selection mask"""
         c1 = ndimage.uniform_filter(self.znum, 3, mode='constant')
         c2 = ndimage.uniform_filter(self.znum*self.znum, 3, mode='constant')
-        z = np.sqrt(c2-c1*c1)
+
+        # Add epsilon to keep square root positive
+        z = np.sqrt(c2-c1*c1+1e-9)
 
         # Standard deviation mask
         c = z < zstd
