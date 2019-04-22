@@ -127,6 +127,8 @@ class fourframe:
             self.crres = np.array([hdu[0].header['CRRES1'],
                                    hdu[0].header['CRRES2']])
 
+            hdu.close()
+            
         # Compute image properties
         self.sx = np.sqrt(self.cd[0, 0]**2+self.cd[1, 0]**2)
         self.sy = np.sqrt(self.cd[0, 1]**2+self.cd[1, 1]**2)
