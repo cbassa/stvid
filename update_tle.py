@@ -56,10 +56,6 @@ if __name__ == '__main__':
             line = re.sub("^2  ", "2 0", line)
             fp.write(line + '\n')
 
-#    subprocess.call(['sed -i -e "s/^1     /1 0000/g" -e "s/^2     /2 0000/g" -e "s/^1  ' +
-#                     '  /1 000/g" -e "s/^2    /2 000/g" -e "s/^1   /1 00/g" -e "s/^2  ' +
-#                     ' /2 00/g" -e "s/^1  /1 0/g" -e "s/^2  /2 0/g" ' + catalog_tle], shell=True)
-
     copyfile(catalog_tle, os.path.join(tle_path, time + '_catalog.txt'))
 
     # Get classified TLEs
