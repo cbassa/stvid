@@ -242,8 +242,7 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path):
             f.close()
 
             # Plot
-            ppg.pgopen(os.path.joine(fname.replace(".fits", ""),
-                                     "_%05d.png/png" % id.norad))
+            ppg.pgopen(fname.replace(".fits", "_%05d.png/png" % id.norad))
             ppg.pgpap(0.0, 1.0)
             ppg.pgsvp(0.1, 0.95, 0.1, 0.8)
 
@@ -384,8 +383,7 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path):
             f.close()
 
             # Plot
-            ppg.pgopen(os.path.join(fname.replace(".fits", ""),
-                                    "_%05d.png/png" % id.norad))
+            ppg.pgopen(fname.replace(".fits", "_%05d.png/png" % id.norad))
             ppg.pgpap(0.0, 1.0)
             ppg.pgsvp(0.1, 0.95, 0.1, 0.8)
 
@@ -450,7 +448,7 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path):
                            os.path.join(path, "classfd"))
             else:
                 copy_files(fname.replace(".fits", "*"),
-                           os.path.joine(path, "catalog"))
+                           os.path.join(path, "catalog"))
 
 
 if __name__ == '__main__':
