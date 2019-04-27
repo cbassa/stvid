@@ -9,7 +9,7 @@ from scipy import interpolate
 
 
 # Sunrise/sunset algorithm from Astronomical Algorithms by Jean Meeus
-def get_sunset_and_sunrise(tnow, loc, refalt):
+def get_sunset_and_sunrise(tnow, loc, refalt_set, refalt_rise):
     # Get time
     nmjd = 64
     mjd0 = np.floor(tnow.mjd)
@@ -32,9 +32,9 @@ def get_sunset_and_sunrise(tnow, loc, refalt):
     maxalt = np.arcsin(np.sin(loc.lat)*np.sin(de)+np.cos(loc.lat)*np.cos(de))
 
     # Never sets, never rises?
-    if minalt > refalt:
+    if minalt > min(refalt_set, refalt_rise):
         return "sun never sets", t[0], t[0]
-    elif maxalt < refalt:
+    elif maxalt < max(refalt_set, refalt_rise):
         return "sun never rises", t[0], t[0]
 
     # Prevent discontinuities in right ascension
@@ -64,12 +64,12 @@ def get_sunset_and_sunrise(tnow, loc, refalt):
             break
 
     # Hour angle offset
-    ha0 = np.arccos((np.sin(refalt)
-                     - np.sin(loc.lat)
-                     * np.sin(np.mean(pos.dec)))
+    ha0 = np.arccos((np.sin(refalt_set)
+                    - np.sin(loc.lat)
+                    * np.sin(np.mean(pos.dec)))
                     / (np.cos(loc.lat)
                     * np.cos(np.mean(pos.dec))))
-
+    
     # Get set time
     mset = mtransit+ha0/(360.0*u.deg)
     while True:
@@ -82,7 +82,7 @@ def get_sunset_and_sunrise(tnow, loc, refalt):
                         + np.cos(loc.lat)
                         * np.cos(de)
                         * np.cos(ha))
-        dm = (alt-refalt)/(360.0
+        dm = (alt-refalt_set)/(360.0
                            * u.deg
                            * np.cos(de)
                            * np.cos(loc.lat)
@@ -111,7 +111,7 @@ def get_sunset_and_sunrise(tnow, loc, refalt):
                         + np.cos(loc.lat)
                         * np.cos(de)
                         * np.cos(ha))
-        dm = (alt-refalt)/(360.0
+        dm = (alt-refalt_rise)/(360.0
                            * u.deg
                            * np.cos(de)
                            * np.cos(loc.lat)
