@@ -205,18 +205,20 @@ if __name__ == '__main__':
     logging.basicConfig(filename=os.path.join(path, "acquire.log"),
                         level=logging.DEBUG)
 
+
     # Set location
     loc = EarthLocation(lat=cfg.getfloat('Common', 'observer_lat')*u.deg,
                         lon=cfg.getfloat('Common', 'observer_lon')*u.deg,
                         height=cfg.getfloat('Common', 'observer_el')*u.m)
 
     if not testing:
-        # Reference altitude
-        refalt = -6.0 * u.deg
+        # Reference altitudes
+        refalt_set = cfg.getfloat('Control', 'alt_sunset')*u.deg
+        refalt_rise = cfg.getfloat('Control', 'alt_sunrise')*u.deg
 
         # Get sunrise and sunset times
-        state, tset, trise = get_sunset_and_sunrise(tnow, loc, refalt)
-
+        state, tset, trise = get_sunset_and_sunrise(tnow, loc, refalt_set, refalt_rise)
+        
         # Start/end logic
         if state == "sun never rises":
             logging.info("The sun never rises. Exiting program.")
