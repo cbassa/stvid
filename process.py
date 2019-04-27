@@ -16,6 +16,8 @@ import configparser
 import argparse
 import os
 from termcolor import colored
+import time
+import shutil
 
 if __name__ == "__main__":
     # Read commandline options
@@ -48,16 +50,6 @@ if __name__ == "__main__":
                         lon=cfg.getfloat('Common', 'observer_lon')*u.deg,
                         height=cfg.getfloat('Common', 'observer_el')*u.m)
 
-    # Move to processing directory
-    os.chdir(args.file_dir)
-
-    # Get files
-    fnames = sorted(glob.glob("2*.fits"))
-
-    # Statistics file
-    fstat = open("imgstat.csv", "w")
-    fstat.write("fname,mjd,ra,de,rmsx,rmsy,mean,std,nstars,nused\n")
-
     # Extract settings
     # Minimum predicted velocity (pixels/s)
     drdtmin = 10.0
@@ -71,6 +63,13 @@ if __name__ == "__main__":
     # Minimum track points
     ntrkmin = 10
 
+    # Move to processing directory
+    os.chdir(args.file_dir)
+    
+    # Statistics file
+    fstat = open("imgstat.csv", "w")
+    fstat.write("fname,mjd,ra,de,rmsx,rmsy,mean,std,nstars,nused\n")
+    
     # Create output dirs
     path = args.file_dir
     if not os.path.exists(os.path.join(path, "classfd")):
@@ -79,39 +78,57 @@ if __name__ == "__main__":
         os.makedirs(os.path.join(path, "catalog"))
     if not os.path.exists(os.path.join(path, "unid")):
         os.makedirs(os.path.join(path, "unid"))
+    if not os.path.exists(os.path.join(path, "processed")):
+        os.makedirs(os.path.join(path, "processed"))
 
-    # Loop over files
-    for fname in fnames:
-        # Generate star catalog
-        pix_catalog = generate_star_catalog(fname)
-
-        # Calibrate astrometry
-        calibrate_from_reference(fname, "test.fits",
-                                 pix_catalog)
-
-        # Generate satellite predictions
-        generate_satellite_predictions(fname)
-
-        # Detect lines with 3D Hough transform
-        ids = find_hough3d_lines(fname)
-
-        # Extract tracks
-        extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path)
+    # Forever loop
+    while True:
+        # Get files
+        fnames = sorted(glob.glob("2*.fits"))
         
-        # Stars available and used
-        nused = np.sum(pix_catalog.flag == 1)
-        nstars = pix_catalog.nstars
-        
-        # Get properties
-        ff = fourframe(fname)
+        # Loop over files
+        for fname in fnames:
+            # Generate star catalog
+            pix_catalog = generate_star_catalog(fname)
 
-        # Write output
-        output = "%s %10.6f %10.6f %4d/%4d %5.1f %5.1f %6.2f +- %6.2f"%(ff.fname, ff.crval[0], ff.crval[1], nused, nstars, 3600.0*ff.crres[0], 3600.0*ff.crres[1], np.mean(ff.zavg), np.std(ff.zavg))
-        print(colored(output, "yellow"))
-        fstat.write(("%s,%.8lf,%.6f,%.6f,%.3f,%.3f,%.3f," +
-                     "%.3f,%d,%d\n") % (ff.fname, ff.mjd, ff.crval[0],
-                                        ff.crval[1], 3600*ff.crres[0],
-                                        3600*ff.crres[1], np.mean(ff.zavg),
-                                        np.std(ff.zavg), nstars, nused))
+            # Calibrate astrometry
+            calibrate_from_reference(fname, "test.fits",
+                                     pix_catalog)
+
+            # Generate satellite predictions
+            generate_satellite_predictions(fname)
+            
+            # Detect lines with 3D Hough transform
+            ids = find_hough3d_lines(fname)
+
+            # Extract tracks
+            extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path)
+        
+            # Stars available and used
+            nused = np.sum(pix_catalog.flag == 1)
+            nstars = pix_catalog.nstars
+        
+            # Get properties
+            ff = fourframe(fname)
+
+            # Write output
+            output = "%s %10.6f %10.6f %4d/%4d %5.1f %5.1f %6.2f +- %6.2f"%(ff.fname, ff.crval[0], ff.crval[1], nused, nstars, 3600.0*ff.crres[0], 3600.0*ff.crres[1], np.mean(ff.zavg), np.std(ff.zavg))
+            print(colored(output, "yellow"))
+            fstat.write(("%s,%.8lf,%.6f,%.6f,%.3f,%.3f,%.3f," +
+                         "%.3f,%d,%d\n") % (ff.fname, ff.mjd, ff.crval[0],
+                                            ff.crval[1], 3600*ff.crres[0],
+                                            3600*ff.crres[1], np.mean(ff.zavg),
+                                            np.std(ff.zavg), nstars, nused))
+
+            # Move processed files
+            shutil.move(fname, "processed")
+            shutil.move(fname + ".png", "processed")
+            shutil.move(fname + ".id", "processed")
+            shutil.move(fname + ".cat", "processed")
+            
+        # Sleep
+        time.sleep(10)
+            
+    # Close files
     fstat.close()
 
