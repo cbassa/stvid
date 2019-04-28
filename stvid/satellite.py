@@ -47,7 +47,7 @@ def find_hough3d_lines(fname, ntrkmin=20, dr=8):
         return []
 
     # Clean output (a bit cluncky)
-    cleaned_output = output.replace("npoints=", "")
+    cleaned_output = output.decode("utf-8").replace("npoints=", "")
     cleaned_output = cleaned_output.replace(", a=(", " ")
     cleaned_output = cleaned_output.replace("), b=(", " ")
     cleaned_output = cleaned_output.replace(")", "")
