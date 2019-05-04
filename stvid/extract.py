@@ -4,6 +4,7 @@ import os
 import glob
 import shutil
 from stvid.stio import fourframe, satid, observation
+from stvid.astrometry import is_calibrated
 import numpy as np
 import ppgplot as ppg
 from scipy import optimize, ndimage
@@ -146,7 +147,7 @@ def store_results(ident, fname, path, iod_line):
     elif ident.catalog.find("inttles.tle") > 0:
         outfname = os.path.join(path, "classfd/classfd.dat")
         dest = os.path.join(path, "classfd")
-        color = "green"
+        color = "blue"
     elif ident.catalog.find("catalog.tle") > 0:
         outfname = os.path.join(path, "catalog/catalog.dat")
         dest = os.path.join(path, "catalog")
@@ -192,13 +193,10 @@ def plot_header(fname, ff, iod_line):
     ppg.pgmtxt("T", 6.0, 0.0, 0.0,
                "UT Date: %.23s  COSPAR ID: %04d"
                % (ff.nfd, ff.site_id))
-    if (3600.0*ff.crres[0] < 1e-3) | \
-       (3600.0*ff.crres[1] < 1e-3) | \
-       (ff.crres[0]/ff.sx > 2.0) | \
-       (ff.crres[1]/ff.sy > 2.0):
-        ppg.pgsci(2)
-    else:
+    if is_calibrated(ff):
         ppg.pgsci(1)
+    else:
+        ppg.pgsci(2)
     ppg.pgmtxt("T", 4.8, 0.0, 0.0,
                "R.A.: %10.5f (%4.1f'') Decl.: %10.5f (%4.1f'')"
                % (ff.crval[0],

@@ -206,3 +206,12 @@ def calibrate_from_reference(fname, ref, pix_catalog):
     add_wcs(fname, w, rmsx, rmsy)
 
     return w, rmsx, rmsy
+
+def is_calibrated(ff):
+    if (3600.0*ff.crres[0] < 1e-3) | \
+       (3600.0*ff.crres[1] < 1e-3) | \
+       (ff.crres[0]/ff.sx > 2.0) | \
+       (ff.crres[1]/ff.sy > 2.0):
+        return False
+    else:
+        return True

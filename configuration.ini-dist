@@ -9,6 +9,7 @@ observer_el = 100             # Elevation of location in meters
 
 observations_path = /path/to/obs/
 tle_path = /path/to/tle/
+results_path = /path/to/results
 
 [Credentials]
 st-username = username        # Space-track.org username

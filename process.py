@@ -5,6 +5,7 @@ import numpy as np
 from stvid.stio import fourframe
 from stvid.stars import generate_star_catalog
 from stvid.astrometry import calibrate_from_reference
+from stvid.astrometry import is_calibrated
 from stvid.satellite import generate_satellite_predictions
 from stvid.satellite import find_hough3d_lines
 from stvid.extract import extract_tracks
@@ -65,19 +66,21 @@ if __name__ == "__main__":
 
     # Move to processing directory
     os.chdir(args.file_dir)
-    
+
     # Statistics file
     fstat = open("imgstat.csv", "w")
     fstat.write("fname,mjd,ra,de,rmsx,rmsy,mean,std,nstars,nused\n")
     
     # Create output dirs
     path = args.file_dir
-    if not os.path.exists(os.path.join(path, "classfd")):
-        os.makedirs(os.path.join(path, "classfd"))
-    if not os.path.exists(os.path.join(path, "catalog")):
-        os.makedirs(os.path.join(path, "catalog"))
-    if not os.path.exists(os.path.join(path, "unid")):
-        os.makedirs(os.path.join(path, "unid"))
+    results_path = os.path.join(cfg.get('Common', 'results_path'),
+                                os.path.split(args.file_dir)[-1])
+    if not os.path.exists(os.path.join(results_path, "classfd")):
+        os.makedirs(os.path.join(results_path, "classfd"))
+    if not os.path.exists(os.path.join(results_path, "catalog")):
+        os.makedirs(os.path.join(results_path, "catalog"))
+    if not os.path.exists(os.path.join(results_path, "unid")):
+        os.makedirs(os.path.join(results_path, "unid"))
     if not os.path.exists(os.path.join(path, "processed")):
         os.makedirs(os.path.join(path, "processed"))
 
@@ -102,7 +105,7 @@ if __name__ == "__main__":
             ids = find_hough3d_lines(fname)
 
             # Extract tracks
-            extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path)
+            extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, results_path)
         
             # Stars available and used
             nused = np.sum(pix_catalog.flag == 1)
@@ -113,7 +116,10 @@ if __name__ == "__main__":
 
             # Write output
             output = "%s %10.6f %10.6f %4d/%4d %5.1f %5.1f %6.2f +- %6.2f"%(ff.fname, ff.crval[0], ff.crval[1], nused, nstars, 3600.0*ff.crres[0], 3600.0*ff.crres[1], np.mean(ff.zavg), np.std(ff.zavg))
-            print(colored(output, "yellow"))
+            if is_calibrated(ff):
+                print(colored(output, "green"))
+            else:
+                print(colored(output, "red"))
             fstat.write(("%s,%.8lf,%.6f,%.6f,%.3f,%.3f,%.3f," +
                          "%.3f,%d,%d\n") % (ff.fname, ff.mjd, ff.crval[0],
                                             ff.crval[1], 3600*ff.crres[0],
