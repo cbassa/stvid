@@ -3,6 +3,7 @@ from __future__ import print_function
 import numpy as np
 from astropy.io import ascii
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import astropy.units as u
 from astropy.coordinates import SkyCoord, AltAz, EarthLocation
 from astropy.time import Time
@@ -10,68 +11,82 @@ import configparser
 import argparse
 import os
 
-# Read commandline options
-conf_parser = argparse.ArgumentParser(description='Plot image statistics')
-conf_parser.add_argument("-c", "--conf_file",
-                         help="Specify configuration file. If no file" +
-                         " is specified 'configuration.ini' is used.",
-                         metavar="FILE")
-conf_parser.add_argument("-i", "--input",
-                         help="Specify file to be processed. If no file" +
-                         " is specified ./imgstat.csv will be used.",
-                         metavar='FILE', default="./imgstat.csv")
-conf_parser.add_argument("-d", "--directory",
-                         help="Specify directory of observations. If no" +
-                         " directory is specified parent will be used.",
-                         metavar='DIR', dest='file_dir', default=".")
-conf_parser.add_argument("-o", "--output",
-                         help="Specify output file. Default is 'imgstat.png'",
-                         metavar='FILE', default="./imgstat.png")
+if __name__ == "__main__":
+    # Read commandline options
+    conf_parser = argparse.ArgumentParser(description='Plot image statistics')
+    conf_parser.add_argument("-c", "--conf_file",
+                             help="Specify configuration file. If no file" +
+                             " is specified 'configuration.ini' is used.",
+                             metavar="FILE")
+    conf_parser.add_argument("-i", "--input",
+                             help="Specify file to be processed. If no file" +
+                             " is specified ./imgstat.csv will be used.",
+                             metavar='FILE', default="./imgstat.csv")
+    conf_parser.add_argument("-d", "--directory",
+                             help="Specify directory of observations. If no" +
+                             " directory is specified parent will be used.",
+                             metavar='DIR', dest='file_dir', default=".")
+    conf_parser.add_argument("-o", "--output",
+                             help="Specify output file. Default is 'imgstat.png'",
+                             metavar='FILE', default="./imgstat.png")
+    
+    args = conf_parser.parse_args()
+    
+    # Process commandline options and parse configuration
+    cfg = configparser.ConfigParser(inline_comment_prefixes=('#', ';'))
+    if args.conf_file:
+        cfg.read([args.conf_file])
+    else:
+        cfg.read('configuration.ini')
+        
+    # Move to processing directory
+    os.chdir(args.file_dir)
+        
+    table = ascii.read(args.input, format="csv")
 
-args = conf_parser.parse_args()
+    t = Time(table['mjd'], format="mjd", scale="utc")
+    tplot = mdates.date2num(t.datetime)
+    pos = SkyCoord(ra=table['ra'], dec=table['de'], frame="icrs", unit="deg")
 
-# Process commandline options and parse configuration
-cfg = configparser.ConfigParser(inline_comment_prefixes=('#', ';'))
-if args.conf_file:
-    cfg.read([args.conf_file])
-else:
-    cfg.read('configuration.ini')
+    # Set location
+    loc = EarthLocation(lat=cfg.getfloat('Common', 'observer_lat')*u.deg,
+                        lon=cfg.getfloat('Common', 'observer_lon')*u.deg,
+                        height=cfg.getfloat('Common', 'observer_el')*u.m)
+    
+    pa = pos.transform_to(AltAz(obstime=t, location=loc))
 
-# Move to processing directory
-os.chdir(args.file_dir)
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(20, 10), sharex=True)
 
-table = ascii.read(args.input, format="csv")
+    date_format = mdates.DateFormatter("%F\n%H:%M:%S")
+    fig.autofmt_xdate(rotation=0, ha="center")
 
-t = Time(table['mjd'], format="mjd", scale="utc")
-pos = SkyCoord(ra=table['ra'], dec=table['de'], frame="icrs", unit="deg")
+    ax1.plot(tplot, table['mean'], label='Brightness')
+    ax1.plot(tplot, table['std'], label='Variation')
+    ax1.set_ylabel("Brightness (ADU)")
 
-# Set location
-loc = EarthLocation(lat=cfg.getfloat('Common', 'observer_lat')*u.deg,
-                    lon=cfg.getfloat('Common', 'observer_lon')*u.deg,
-                    height=cfg.getfloat('Common', 'observer_el')*u.m)
+    ax1.xaxis_date()
+    ax1.xaxis.set_major_formatter(date_format)
+    ax1.legend()
 
-pa = pos.transform_to(AltAz(obstime=t, location=loc))
+    ax2.plot(tplot, pa.az.degree)
+    ax2.xaxis_date()
+    ax2.xaxis.set_major_formatter(date_format)
+    ax2.set_ylabel("Azimuth (deg)")
 
-mjd0 = np.floor(np.min(table['mjd']))
+    ax3.plot(tplot, pa.alt.degree)
+    ax3.xaxis_date()
+    ax3.xaxis.set_major_formatter(date_format)
+    ax3.set_ylabel("Altitude (deg)")
 
-plt.figure(figsize=(20, 10))
-plt.subplot(411)
+    ax4.plot(tplot, table['rmsx'], label="RA")
+    ax4.plot(tplot, table['rmsy'], label="Dec")
+    ax4.xaxis_date()
+    ax4.xaxis.set_major_formatter(date_format)
+    ax4.set_xlabel("Time (UTC)")
+    ax4.set_ylabel("Residuals (arcseconds)")
+    ax4.legend()
+        
+    plt.tight_layout()
+    plt.savefig(args.output)
 
-plt.plot(table['mjd']-mjd0, table['mean'], label='Brightness')
-plt.plot(table['mjd']-mjd0, table['std'], label='Variation')
-plt.ylabel("ADU")
-plt.legend()
-plt.subplot(412)
-plt.plot(table['mjd']-mjd0, pa.az.degree)
-plt.ylabel("Azimuth (deg)")
-plt.subplot(413)
-plt.plot(table['mjd']-mjd0, pa.alt.degree)
-plt.ylabel("Altitude (deg)")
-plt.subplot(414)
-plt.plot(table['mjd']-mjd0, table['rmsx'], label='RA')
-plt.plot(table['mjd']-mjd0, table['rmsy'], label='Dec')
-plt.ylim(0, 60)
-plt.ylabel("Residual (arcseconds)")
-plt.xlabel("MJD - %.0f" % mjd0)
-plt.legend()
-plt.savefig(args.output)
+    
