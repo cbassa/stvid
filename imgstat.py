@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 from __future__ import print_function
-import numpy as np
 from astropy.io import ascii
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
@@ -14,34 +13,43 @@ import os
 if __name__ == "__main__":
     # Read commandline options
     conf_parser = argparse.ArgumentParser(description='Plot image statistics')
-    conf_parser.add_argument("-c", "--conf_file",
+    conf_parser.add_argument("-c",
+                             "--conf_file",
                              help="Specify configuration file. If no file" +
                              " is specified 'configuration.ini' is used.",
                              metavar="FILE")
-    conf_parser.add_argument("-i", "--input",
+    conf_parser.add_argument("-i",
+                             "--input",
                              help="Specify file to be processed. If no file" +
                              " is specified ./imgstat.csv will be used.",
-                             metavar='FILE', default="./imgstat.csv")
-    conf_parser.add_argument("-d", "--directory",
+                             metavar='FILE',
+                             default="./imgstat.csv")
+    conf_parser.add_argument("-d",
+                             "--directory",
                              help="Specify directory of observations. If no" +
                              " directory is specified parent will be used.",
-                             metavar='DIR', dest='file_dir', default=".")
-    conf_parser.add_argument("-o", "--output",
-                             help="Specify output file. Default is 'imgstat.png'",
-                             metavar='FILE', default="./imgstat.png")
-    
+                             metavar='DIR',
+                             dest='file_dir',
+                             default=".")
+    conf_parser.add_argument(
+        "-o",
+        "--output",
+        help="Specify output file. Default is 'imgstat.png'",
+        metavar='FILE',
+        default="./imgstat.png")
+
     args = conf_parser.parse_args()
-    
+
     # Process commandline options and parse configuration
     cfg = configparser.ConfigParser(inline_comment_prefixes=('#', ';'))
     if args.conf_file:
         cfg.read([args.conf_file])
     else:
         cfg.read('configuration.ini')
-        
+
     # Move to processing directory
     os.chdir(args.file_dir)
-        
+
     table = ascii.read(args.input, format="csv")
 
     t = Time(table['mjd'], format="mjd", scale="utc")
@@ -49,13 +57,16 @@ if __name__ == "__main__":
     pos = SkyCoord(ra=table['ra'], dec=table['de'], frame="icrs", unit="deg")
 
     # Set location
-    loc = EarthLocation(lat=cfg.getfloat('Common', 'observer_lat')*u.deg,
-                        lon=cfg.getfloat('Common', 'observer_lon')*u.deg,
-                        height=cfg.getfloat('Common', 'observer_el')*u.m)
-    
+    loc = EarthLocation(lat=cfg.getfloat('Common', 'observer_lat') * u.deg,
+                        lon=cfg.getfloat('Common', 'observer_lon') * u.deg,
+                        height=cfg.getfloat('Common', 'observer_el') * u.m)
+
     pa = pos.transform_to(AltAz(obstime=t, location=loc))
 
-    fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(20, 10), sharex=True)
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(4,
+                                             1,
+                                             figsize=(20, 10),
+                                             sharex=True)
 
     date_format = mdates.DateFormatter("%F\n%H:%M:%S")
     fig.autofmt_xdate(rotation=0, ha="center")
@@ -85,8 +96,6 @@ if __name__ == "__main__":
     ax4.set_xlabel("Time (UTC)")
     ax4.set_ylabel("Residuals (arcseconds)")
     ax4.legend()
-        
+
     plt.tight_layout()
     plt.savefig(args.output)
-
-    
