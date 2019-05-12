@@ -77,8 +77,7 @@ if __name__ == "__main__":
 
     # Create output dirs
     path = args.file_dir
-    results_path = os.path.join(cfg.get('Common', 'results_path'),
-                                os.path.split(args.file_dir)[-1])
+    results_path = path
     if not os.path.exists(os.path.join(results_path, "classfd")):
         os.makedirs(os.path.join(results_path, "classfd"))
     if not os.path.exists(os.path.join(results_path, "catalog")):
@@ -107,17 +106,17 @@ if __name__ == "__main__":
             # Detect lines with 3D Hough transform
             ids = find_hough3d_lines(fname)
 
-            # Extract tracks
-            extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin,
-                           results_path)
-
-            # Stars available and used
-            nused = np.sum(pix_catalog.flag == 1)
-            nstars = pix_catalog.nstars
-
             # Get properties
             ff = fourframe(fname)
 
+            # Extract tracks
+            if is_calibrated(ff):
+                extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, results_path)
+        
+            # Stars available and used
+            nused = np.sum(pix_catalog.flag == 1)
+            nstars = pix_catalog.nstars
+        
             # Write output
             output = "%s %10.6f %10.6f %4d/%4d %5.1f %5.1f %6.2f +- %6.2f" % (
                 ff.fname, ff.crval[0], ff.crval[1], nused, nstars,
