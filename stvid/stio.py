@@ -22,7 +22,9 @@ class observation:
         self.nfd = Time(self.mjd, format='mjd', scale='utc').isot
 
         # Correct for rotation
-        tobs = Time(ff.mjd+0.5*ff.texp/86400.0, format='mjd', scale='utc')
+        tobs = Time(ff.mjd + 0.5 * ff.texp / 86400.0,
+                    format='mjd',
+                    scale='utc')
         tobs.delta_ut1_utc = 0
         hobs = tobs.sidereal_time("mean", longitude=0.0).degree
         tmid = Time(self.mjd, format='mjd', scale='utc')
@@ -31,7 +33,7 @@ class observation:
 
         # Compute ra/dec
         world = ff.w.wcs_pix2world(np.array([[self.x0, self.y0]]), 1)
-        self.ra = world[0, 0]+hobs-hmid
+        self.ra = world[0, 0] + hobs - hmid
         self.de = world[0, 1]
 
 
@@ -50,15 +52,13 @@ class satid:
         self.norad = int(s[6])
         self.catalog = s[7]
         self.state = s[8]
-        self.dxdt = (self.x1-self.x0)/(self.t1-self.t0)
-        self.dydt = (self.y1-self.y0)/(self.t1-self.t0)
+        self.dxdt = (self.x1 - self.x0) / (self.t1 - self.t0)
+        self.dydt = (self.y1 - self.y0) / (self.t1 - self.t0)
 
     def __repr__(self):
-        return "%s %f %f %f -> %f %f %f %d %s %s" % (self.nfd, self.x0,
-                                                     self.y0, self.t0,
-                                                     self.x1, self.y1,
-                                                     self.t1, self.norad,
-                                                     self.catalog, self.state)
+        return "%s %f %f %f -> %f %f %f %d %s %s" % (
+            self.nfd, self.x0, self.y0, self.t0, self.x1, self.y1, self.t1,
+            self.norad, self.catalog, self.state)
 
 
 class fourframe:
@@ -95,15 +95,15 @@ class fourframe:
             self.zavg, self.zstd, self.zmax, self.znum = hdu[0].data
 
             # Generate sigma frame
-            self.zsig = (self.zmax-self.zavg)/(self.zstd+1e-9)
+            self.zsig = (self.zmax - self.zavg) / (self.zstd + 1e-9)
 
             # Frame properties
             self.ny, self.nx = self.zavg.shape
             self.nz = hdu[0].header['NFRAMES']
 
             # Read frame time oselfsets
-            self.dt = np.array([hdu[0].header['DT%04d' % i]
-                                for i in range(self.nz)])
+            self.dt = np.array(
+                [hdu[0].header['DT%04d' % i] for i in range(self.nz)])
 
             # Read header
             self.mjd = hdu[0].header['MJD-OBS']
@@ -114,30 +114,29 @@ class fourframe:
             self.fname = fname
 
             # Astrometry keywords
-            self.crpix = np.array([hdu[0].header['CRPIX1'],
-                                   hdu[0].header['CRPIX2']])
-            self.crval = np.array([hdu[0].header['CRVAL1'],
-                                   hdu[0].header['CRVAL2']])
-            self.cd = np.array([[hdu[0].header['CD1_1'],
-                                 hdu[0].header['CD1_2']],
-                                [hdu[0].header['CD2_1'],
-                                 hdu[0].header['CD2_2']]])
+            self.crpix = np.array(
+                [hdu[0].header['CRPIX1'], hdu[0].header['CRPIX2']])
+            self.crval = np.array(
+                [hdu[0].header['CRVAL1'], hdu[0].header['CRVAL2']])
+            self.cd = np.array(
+                [[hdu[0].header['CD1_1'], hdu[0].header['CD1_2']],
+                 [hdu[0].header['CD2_1'], hdu[0].header['CD2_2']]])
             self.ctype = [hdu[0].header['CTYPE1'], hdu[0].header['CTYPE2']]
             self.cunit = [hdu[0].header['CUNIT1'], hdu[0].header['CUNIT2']]
-            self.crres = np.array([hdu[0].header['CRRES1'],
-                                   hdu[0].header['CRRES2']])
+            self.crres = np.array(
+                [hdu[0].header['CRRES1'], hdu[0].header['CRRES2']])
 
             hdu.close()
-            
+
         # Compute image properties
-        self.sx = np.sqrt(self.cd[0, 0]**2+self.cd[1, 0]**2)
-        self.sy = np.sqrt(self.cd[0, 1]**2+self.cd[1, 1]**2)
-        self.wx = self.nx*self.sx
-        self.wy = self.ny*self.sy
-        self.zmaxmin = np.mean(self.zmax)-2.0*np.std(self.zmax)
-        self.zmaxmax = np.mean(self.zmax)+6.0*np.std(self.zmax)
-        self.zavgmin = np.mean(self.zavg)-2.0*np.std(self.zavg)
-        self.zavgmax = np.mean(self.zavg)+6.0*np.std(self.zavg)
+        self.sx = np.sqrt(self.cd[0, 0]**2 + self.cd[1, 0]**2)
+        self.sy = np.sqrt(self.cd[0, 1]**2 + self.cd[1, 1]**2)
+        self.wx = self.nx * self.sx
+        self.wy = self.ny * self.sy
+        self.zmaxmin = np.mean(self.zmax) - 2.0 * np.std(self.zmax)
+        self.zmaxmax = np.mean(self.zmax) + 6.0 * np.std(self.zmax)
+        self.zavgmin = np.mean(self.zavg) - 2.0 * np.std(self.zavg)
+        self.zavgmax = np.mean(self.zavg) + 6.0 * np.std(self.zavg)
 
         # Setup WCS
         self.w = wcs.WCS(naxis=2)
@@ -163,10 +162,10 @@ class fourframe:
     def selection_mask(self, sigma, zstd):
         """Create a selection mask"""
         c1 = ndimage.uniform_filter(self.znum, 3, mode='constant')
-        c2 = ndimage.uniform_filter(self.znum*self.znum, 3, mode='constant')
+        c2 = ndimage.uniform_filter(self.znum * self.znum, 3, mode='constant')
 
         # Add epsilon to keep square root positive
-        z = np.sqrt(c2-c1*c1+1e-9)
+        z = np.sqrt(c2 - c1 * c1 + 1e-9)
 
         # Standard deviation mask
         c = z < zstd
@@ -177,7 +176,7 @@ class fourframe:
         c = self.zsig < sigma
         m2 = np.zeros_like(self.zavg)
         m2[~c] = 1.0
-        self.zsel = m1*m2
+        self.zsel = m1 * m2
 
         # Generate points
         c = self.zsel == 1.0
@@ -189,12 +188,17 @@ class fourframe:
 
         return x, y, inum, t, sig
 
-    def significant_pixels_along_track(self, sigma, x0, y0,
-                                       dxdt, dydt, rmin=10.0):
+    def significant_pixels_along_track(self,
+                                       sigma,
+                                       x0,
+                                       y0,
+                                       dxdt,
+                                       dydt,
+                                       rmin=10.0):
         """Extract significant pixels along a track"""
 
         # Generate sigma frame
-        zsig = (self.zmax-self.zavg)/(self.zstd+1e-9)
+        zsig = (self.zmax - self.zavg) / (self.zstd + 1e-9)
 
         # Select
         c = (zsig > sigma)
@@ -207,9 +211,9 @@ class fourframe:
         t = np.array([self.dt[i] for i in inum])
 
         # Predicted positions
-        xr = x0+dxdt*t
-        yr = y0+dydt*t
-        r = np.sqrt((x-xr)**2+(y-yr)**2)
+        xr = x0 + dxdt * t
+        yr = y0 + dydt * t
+        r = np.sqrt((x - xr)**2 + (y - yr)**2)
         c = r < rmin
 
         return x[c], y[c], t[c], sig[c]
@@ -218,7 +222,7 @@ class fourframe:
         """Extract significant pixels"""
 
         # Generate sigma frame
-        zsig = (self.zmax-self.zavg)/(self.zstd+1e-9)
+        zsig = (self.zmax - self.zavg) / (self.zstd + 1e-9)
 
         # Select
         c = (zsig > sigma)
@@ -239,8 +243,8 @@ class fourframe:
 
         # Loop over frames
         for i in range(self.nz):
-            dx = int(np.round(dxdt*(self.dt[i]-tref)))
-            dy = int(np.round(dydt*(self.dt[i]-tref)))
+            dx = int(np.round(dxdt * (self.dt[i] - tref)))
+            dy = int(np.round(dydt * (self.dt[i] - tref)))
 
             # Skip if shift larger than image
             if np.abs(dx) >= self.nx:
@@ -250,28 +254,23 @@ class fourframe:
 
             # Extract range
             if dx >= 0:
-                i1min, i1max = dx, self.nx-1
-                i2min, i2max = 0, self.nx-dx-1
+                i1min, i1max = dx, self.nx - 1
+                i2min, i2max = 0, self.nx - dx - 1
             else:
-                i1min, i1max = 0, self.nx+dx-1
-                i2min, i2max = -dx, self.nx-1
+                i1min, i1max = 0, self.nx + dx - 1
+                i2min, i2max = -dx, self.nx - 1
             if dy >= 0:
-                j1min, j1max = dy, self.ny-1
-                j2min, j2max = 0, self.ny-dy-1
+                j1min, j1max = dy, self.ny - 1
+                j2min, j2max = 0, self.ny - dy - 1
             else:
-                j1min, j1max = 0, self.ny+dy-1
-                j2min, j2max = -dy, self.ny-1
+                j1min, j1max = 0, self.ny + dy - 1
+                j2min, j2max = -dy, self.ny - 1
             zsel = np.where(self.znum == i, self.zmax, 0.0)
             ztrk[j2min:j2max, i2min:i2max] += zsel[j1min:j1max, i1min:i1max]
 
         return ztrk
 
     def __repr__(self):
-        return "%s %dx%dx%d %s %.3f %d %s" % (self.fname,
-                                              self.nx,
-                                              self.ny,
-                                              self.nz,
-                                              self.nfd,
-                                              self.texp,
-                                              self.site_id,
-                                              self.observer)
+        return "%s %dx%dx%d %s %.3f %d %s" % (self.fname, self.nx, self.ny,
+                                              self.nz, self.nfd, self.texp,
+                                              self.site_id, self.observer)

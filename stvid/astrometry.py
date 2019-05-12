@@ -207,6 +207,7 @@ def calibrate_from_reference(fname, ref, pix_catalog):
 
     return w, rmsx, rmsy
 
+
 def is_calibrated(ff):
     if (3600.0*ff.crres[0] < 1e-3) | \
        (3600.0*ff.crres[1] < 1e-3) | \
