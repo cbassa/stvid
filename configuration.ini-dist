@@ -20,10 +20,13 @@ alt_sunset = -6.0             # Solar altitude at sunset
 alt_sunrise = -6.0            # Solar altitude at sunrise
 
 [Camera]
+camera_type = watec           # or asi for ZWO ASI Cameras
 device_id = 0
 camera_x = 720                # Camera horizontal pixel count
 camera_y = 576                # Camera vertical pixel count
-camera_frames = 250           # Camera frames for each image (25fps*10sec=250)
+camera_frames = 250           # Camera frames for each image (e.g 25fps*10sec=250)
 
 [Astrometry]
 sex_config = /path/to/solve.sex
+low_app = 18                  # Arcsec per pixel low scale
+high_app = 20                 # Arcsec per pixel high scale

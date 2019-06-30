@@ -12,3 +12,4 @@ pytz==2018.4
 six==1.11.0
 spacetrack==0.13.0
 termcolor
+zwoasi
