@@ -15,35 +15,73 @@ from stvid.utils import get_sunset_and_sunrise
 import logging
 import configparser
 import argparse
+import zwoasi as asi
 
 
 # Capture images
-def capture(buf, z1, t1, z2, t2, device, nx, ny, nz, tend, live):
+def capture(buf, z1, t1, z2, t2, nx, ny, nz, tend, live, type):
     # Array flag
     first = True
+
+    # Initialize device
+    if camera_type == 'asi':
+        asi.init(os.getenv("ZWO_ASI_LIB"))
+
+        camera = asi.Camera(0)
+        camera_info = camera.get_camera_property()
+        logging.info('ASI Camera info: %s' % camera_info)
+
+        camera.set_control_value(asi.ASI_BANDWIDTHOVERLOAD,
+                                 camera.get_controls()['BandWidth']['MinValue'])
+        camera.disable_dark_subtract()
+
+        camera.set_control_value(asi.ASI_GAIN, 300)
+        camera.set_control_value(asi.ASI_EXPOSURE, 100000)
+        camera.set_control_value(asi.ASI_WB_B, 99)
+        camera.set_control_value(asi.ASI_WB_R, 75)
+        camera.set_control_value(asi.ASI_GAMMA, 50)
+        camera.set_control_value(asi.ASI_BRIGHTNESS, 50)
+        camera.set_control_value(asi.ASI_FLIP, 0)
+        camera.set_roi(bins=2)
+        camera.start_video_capture()
+        camera.set_image_type(asi.ASI_IMG_Y8)
+
+    else:
+        device = cv2.VideoCapture(devid)
+
+        # Set properties
+        device.set(3, nx)
+        device.set(4, ny)
 
     # Loop until reaching end time
     while float(time.time()) < tend:
         # Get frames
         for i in range(nz):
             # Get frame
-            ret, frame = device.read()
+            if type == 'asi':
+                frame = camera.capture_video_frame()
+                res = True
+            else:
+                res, frame = device.read()
 
             # Skip lost frames
-            if ret is True:
+            if res is True:
                 # Store time
                 t = float(time.time())
 
-                # Convert image to grayscale
-                gray = np.asarray(cv2.cvtColor(
-                    frame, cv2.COLOR_BGR2GRAY)).astype(np.uint8)
+                if type != 'asi':
+                    # Convert image to grayscale
+                    gray = np.asarray(cv2.cvtColor(
+                        frame, cv2.COLOR_BGR2GRAY)).astype(np.uint8)
 
-                # Store buffer
-                z = gray
+                    # Store buffer
+                    z = gray
+                else:
+                    z = frame
 
                 # Display Frame
                 if live is True:
-                    cv2.imshow("Capture", gray)
+                    cv2.imshow("Capture", z)
                     cv2.waitKey(1)
 
                 # Store results
@@ -64,6 +102,11 @@ def capture(buf, z1, t1, z2, t2, device, nx, ny, nz, tend, live):
         first = not first
 
     logging.info("Exiting capture")
+
+    if type == 'asi':
+        camera.stop_video_capture()
+    else:
+        device.release()
 
 
 def compress(buf, z1, t1, z2, t2, nx, ny, nz, tend, path):
@@ -191,6 +234,9 @@ if __name__ == '__main__':
     # Get device id
     devid = cfg.getint('Camera', 'device_id')
 
+    # Get camera type
+    camera_type = cfg.get('Camera', 'camera_type')
+
     # Current time
     tnow = Time.now()
 
@@ -249,13 +295,6 @@ if __name__ == '__main__':
     ny = cfg.getint('Camera', 'camera_y')
     nz = cfg.getint('Camera', 'camera_frames')
 
-    # Initialize device
-    device = cv2.VideoCapture(devid)
-
-    # Set properties
-    device.set(3, nx)
-    device.set(4, ny)
-
     # Initialize arrays
     z1base = multiprocessing.Array(ctypes.c_uint8, nx*ny*nz)
     z1 = np.ctypeslib.as_array(z1base.get_obj()).reshape(nz, ny, nx)
@@ -269,8 +308,8 @@ if __name__ == '__main__':
 
     # Set processes
     pcapture = multiprocessing.Process(target=capture,
-                                       args=(buf, z1, t1, z2, t2, device,
-                                             nx, ny, nz, tend.unix, live))
+                                       args=(buf, z1, t1, z2, t2,
+                                             nx, ny, nz, tend.unix, live, camera_type))
     pcompress = multiprocessing.Process(target=compress,
                                         args=(buf, z1, t1, z2, t2, nx, ny,
                                               nz, tend.unix, path))
@@ -290,4 +329,3 @@ if __name__ == '__main__':
     # Release device
     if live is True:
         cv2.destroyAllWindows()
-    device.release()
