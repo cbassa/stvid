@@ -134,9 +134,9 @@ if __name__ == "__main__":
 
             # Move processed files
             shutil.move(fname, "processed")
-            shutil.move(fname + ".png", "processed")
-            shutil.move(fname + ".id", "processed")
-            shutil.move(fname + ".cat", "processed")
+            shutil.move(fname + ".png", os.path.join("processed", fname + ".png"))
+            shutil.move(fname + ".id", os.path.join("processed", fname + ".id"))
+            shutil.move(fname + ".cat", os.path.join("processed", fname + ".cat"))
 
         # Sleep
         try:
