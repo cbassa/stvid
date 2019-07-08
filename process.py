@@ -86,6 +86,8 @@ if __name__ == "__main__":
         os.makedirs(os.path.join(path, "unid"))
     if not os.path.exists(os.path.join(path, "processed")):
         os.makedirs(os.path.join(path, "processed"))
+    if not os.path.exists(os.path.join(path, "not_seen")):
+        os.makedirs(os.path.join(path, "not_seen"))
 
     # Forever loop
     while True:

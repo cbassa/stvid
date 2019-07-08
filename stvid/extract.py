@@ -10,7 +10,6 @@ from scipy import optimize, ndimage
 from termcolor import colored
 import datetime
 
-
 # Gaussian model
 def model(a, nx, ny):
     x, y = np.meshgrid(np.arange(nx), np.arange(ny))
@@ -171,12 +170,25 @@ def store_results(ident, fname, path, iod_line):
     shutil.copy2(fname + ".cat", dest)
     shutil.copy2(fname + ".id", dest)
     shutil.copy2(fname + ".png", dest)
-    shutil.move(pngfile, os.path.join(dest, pngfile))
+    if os.path.exists(pngfile):
+        shutil.move(pngfile, os.path.join(dest, pngfile))
 
     # Write iodline
     fp = open(outfname, "a")
     fp.write("%s\n" % iod_line)
     fp.close()
+
+    return
+
+def store_not_seen(ident, fname, path):
+    # Find destination
+    dest = os.path.join(path, "not_seen")
+
+    # Copy files
+    shutil.copy2(fname, dest)
+    shutil.copy2(fname + ".cat", dest)
+    shutil.copy2(fname + ".id", dest)
+    shutil.copy2(fname + ".png", dest)
 
     return
 
@@ -332,7 +344,7 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path):
 
             # Store results
             store_results(ident, fname, path, iod_line)
-
+            object_detected = True
         elif ident.catalog.find("classfd.tle") > 0:
             # Track and stack
             t = np.linspace(0.0, ff.texp)
@@ -341,6 +353,7 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path):
 
             # Skip if no points selected
             if np.sum(c) == 0:
+                store_not_seen(ident, fname, path)
                 continue
 
             # Compute track
@@ -374,10 +387,12 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path):
 
             # Skip if peak is not significant
             if sigma < trksig:
+                store_not_seen(ident, fname, path)                
                 continue
 
             # Skip if point is outside selection area
             if inside_selection(ident, tmid, x0, y0) is False:
+                store_not_seen(ident, fname, path)                
                 continue
 
             # Format IOD line
@@ -387,8 +402,8 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path):
                                               obs.nfd, obs.ra, obs.de)
 
             # Create diagnostic plot
-            plot_header(fname.replace(".fits", "_%05d.png/png" % ident.norad),
-                        ff, iod_line)
+            pngfile = fname.replace(".fits", "_%05d.png" % ident.norad)
+            plot_header(pngfile + "/png", ff, iod_line)
 
             ppg.pgimag(ztrk, ff.nx, ff.ny, 0, ff.nx - 1, 0, ff.ny - 1, vmax,
                        vmin, tr)
@@ -416,3 +431,6 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path):
 
             # Store results
             store_results(ident, fname, path, iod_line)
+            object_detected = True
+
+
