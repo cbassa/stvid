@@ -23,15 +23,19 @@ import shutil
 if __name__ == "__main__":
     # Read commandline options
     conf_parser = argparse.ArgumentParser(description='Process captured' +
-                                                      ' video frames.')
-    conf_parser.add_argument("-c", "--conf_file",
+                                          ' video frames.')
+    conf_parser.add_argument("-c",
+                             "--conf_file",
                              help="Specify configuration file. If no file" +
                              " is specified 'configuration.ini' is used.",
                              metavar="FILE")
-    conf_parser.add_argument("-d", "--directory",
+    conf_parser.add_argument("-d",
+                             "--directory",
                              help="Specify directory of observations. If no" +
                              " directory is specified parent will be used.",
-                             metavar='DIR', dest='file_dir', default=".")
+                             metavar='DIR',
+                             dest='file_dir',
+                             default=".")
 
     args = conf_parser.parse_args()
 
@@ -47,9 +51,9 @@ if __name__ == "__main__":
     warnings.simplefilter("ignore", AstropyWarning)
 
     # Set location
-    loc = EarthLocation(lat=cfg.getfloat('Common', 'observer_lat')*u.deg,
-                        lon=cfg.getfloat('Common', 'observer_lon')*u.deg,
-                        height=cfg.getfloat('Common', 'observer_el')*u.m)
+    loc = EarthLocation(lat=cfg.getfloat('Common', 'observer_lat') * u.deg,
+                        lon=cfg.getfloat('Common', 'observer_lon') * u.deg,
+                        height=cfg.getfloat('Common', 'observer_el') * u.m)
 
     # Extract settings
     # Minimum predicted velocity (pixels/s)
@@ -70,7 +74,7 @@ if __name__ == "__main__":
     # Statistics file
     fstat = open("imgstat.csv", "w")
     fstat.write("fname,mjd,ra,de,rmsx,rmsy,mean,std,nstars,nused\n")
-    
+
     # Create output dirs
     path = args.file_dir
     if not os.path.exists(os.path.join(path, "classfd")):
@@ -86,19 +90,18 @@ if __name__ == "__main__":
     while True:
         # Get files
         fnames = sorted(glob.glob("2*.fits"))
-        
+
         # Loop over files
         for fname in fnames:
             # Generate star catalog
             pix_catalog = generate_star_catalog(fname)
 
             # Calibrate astrometry
-            calibrate_from_reference(fname, "test.fits",
-                                     pix_catalog)
+            calibrate_from_reference(fname, "test.fits", pix_catalog)
 
             # Generate satellite predictions
             generate_satellite_predictions(fname)
-            
+
             # Detect lines with 3D Hough transform
             ids = find_hough3d_lines(fname)
 
@@ -114,26 +117,28 @@ if __name__ == "__main__":
             nstars = pix_catalog.nstars
 
             # Write output
-            output = "%s %10.6f %10.6f %4d/%4d %5.1f %5.1f %6.2f +- %6.2f"%(ff.fname, ff.crval[0], ff.crval[1], nused, nstars, 3600.0*ff.crres[0], 3600.0*ff.crres[1], np.mean(ff.zavg), np.std(ff.zavg))
+            output = "%s %10.6f %10.6f %4d/%4d %5.1f %5.1f %6.2f +- %6.2f" % (
+                ff.fname, ff.crval[0], ff.crval[1], nused, nstars,
+                3600.0 * ff.crres[0], 3600.0 * ff.crres[1], np.mean(
+                    ff.zavg), np.std(ff.zavg))
             if is_calibrated(ff):
                 print(colored(output, "green"))
             else:
                 print(colored(output, "red"))
-            fstat.write(("%s,%.8lf,%.6f,%.6f,%.3f,%.3f,%.3f," +
-                         "%.3f,%d,%d\n") % (ff.fname, ff.mjd, ff.crval[0],
-                                            ff.crval[1], 3600*ff.crres[0],
-                                            3600*ff.crres[1], np.mean(ff.zavg),
-                                            np.std(ff.zavg), nstars, nused))
+            fstat.write(
+                ("%s,%.8lf,%.6f,%.6f,%.3f,%.3f,%.3f," + "%.3f,%d,%d\n") %
+                (ff.fname, ff.mjd, ff.crval[0], ff.crval[1],
+                 3600 * ff.crres[0], 3600 * ff.crres[1], np.mean(
+                     ff.zavg), np.std(ff.zavg), nstars, nused))
 
             # Move processed files
             shutil.move(fname, "processed")
             shutil.move(fname + ".png", "processed")
             shutil.move(fname + ".id", "processed")
             shutil.move(fname + ".cat", "processed")
-            
+
         # Sleep
         time.sleep(10)
-            
+
     # Close files
     fstat.close()
-

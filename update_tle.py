@@ -3,7 +3,6 @@ from __future__ import print_function
 import configparser
 import argparse
 from spacetrack import SpaceTrackClient
-import subprocess
 from shutil import copyfile
 import datetime
 from io import BytesIO
