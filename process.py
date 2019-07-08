@@ -19,6 +19,7 @@ import os
 from termcolor import colored
 import time
 import shutil
+import sys
 
 if __name__ == "__main__":
     # Read commandline options
@@ -138,7 +139,10 @@ if __name__ == "__main__":
             shutil.move(fname + ".cat", "processed")
 
         # Sleep
-        time.sleep(10)
+        try:
+            time.sleep(10)
+        except KeyboardInterrupt:
+            sys.exit()
 
     # Close files
     fstat.close()
