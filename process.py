@@ -73,14 +73,12 @@ if __name__ == "__main__":
     
     # Create output dirs
     path = args.file_dir
-    results_path = os.path.join(cfg.get('Common', 'results_path'),
-                                os.path.split(args.file_dir)[-1])
-    if not os.path.exists(os.path.join(results_path, "classfd")):
-        os.makedirs(os.path.join(results_path, "classfd"))
-    if not os.path.exists(os.path.join(results_path, "catalog")):
-        os.makedirs(os.path.join(results_path, "catalog"))
-    if not os.path.exists(os.path.join(results_path, "unid")):
-        os.makedirs(os.path.join(results_path, "unid"))
+    if not os.path.exists(os.path.join(path, "classfd")):
+        os.makedirs(os.path.join(path, "classfd"))
+    if not os.path.exists(os.path.join(path, "catalog")):
+        os.makedirs(os.path.join(path, "catalog"))
+    if not os.path.exists(os.path.join(path, "unid")):
+        os.makedirs(os.path.join(path, "unid"))
     if not os.path.exists(os.path.join(path, "processed")):
         os.makedirs(os.path.join(path, "processed"))
 
@@ -104,15 +102,16 @@ if __name__ == "__main__":
             # Detect lines with 3D Hough transform
             ids = find_hough3d_lines(fname)
 
+            # Get properties
+            ff = fourframe(fname)
+
             # Extract tracks
-            extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, results_path)
-        
+            if is_calibrated(ff):
+                extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path)
+                
             # Stars available and used
             nused = np.sum(pix_catalog.flag == 1)
             nstars = pix_catalog.nstars
-        
-            # Get properties
-            ff = fourframe(fname)
 
             # Write output
             output = "%s %10.6f %10.6f %4d/%4d %5.1f %5.1f %6.2f +- %6.2f"%(ff.fname, ff.crval[0], ff.crval[1], nused, nstars, 3600.0*ff.crres[0], 3600.0*ff.crres[1], np.mean(ff.zavg), np.std(ff.zavg))
