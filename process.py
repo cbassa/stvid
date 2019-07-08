@@ -133,7 +133,7 @@ if __name__ == "__main__":
                      ff.zavg), np.std(ff.zavg), nstars, nused))
 
             # Move processed files
-            shutil.move(fname, "processed")
+            shutil.move(fname, os.path.join("processed", fname))
             shutil.move(fname + ".png", os.path.join("processed", fname + ".png"))
             shutil.move(fname + ".id", os.path.join("processed", fname + ".id"))
             shutil.move(fname + ".cat", os.path.join("processed", fname + ".cat"))

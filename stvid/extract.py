@@ -166,14 +166,12 @@ def store_results(ident, fname, path, iod_line):
     print(colored(iod_line, color))
 
     # Copy files
+    pngfile = fname.replace(".fits", "_%05d.png" % ident.norad)
     shutil.copy2(fname, dest)
     shutil.copy2(fname + ".cat", dest)
     shutil.copy2(fname + ".id", dest)
     shutil.copy2(fname + ".png", dest)
-    try:
-        shutil.move(fname.replace(".fits", "_%05d.png" % ident.norad), dest)
-    except Exception:
-        pass
+    shutil.move(pngfile, os.path.join(dest, pngfile))
 
     # Write iodline
     fp = open(outfname, "a")
