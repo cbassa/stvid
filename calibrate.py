@@ -37,10 +37,12 @@ if __name__ == '__main__':
         print("Found " + file_for_astrometry + " for astrometric solving.")
 
         sex_config = cfg.get('Astrometry', 'sex_config')
+        low_app = cfg.get('Astrometry', 'low_app')
+        high_app = cfg.get('Astrometry', 'high_app')
 
         # Format command
-        command = "solve-field -O -y -u app -L 37 -H 40 --use-sextractor " + \
-                  "--sextractor-config %s --downsample 2 --x-column X_IMAGE " % sex_config + \
+        command = "solve-field -O -y -u app -L %s -H %s --downsample 2 " % (low_app, high_app) + \
+                  "--use-sextractor --sextractor-config %s --x-column X_IMAGE " % sex_config + \
                   "--y-column Y_IMAGE  --sort-column MAG_AUTO --sort-ascending " + \
                   "%s" % file_for_astrometry
 
