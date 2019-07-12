@@ -236,6 +236,7 @@ if __name__ == '__main__':
 
     # Get camera type
     camera_type = cfg.get('Camera', 'camera_type')
+    print(camera_type)
 
     # Current time
     tnow = Time.now()
@@ -248,7 +249,8 @@ if __name__ == '__main__':
         path = os.path.join(cfg.get('Common', 'observations_path'), "acquire_test")
     else:
         path = os.path.join(cfg.get('Common', 'observations_path'), obsid)
-    os.makedirs(path)
+    if not os.path.exists(path):
+        os.makedirs(path)
 
     # Setup logging
     logging.basicConfig(filename=os.path.join(path, "acquire.log"),
