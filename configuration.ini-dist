@@ -20,11 +20,22 @@ alt_sunset = -6.0             # Solar altitude at sunset
 alt_sunrise = -6.0            # Solar altitude at sunrise
 
 [Camera]
-camera_type = watec           # or asi for ZWO ASI Cameras
+camera_type = CV2             # CV2 or ASI
+
+[CV2]
 device_id = 0
-camera_x = 720                # Camera horizontal pixel count
-camera_y = 576                # Camera vertical pixel count
-camera_frames = 250           # Camera frames for each image (e.g 25fps*10sec=250)
+nx = 720                # Camera horizontal pixel count
+ny = 576                # Camera vertical pixel count
+nframes = 250           # Number of frames for each image
+
+[ASI]
+device_id = 0
+nx = 1544               # Camera horizontal pixel count
+ny = 1040               # Camera vertical pixel count
+nframes = 100           # Number of frames for each image
+gain = 300              # Camera gain
+exposure = 100000       # Exposure time in microseconds
+bin = 2                 # Binning factor (1: 1x2, 2: 2x2 etc)
 
 [Astrometry]
 sex_config = /path/to/solve.sex

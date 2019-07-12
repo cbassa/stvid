@@ -17,67 +17,33 @@ import configparser
 import argparse
 import zwoasi as asi
 
-
-# Capture images
-def capture(buf, z1, t1, z2, t2, nx, ny, nz, tend, live, type):
+# Capture images from cv2
+def capture_cv2(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live):
     # Array flag
     first = True
 
     # Initialize device
-    if camera_type == 'asi':
-        asi.init(os.getenv("ZWO_ASI_LIB"))
+    device = cv2.VideoCapture(device_id)
 
-        camera = asi.Camera(0)
-        camera_info = camera.get_camera_property()
-        logging.info('ASI Camera info: %s' % camera_info)
-
-        camera.set_control_value(asi.ASI_BANDWIDTHOVERLOAD,
-                                 camera.get_controls()['BandWidth']['MinValue'])
-        camera.disable_dark_subtract()
-
-        camera.set_control_value(asi.ASI_GAIN, 300)
-        camera.set_control_value(asi.ASI_EXPOSURE, 100000)
-        camera.set_control_value(asi.ASI_WB_B, 99)
-        camera.set_control_value(asi.ASI_WB_R, 75)
-        camera.set_control_value(asi.ASI_GAMMA, 50)
-        camera.set_control_value(asi.ASI_BRIGHTNESS, 50)
-        camera.set_control_value(asi.ASI_FLIP, 0)
-        camera.set_roi(bins=2)
-        camera.start_video_capture()
-        camera.set_image_type(asi.ASI_IMG_Y8)
-
-    else:
-        device = cv2.VideoCapture(devid)
-
-        # Set properties
-        device.set(3, nx)
-        device.set(4, ny)
+    # Set properties
+    device.set(3, nx)
+    device.set(4, ny)
 
     # Loop until reaching end time
     while float(time.time()) < tend:
         # Get frames
         for i in range(nz):
             # Get frame
-            if type == 'asi':
-                frame = camera.capture_video_frame()
-                res = True
-            else:
-                res, frame = device.read()
+            res, frame = device.read()
 
             # Skip lost frames
             if res is True:
                 # Store time
                 t = float(time.time())
 
-                if type != 'asi':
-                    # Convert image to grayscale
-                    gray = np.asarray(cv2.cvtColor(
-                        frame, cv2.COLOR_BGR2GRAY)).astype(np.uint8)
-
-                    # Store buffer
-                    z = gray
-                else:
-                    z = frame
+                # Convert image to grayscale
+                z = np.asarray(cv2.cvtColor(
+                    frame, cv2.COLOR_BGR2GRAY)).astype(np.uint8)
 
                 # Display Frame
                 if live is True:
@@ -101,13 +67,72 @@ def capture(buf, z1, t1, z2, t2, nx, ny, nz, tend, live, type):
         # Swap flag
         first = not first
 
+    # End capture
     logging.info("Exiting capture")
+    device.release()
 
-    if type == 'asi':
-        camera.stop_video_capture()
-    else:
-        device.release()
+# Capture images
+def capture_asi(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, gain, exposure, bins):
+    # Array flag
+    first = True
 
+    # Initialize device
+    asi.init(os.getenv("ZWO_ASI_LIB"))
+
+    camera = asi.Camera(device_id)
+    camera_info = camera.get_camera_property()
+    logging.info('ASI Camera info: %s' % camera_info)
+
+    camera.set_control_value(asi.ASI_BANDWIDTHOVERLOAD,
+                             camera.get_controls()['BandWidth']['MinValue'])
+    camera.disable_dark_subtract()
+    
+    camera.set_control_value(asi.ASI_GAIN, gain)
+    camera.set_control_value(asi.ASI_EXPOSURE, exposure)
+    camera.set_control_value(asi.ASI_WB_B, 99)
+    camera.set_control_value(asi.ASI_WB_R, 75)
+    camera.set_control_value(asi.ASI_GAMMA, 50)
+    camera.set_control_value(asi.ASI_BRIGHTNESS, 50)
+    camera.set_control_value(asi.ASI_FLIP, 0)
+    camera.set_roi(bins=bins)
+    camera.start_video_capture()
+    camera.set_image_type(asi.ASI_IMG_Y8)
+
+    # Loop until reaching end time
+    while float(time.time()) < tend:
+        # Get frames
+        for i in range(nz):
+            # Get frame
+            z = camera.capture_video_frame()
+
+            # Store time
+            t = float(time.time())
+
+            # Display Frame
+            if live is True:
+                cv2.imshow("Capture", z)
+                cv2.waitKey(1)
+
+            # Store results
+            if first:
+                z1[i] = z
+                t1[i] = t
+            else:
+                z2[i] = z
+                t2[i] = t
+
+        # Assign buffer ready
+        if first:
+            buf.value = 1
+        else:
+            buf.value = 2
+
+        # Swap flag
+        first = not first
+
+    # End capture
+    logging.info("Exiting capture")
+    camera.stop_video_capture()
 
 def compress(buf, z1, t1, z2, t2, nx, ny, nz, tend, path):
     # Flag to keep track of processed buffer
@@ -231,8 +256,11 @@ if __name__ == '__main__':
     else:
         live = False
 
+    # Get camera type
+    camera_type = cfg.get('Camera', 'camera_type')
+
     # Get device id
-    devid = cfg.getint('Camera', 'device_id')
+    device_id = cfg.getint(camera_type, 'device_id')
 
     # Get camera type
     camera_type = cfg.get('Camera', 'camera_type')
@@ -241,11 +269,15 @@ if __name__ == '__main__':
     tnow = Time.now()
 
     # Get obsid
-    obsid = time.strftime("%Y%m%d_%H%M%S", time.gmtime())+"_%d" % devid
+    obsid = time.strftime("%Y%m%d_%H%M%S", time.gmtime())+"_%d" % device_id
 
     # Generate directory
-    path = os.path.join(cfg.get('Common', 'observations_path'), obsid)
-    os.makedirs(path)
+    if testing:
+        path = os.path.join(cfg.get('Common', 'observations_path'), "acquire_test")
+    else:
+        path = os.path.join(cfg.get('Common', 'observations_path'), obsid)
+    if not os.path.exists(path):
+        os.makedirs(path)
 
     # Setup logging
     logging.basicConfig(filename=os.path.join(path, "acquire.log"),
@@ -290,11 +322,15 @@ if __name__ == '__main__':
     logging.info("Starting data acquisition.")
     logging.info("Acquisition will end at "+tend.isot)
 
-    # Settings
-    nx = cfg.getint('Camera', 'camera_x')
-    ny = cfg.getint('Camera', 'camera_y')
-    nz = cfg.getint('Camera', 'camera_frames')
-
+    # Get settings
+    nx = cfg.getint(camera_type, 'nx')
+    ny = cfg.getint(camera_type, 'ny')
+    nz = cfg.getint(camera_type, 'nframes')
+    if camera_type == "ASI":
+        gain = cfg.getint(camera_type, 'gain')
+        exposure = cfg.getint(camera_type, 'exposure')
+        bins = cfg.getint(camera_type, 'bin')
+    
     # Initialize arrays
     z1base = multiprocessing.Array(ctypes.c_uint8, nx*ny*nz)
     z1 = np.ctypeslib.as_array(z1base.get_obj()).reshape(nz, ny, nx)
@@ -307,12 +343,17 @@ if __name__ == '__main__':
     buf = multiprocessing.Value('i', 0)
 
     # Set processes
-    pcapture = multiprocessing.Process(target=capture,
-                                       args=(buf, z1, t1, z2, t2,
-                                             nx, ny, nz, tend.unix, live, camera_type))
     pcompress = multiprocessing.Process(target=compress,
                                         args=(buf, z1, t1, z2, t2, nx, ny,
                                               nz, tend.unix, path))
+    if camera_type == "CV2":
+        pcapture = multiprocessing.Process(target=capture_cv2,
+                                           args=(buf, z1, t1, z2, t2,
+                                                 nx, ny, nz, tend.unix, device_id, live))
+    elif camera_type == "ASI":
+        pcapture = multiprocessing.Process(target=capture_asi,
+                                           args=(buf, z1, t1, z2, t2,
+                                                 nx, ny, nz, tend.unix, device_id, live, gain, exposure, bins))
 
     # Start
     pcapture.start()
