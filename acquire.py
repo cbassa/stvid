@@ -244,7 +244,10 @@ if __name__ == '__main__':
     obsid = time.strftime("%Y%m%d_%H%M%S", time.gmtime())+"_%d" % devid
 
     # Generate directory
-    path = os.path.join(cfg.get('Common', 'observations_path'), obsid)
+    if testing:
+        path = os.path.join(cfg.get('Common', 'observations_path'), "acquire_test")
+    else:
+        path = os.path.join(cfg.get('Common', 'observations_path'), obsid)
     os.makedirs(path)
 
     # Setup logging
