@@ -73,7 +73,7 @@ def capture_cv2(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live):
     device.release()
 
 # Capture images
-def capture_asi(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live):
+def capture_asi(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, gain, exposure, bins):
     # Array flag
     first = True
 
@@ -88,14 +88,14 @@ def capture_asi(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live):
                              camera.get_controls()['BandWidth']['MinValue'])
     camera.disable_dark_subtract()
     
-    camera.set_control_value(asi.ASI_GAIN, 300)
-    camera.set_control_value(asi.ASI_EXPOSURE, 100000)
+    camera.set_control_value(asi.ASI_GAIN, gain)
+    camera.set_control_value(asi.ASI_EXPOSURE, exposure)
     camera.set_control_value(asi.ASI_WB_B, 99)
     camera.set_control_value(asi.ASI_WB_R, 75)
     camera.set_control_value(asi.ASI_GAMMA, 50)
     camera.set_control_value(asi.ASI_BRIGHTNESS, 50)
     camera.set_control_value(asi.ASI_FLIP, 0)
-    camera.set_roi(bins=2)
+    camera.set_roi(bins=bins)
     camera.start_video_capture()
     camera.set_image_type(asi.ASI_IMG_Y8)
 
@@ -320,14 +320,14 @@ if __name__ == '__main__':
     logging.info("Starting data acquisition.")
     logging.info("Acquisition will end at "+tend.isot)
 
-    # Settings
+    # Get settings
     nx = cfg.getint(camera_type, 'nx')
     ny = cfg.getint(camera_type, 'ny')
     nz = cfg.getint(camera_type, 'nframes')
-
-    print(camera_type, device_id, nx, ny, nz)
-    
-
+    if camera_type == "ASI":
+        gain = cfg.getint(camera_type, 'gain')
+        exposure = cfg.getint(camera_type, 'exposure')
+        bins = cfg.getint(camera_type, 'bin')
     
     # Initialize arrays
     z1base = multiprocessing.Array(ctypes.c_uint8, nx*ny*nz)
@@ -341,6 +341,9 @@ if __name__ == '__main__':
     buf = multiprocessing.Value('i', 0)
 
     # Set processes
+    pcompress = multiprocessing.Process(target=compress,
+                                        args=(buf, z1, t1, z2, t2, nx, ny,
+                                              nz, tend.unix, path))
     if camera_type == "CV2":
         pcapture = multiprocessing.Process(target=capture_cv2,
                                            args=(buf, z1, t1, z2, t2,
@@ -348,10 +351,7 @@ if __name__ == '__main__':
     elif camera_type == "ASI":
         pcapture = multiprocessing.Process(target=capture_asi,
                                            args=(buf, z1, t1, z2, t2,
-                                                 nx, ny, nz, tend.unix, device_id, live))
-    pcompress = multiprocessing.Process(target=compress,
-                                        args=(buf, z1, t1, z2, t2, nx, ny,
-                                              nz, tend.unix, path))
+                                                 nx, ny, nz, tend.unix, device_id, live, gain, exposure, bins))
 
     # Start
     pcapture.start()
