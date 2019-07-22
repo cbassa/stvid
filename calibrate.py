@@ -44,7 +44,7 @@ if __name__ == '__main__':
         command = "solve-field -O -y -u app -L %s -H %s --downsample 2 " % (low_app, high_app) + \
                   "--use-sextractor --sextractor-config %s --x-column X_IMAGE " % sex_config + \
                   "--y-column Y_IMAGE  --sort-column MAG_AUTO --sort-ascending " + \
-                  "%s" % file_for_astrometry
+                  "--no-plots -T -N %s/test.fits %s" % (path, file_for_astrometry)
 
         # Run sextractor
         subprocess.run(command, shell=True, stderr=subprocess.STDOUT)
