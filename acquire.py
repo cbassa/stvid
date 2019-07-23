@@ -72,7 +72,7 @@ def capture_cv2(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live):
     device.release()
 
 # Capture images
-def capture_asi(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, gain, exposure, bins, brightness, bandwidth):
+def capture_asi(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, gain, maxgain, autogain, exposure, bins, brightness, bandwidth):
     # Array flag
     first = True
 
@@ -86,8 +86,9 @@ def capture_asi(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, gain, ex
     camera.set_control_value(asi.ASI_BANDWIDTHOVERLOAD, bandwidth)
     camera.disable_dark_subtract()
     
-    camera.set_control_value(asi.ASI_GAIN, gain)
-    camera.set_control_value(asi.ASI_EXPOSURE, exposure)
+    camera.set_control_value(asi.ASI_GAIN, gain, auto=autogain)
+    camera.set_control_value(asi.ASI_EXPOSURE, exposure, auto=False)
+    camera.set_control_value(asi.ASI_AUTO_MAX_GAIN, maxgain)
     camera.set_control_value(asi.ASI_WB_B, 99)
     camera.set_control_value(asi.ASI_WB_R, 75)
     camera.set_control_value(asi.ASI_GAMMA, 50)
@@ -97,8 +98,31 @@ def capture_asi(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, gain, ex
     camera.start_video_capture()
     camera.set_image_type(asi.ASI_IMG_RAW8)
 
+    # Fix autogain
+    if autogain:
+        while True:
+            # Get frame
+            z = camera.capture_video_frame()
+
+            # Break on no change in gain
+            settings = camera.get_control_values()
+            if gain == settings["Gain"]:
+                break
+            gain = settings["Gain"]
+            camera.set_control_value(asi.ASI_GAIN, gain, auto=autogain)
+
     # Loop until reaching end time
     while float(time.time()) < tend:
+        # Get settings
+        settings = camera.get_control_values()
+        gain = settings["Gain"]
+        temp = settings["Temperature"]/10.0
+        logging.info("Capturing frame with gain %d, temperature %.1f" % (gain, temp))
+            
+        # Set gain
+        if autogain:
+            camera.set_control_value(asi.ASI_GAIN, gain, auto=autogain)
+
         # Get frames
         for i in range(nz):
             # Get frame
@@ -109,7 +133,7 @@ def capture_asi(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, gain, ex
 
             # Display Frame
             if live is True:
-                cv2.imshow("Capture", z)
+                cv2.imshow("Capture", cv2.resize(z, (nx//2, ny//2)))
                 cv2.waitKey(1)
 
             # Store results
@@ -327,6 +351,8 @@ if __name__ == '__main__':
     nz = cfg.getint(camera_type, 'nframes')
     if camera_type == "ASI":
         gain = cfg.getint(camera_type, 'gain')
+        maxgain = cfg.getint(camera_type, 'maxgain')
+        autogain = cfg.getboolean(camera_type, 'autogain')
         exposure = cfg.getint(camera_type, 'exposure')
         bins = cfg.getint(camera_type, 'bin')
         brightness = cfg.getint(camera_type, 'brightness')
@@ -354,8 +380,8 @@ if __name__ == '__main__':
     elif camera_type == "ASI":
         pcapture = multiprocessing.Process(target=capture_asi,
                                            args=(buf, z1, t1, z2, t2,
-                                                 nx, ny, nz, tend.unix, device_id, live, gain, exposure, bins,
-                                                 brightness, bandwidth))
+                                                 nx, ny, nz, tend.unix, device_id, live, gain, maxgain, autogain,
+                                                 exposure, bins, brightness, bandwidth))
 
     # Start
     pcapture.start()
