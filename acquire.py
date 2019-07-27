@@ -33,14 +33,17 @@ def capture_cv2(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live):
     while float(time.time()) < tend:
         # Get frames
         for i in range(nz):
+            # Store start time
+            t0 = float(time.time())
+            
             # Get frame
             res, frame = device.read()
 
+            # Compute mid time
+            t = (float(time.time())+t0)/2.0
+
             # Skip lost frames
             if res is True:
-                # Store time
-                t = float(time.time())
-
                 # Convert image to grayscale
                 z = np.asarray(cv2.cvtColor(
                     frame, cv2.COLOR_BGR2GRAY)).astype(np.uint8)
@@ -125,11 +128,14 @@ def capture_asi(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, gain, ma
 
         # Get frames
         for i in range(nz):
+            # Store start time
+            t0 = float(time.time())
+
             # Get frame
             z = camera.capture_video_frame()
 
-            # Store time
-            t = float(time.time())
+            # Compute mid time
+            t = (float(time.time())+t0)/2.0
 
             # Display Frame
             if live is True:
