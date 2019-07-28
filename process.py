@@ -77,18 +77,22 @@ if __name__ == "__main__":
     fstat.write("fname,mjd,ra,de,rmsx,rmsy,mean,std,nstars,nused\n")
 
     # Create output dirs
-    path = args.file_dir
-    if not os.path.exists(os.path.join(path, "classfd")):
-        os.makedirs(os.path.join(path, "classfd"))
-    if not os.path.exists(os.path.join(path, "catalog")):
-        os.makedirs(os.path.join(path, "catalog"))
-    if not os.path.exists(os.path.join(path, "unid")):
-        os.makedirs(os.path.join(path, "unid"))
-    if not os.path.exists(os.path.join(path, "processed")):
-        os.makedirs(os.path.join(path, "processed"))
-    if not os.path.exists(os.path.join(path, "not_seen")):
-        os.makedirs(os.path.join(path, "not_seen"))
-
+    file_dir = args.file_dir.rstrip("/")
+    root_dir = os.path.split(file_dir)[0]
+    results_dir = os.path.join(cfg.get('Common', 'results_path'),
+                               os.path.split(root_dir)[-1])
+    processed_dir = os.path.join(file_dir, "processed")
+    if not os.path.exists(os.path.join(results_dir, "classfd")):
+        os.makedirs(os.path.join(results_dir, "classfd"))
+    if not os.path.exists(os.path.join(results_dir, "catalog")):
+        os.makedirs(os.path.join(results_dir, "catalog"))
+    if not os.path.exists(os.path.join(results_dir, "unid")):
+        os.makedirs(os.path.join(results_dir, "unid"))
+    if not os.path.exists(os.path.join(results_dir, "not_seen")):
+        os.makedirs(os.path.join(results_dir, "not_seen"))
+    if not os.path.exists(processed_dir):
+        os.makedirs(processed_dir)
+        
     # Forever loop
     while True:
         # Get files
@@ -113,7 +117,7 @@ if __name__ == "__main__":
 
             # Extract tracks
             if is_calibrated(ff):
-                extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path)
+                extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, root_dir, results_dir)
                 
             # Stars available and used
             nused = np.sum(pix_catalog.flag == 1)
@@ -135,10 +139,10 @@ if __name__ == "__main__":
                      ff.zavg), np.std(ff.zavg), nstars, nused))
 
             # Move processed files
-            shutil.move(fname, os.path.join("processed", fname))
-            shutil.move(fname + ".png", os.path.join("processed", fname + ".png"))
-            shutil.move(fname + ".id", os.path.join("processed", fname + ".id"))
-            shutil.move(fname + ".cat", os.path.join("processed", fname + ".cat"))
+            shutil.move(fname, os.path.join(processed_dir, fname))
+            shutil.move(fname + ".png", os.path.join(processed_dir, fname + ".png"))
+            shutil.move(fname + ".id", os.path.join(processed_dir, fname + ".id"))
+            shutil.move(fname + ".cat", os.path.join(processed_dir, fname + ".cat"))
 
         # Sleep
         try:

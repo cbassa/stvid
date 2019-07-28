@@ -231,7 +231,7 @@ def plot_header(fname, ff, iod_line):
 
 
 # Extract tracks
-def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path):
+def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path, results_path):
     # Read four frame
     ff = fourframe(fname)
 
@@ -343,7 +343,7 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path):
             ppg.pgend()
 
             # Store results
-            store_results(ident, fname, path, iod_line)
+            store_results(ident, fname, results_path, iod_line)
             object_detected = True
         elif ident.catalog.find("classfd.tle") > 0:
             # Track and stack
@@ -353,7 +353,7 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path):
 
             # Skip if no points selected
             if np.sum(c) == 0:
-                store_not_seen(ident, fname, path)
+                store_not_seen(ident, fname, results_path)
                 continue
 
             # Compute track
@@ -387,12 +387,12 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path):
 
             # Skip if peak is not significant
             if sigma < trksig:
-                store_not_seen(ident, fname, path)                
+                store_not_seen(ident, fname, results_path)                
                 continue
 
             # Skip if point is outside selection area
             if inside_selection(ident, tmid, x0, y0) is False:
-                store_not_seen(ident, fname, path)                
+                store_not_seen(ident, fname, results_path)                
                 continue
 
             # Format IOD line
@@ -430,7 +430,7 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path):
             ppg.pgend()
 
             # Store results
-            store_results(ident, fname, path, iod_line)
+            store_results(ident, fname, results_path, iod_line)
             object_detected = True
 
 

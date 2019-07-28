@@ -298,7 +298,8 @@ if __name__ == '__main__':
     tnow = Time.now()
 
     # Get obsid
-    obsid = time.strftime("%Y%m%d_%H%M%S", time.gmtime())+"_%d" % device_id
+    t = time.gmtime()
+    obsid = "%s_%d/%s"%(time.strftime("%Y%m%d", t), device_id, time.strftime("%H%M%S", t))
 
     # Generate directory
     if testing:
