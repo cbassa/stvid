@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 from __future__ import print_function
 import os
+import glob
 import numpy as np
+import subprocess
+import shutil
 import astropy.units as u
 from astropy.io import fits
 from astropy import wcs
@@ -216,3 +219,30 @@ def is_calibrated(ff):
         return False
     else:
         return True
+
+def generate_reference_with_anet(fname, cmd_args, reffname="test.fits", tempfroot="cal"):
+    # Copy file to generic name
+    shutil.copy2(fname, tempfroot + ".fits")
+    
+    # Generate command
+    command = "solve-field %s -O -T -N %s %s.fits" % (cmd_args, reffname, tempfroot)
+    
+    # Run command
+    try:
+        subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
+
+        # Did the astrometry succeed?
+        solved = os.path.exists("%s.solved" % tempfroot)
+    except:
+        solved = False
+
+    # Remove temporary files
+    for fname in glob.glob("%s*" % tempfroot):
+        try:
+            os.remove(fname)
+        except:
+            pass
+
+    return solved
+    
+    
