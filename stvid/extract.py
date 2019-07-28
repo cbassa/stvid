@@ -10,6 +10,7 @@ from scipy import optimize, ndimage
 from termcolor import colored
 import datetime
 
+
 # Gaussian model
 def model(a, nx, ny):
     x, y = np.meshgrid(np.arange(nx), np.arange(ny))
@@ -180,6 +181,7 @@ def store_results(ident, fname, path, iod_line):
 
     return
 
+
 def store_not_seen(ident, fname, path):
     # Find destination
     dest = os.path.join(path, "not_seen")
@@ -344,7 +346,7 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path, results_path)
 
             # Store results
             store_results(ident, fname, results_path, iod_line)
-            object_detected = True
+
         elif ident.catalog.find("classfd.tle") > 0:
             # Track and stack
             t = np.linspace(0.0, ff.texp)
@@ -387,12 +389,12 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path, results_path)
 
             # Skip if peak is not significant
             if sigma < trksig:
-                store_not_seen(ident, fname, results_path)                
+                store_not_seen(ident, fname, results_path)
                 continue
 
             # Skip if point is outside selection area
             if inside_selection(ident, tmid, x0, y0) is False:
-                store_not_seen(ident, fname, results_path)                
+                store_not_seen(ident, fname, results_path)
                 continue
 
             # Format IOD line
@@ -431,6 +433,3 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path, results_path)
 
             # Store results
             store_results(ident, fname, results_path, iod_line)
-            object_detected = True
-
-

@@ -93,7 +93,7 @@ if __name__ == "__main__":
         os.makedirs(os.path.join(results_dir, "not_seen"))
     if not os.path.exists(processed_dir):
         os.makedirs(processed_dir)
-        
+
     # Forever loop
     while True:
         # Get files
@@ -107,18 +107,18 @@ if __name__ == "__main__":
             # Create reference calibration file
             if not os.path.exists("test.fits"):
                 solved = generate_reference_with_anet(fname, "")
-            
+
             # Calibrate astrometry
             calibrate_from_reference(fname, "test.fits", pix_catalog)
 
             # Redo refence if astrometry failed
-            if not is_calibrated(fourframe(fname)) and pix_catalog.nstars>10:
+            if not is_calibrated(fourframe(fname)) and pix_catalog.nstars > 10:
                 print(colored("Recomputing astrometric calibration for %s" % fname, "yellow"))
                 solved = generate_reference_with_anet(fname, "")
 
                 # Calibrate astrometry
                 calibrate_from_reference(fname, "test.fits", pix_catalog)
-                
+
             # Generate satellite predictions
             generate_satellite_predictions(fname)
 
@@ -127,11 +127,11 @@ if __name__ == "__main__":
 
             # Get properties
             ff = fourframe(fname)
-            
+
             # Extract tracks
             if is_calibrated(ff):
                 extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, root_dir, results_dir)
-                
+
             # Stars available and used
             nused = np.sum(pix_catalog.flag == 1)
             nstars = pix_catalog.nstars

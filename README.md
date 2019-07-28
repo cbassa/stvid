@@ -9,6 +9,8 @@ This repository is currently used for development, and relies, for the moment, o
 ## Installation
 **stvid** handles requirements using pip. You can install requirements by running `pip install -r requirements.txt`. You should consider using a VirtualEnv to run stvid on a separate python virtual environment. You will also need to download the [Tycho 2 catalog](https://www.dropbox.com/s/isbq1wsmfr24zx5/tyc2.fits?dl=0).
 
+You will also need to build and install [Hough3dLines](https://gitlab.com/pierros/hough3d-code) code, and have sextractor installed in your system.
+
 ## Configuration
 * Copy the `configuration.ini-dist` file to `configuration.ini`
 * Edit `configuration.ini` with your preferred settings
@@ -22,7 +24,7 @@ Features to be implemented.
 #### High priority
 * ~~Use sunset/sunrise times for starting/stopping data acquisition.~~
 * ~~Automatic astrometric calibration.~~
-* Recognize unidentified satellite/meteor tracks using [3D Hough transform](http://www.ipol.im/pub/art/2017/208/).
+* ~~Recognize unidentified satellite/meteor tracks using [3D Hough transform](http://www.ipol.im/pub/art/2017/208/).~~
 
 #### Medium priority
 * Pause data acquisition of the current line-of-sight (alt/az) is in the Earth's shadow for a particular orbital altitude.
