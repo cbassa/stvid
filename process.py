@@ -77,11 +77,11 @@ if __name__ == "__main__":
     fstat.write("fname,mjd,ra,de,rmsx,rmsy,mean,std,nstars,nused\n")
 
     # Create output dirs
-    file_dir = os.path.dirname(args.file_dir)
+    file_dir = args.file_dir.rstrip("/")
     root_dir = os.path.split(file_dir)[0]
     results_dir = os.path.join(cfg.get('Common', 'results_path'),
                                os.path.split(root_dir)[-1])
-    processed_dir = os.path.join(root_dir, "processed")
+    processed_dir = os.path.join(file_dir, "processed")
     if not os.path.exists(os.path.join(results_dir, "classfd")):
         os.makedirs(os.path.join(results_dir, "classfd"))
     if not os.path.exists(os.path.join(results_dir, "catalog")):
