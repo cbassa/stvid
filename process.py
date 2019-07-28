@@ -6,6 +6,7 @@ from stvid.stio import fourframe
 from stvid.stars import generate_star_catalog
 from stvid.astrometry import calibrate_from_reference
 from stvid.astrometry import is_calibrated
+from stvid.astrometry import generate_reference_with_anet
 from stvid.satellite import generate_satellite_predictions
 from stvid.satellite import find_hough3d_lines
 from stvid.extract import extract_tracks
@@ -103,9 +104,21 @@ if __name__ == "__main__":
             # Generate star catalog
             pix_catalog = generate_star_catalog(fname)
 
+            # Create reference calibration file
+            if not os.path.exists("test.fits"):
+                solved = generate_reference_with_anet(fname, "")
+            
             # Calibrate astrometry
             calibrate_from_reference(fname, "test.fits", pix_catalog)
 
+            # Redo refence if astrometry failed
+            if not is_calibrated(fourframe(fname)) and pix_catalog.nstars>10:
+                print(colored("Recomputing astrometric calibration for %s" % fname, "yellow"))
+                solved = generate_reference_with_anet(fname, "")
+
+                # Calibrate astrometry
+                calibrate_from_reference(fname, "test.fits", pix_catalog)
+                
             # Generate satellite predictions
             generate_satellite_predictions(fname)
 
@@ -114,7 +127,7 @@ if __name__ == "__main__":
 
             # Get properties
             ff = fourframe(fname)
-
+            
             # Extract tracks
             if is_calibrated(ff):
                 extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, root_dir, results_dir)
