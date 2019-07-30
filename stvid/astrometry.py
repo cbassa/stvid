@@ -11,7 +11,7 @@ from astropy import wcs
 from astropy.coordinates import SkyCoord, FK5, ICRS
 from astropy.time import Time
 from scipy import optimize
-
+from stvid.stars import pixel_catalog
 
 # Class for the Tycho 2 catalog
 class tycho2_catalog:
@@ -223,9 +223,13 @@ def is_calibrated(ff):
 def generate_reference_with_anet(fname, cmd_args, reffname="test.fits", tempfroot="cal"):
     # Copy file to generic name
     shutil.copy2(fname, tempfroot + ".fits")
+
+    # Get center
+    hdu = fits.open(fname)
+    ny, nx = hdu[0].data[0].shape
     
     # Generate command
-    command = "solve-field %s -O -T -N %s %s.fits" % (cmd_args, reffname, tempfroot)
+    command = "solve-field %s -l 20 -O -N %s --crpix-x %d --crpix-y %d -t 1 %s.fits" % (cmd_args, reffname, nx//2, ny//2, tempfroot)
     
     # Run command
     try:
@@ -244,5 +248,4 @@ def generate_reference_with_anet(fname, cmd_args, reffname="test.fits", tempfroo
             pass
 
     return solved
-    
     

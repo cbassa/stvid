@@ -59,7 +59,7 @@ if __name__ == "__main__":
 
     # Extract settings
     # Minimum predicted velocity (pixels/s)
-    drdtmin = 10.0
+    drdtmin = 5.0
 
     # Track selection region around prediction (pixels)
     trkrmin = 10.0
@@ -99,25 +99,31 @@ if __name__ == "__main__":
         # Get files
         fnames = sorted(glob.glob("2*.fits"))
 
+        # Create reference calibration file
+        if not os.path.exists("test.fits"):
+            solved = False
+            # Loop over files to find a suitable calibration file
+            for fname in fnames:
+                # Generate star catalog
+                pix_catalog = generate_star_catalog(fname)
+        
+                # Solve
+                if pix_catalog.nstars > 100:
+                    print(colored("Computing astrometric calibration for %s" % fname, "yellow"))
+                    solved = generate_reference_with_anet(fname, "")
+
+                # Break when solved
+                if solved:
+                    break
+                
         # Loop over files
         for fname in fnames:
             # Generate star catalog
-            pix_catalog = generate_star_catalog(fname)
+            if not os.path.exists(fname + ".cat"):
+                pix_catalog = generate_star_catalog(fname)
 
-            # Create reference calibration file
-            if not os.path.exists("test.fits"):
-                solved = generate_reference_with_anet(fname, "")
-
-            # Calibrate astrometry
+            # Calibrate from reference
             calibrate_from_reference(fname, "test.fits", pix_catalog)
-
-            # Redo refence if astrometry failed
-            if not is_calibrated(fourframe(fname)) and pix_catalog.nstars > 10:
-                print(colored("Recomputing astrometric calibration for %s" % fname, "yellow"))
-                solved = generate_reference_with_anet(fname, "")
-
-                # Calibrate astrometry
-                calibrate_from_reference(fname, "test.fits", pix_catalog)
 
             # Generate satellite predictions
             generate_satellite_predictions(fname)
