@@ -100,7 +100,7 @@ if __name__ == "__main__":
         fnames = sorted(glob.glob("2*.fits"))
 
         # Create reference calibration file
-        if not os.path.exists("test.fits"):
+        if os.path.exists("test.fits"):
             solved = False
             # Loop over files to find a suitable calibration file
             for fname in fnames:
