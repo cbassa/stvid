@@ -78,7 +78,7 @@ if __name__ == "__main__":
     fstat.write("fname,mjd,ra,de,rmsx,rmsy,mean,std,nstars,nused\n")
 
     # Create output dirs
-    file_dir = args.file_dir.rstrip("/")
+    file_dir = os.path.abspath(args.file_dir.rstrip("/"))
     root_dir = os.path.split(file_dir)[0]
     results_dir = os.path.join(cfg.get('Common', 'results_path'),
                                os.path.split(root_dir)[-1])
@@ -108,7 +108,7 @@ if __name__ == "__main__":
                 pix_catalog = generate_star_catalog(fname)
         
                 # Solve
-                if pix_catalog.nstars > 100:
+                if pix_catalog.nstars > 10:
                     print(colored("Computing astrometric calibration for %s" % fname, "yellow"))
                     solved = generate_reference_with_anet(fname, "")
 
