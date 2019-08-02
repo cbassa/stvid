@@ -2,7 +2,6 @@ astropy
 numpy
 opencv-python
 scipy
-git+https://github.com/haavee/ppgplot.git@master
 cycler==0.10.0
 kiwisolver==1.0.1
 matplotlib==2.2.2
@@ -13,3 +12,4 @@ six
 spacetrack==0.13.0
 termcolor
 zwoasi
+git+https://github.com/haavee/ppgplot.git@master

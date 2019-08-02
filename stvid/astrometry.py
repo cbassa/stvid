@@ -6,6 +6,7 @@ import numpy as np
 import subprocess
 import shutil
 import astropy.units as u
+import configparser
 from astropy.io import fits
 from astropy import wcs
 from astropy.coordinates import SkyCoord, FK5, ICRS
@@ -18,8 +19,10 @@ class tycho2_catalog:
     """Tycho2 catalog"""
 
     def __init__(self, maxmag=9.0):
-        hdu = fits.open(os.path.join(os.getenv("ST_DATADIR"),
-                                     "data/tyc2.fits"))
+        cfg = configparser.ConfigParser(inline_comment_prefixes=('#', ';'))
+        cfg.read('../configuration.ini')
+        tyc2 = cfg.get('Common', 'tyc2_path')
+        hdu = fits.open(tyc2)
 
         ra = hdu[1].data.field('RA')*u.deg
         dec = hdu[1].data.field('DEC')*u.deg
@@ -220,6 +223,7 @@ def is_calibrated(ff):
     else:
         return True
 
+
 def generate_reference_with_anet(fname, cmd_args, reffname="test.fits", tempfroot="cal"):
     # Copy file to generic name
     shutil.copy2(fname, tempfroot + ".fits")
@@ -248,4 +252,3 @@ def generate_reference_with_anet(fname, cmd_args, reffname="test.fits", tempfroo
             pass
 
     return solved
-    

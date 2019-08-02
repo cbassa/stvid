@@ -29,6 +29,7 @@ class pixel_catalog:
             self.flag = None
             self.nstars = 0
 
+
 def generate_star_catalog(fname):
     # Skip if file already exists
     if not os.path.exists(os.path.join(fname, ".cat")):

@@ -7,9 +7,10 @@ observer_lat = 19.8956        # Latitude of location in decimal degrees
 observer_lon = -155.2342      # Longitude of location in decimal degrees
 observer_el = 100             # Elevation of location in meters
 
-observations_path = /path/to/obs/
-tle_path = /path/to/tle/
-results_path = /path/to/results
+observations_path = /path/to/obs/ # Path for raw acquisitions
+tle_path = /path/to/tle/          # Path where TLEs are stored (and updated)
+results_path = /path/to/results   # Path for results of processed obs
+tyc2_path = ./tyc2.fits           # Path to Tycho 2 catalogue
 
 [Credentials]
 st-username = username        # Space-track.org username
@@ -44,5 +45,5 @@ high_speed = 1          # High speed mode (0 for False, 1 for True)
 
 [Astrometry]
 sex_config = /path/to/solve.sex
-low_app = 18                  # Arcsec per pixel low scale
-high_app = 20                 # Arcsec per pixel high scale
+low_app = 18            # Arcsec per pixel low scale - Resolution of camera
+high_app = 20           # Arcsec per pixel high scale - Resolution of camera

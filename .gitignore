@@ -1,8 +1,9 @@
 # Python compiled objects
 *.pyc
 
-# Emacs backup files
+# IDE files
 *~
+settings.json
 
-# Configuration file
-configuration.ini
+# Configuration files
+*.ini
