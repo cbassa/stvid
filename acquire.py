@@ -99,11 +99,11 @@ def capture_asi(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, gain,
     camera.set_control_value(asi.ASI_WB_R, 75)
     camera.set_control_value(asi.ASI_GAMMA, 50)
     camera.set_control_value(asi.ASI_BRIGHTNESS, brightness)
-    camera.set_control_value(asi.ASI_FLIP, 0)
-    camera.set_control_value(asi.ASI_HIGH_SPEED_MODE, high_speed)
+#    camera.set_control_value(asi.ASI_FLIP, 0)
+#    camera.set_control_value(asi.ASI_HIGH_SPEED_MODE, high_speed)
+#    if 'HardwareBin' in camera.get_controls():
+#        camera.set_control_value(asi.ASI_HARDWARE_BIN, 1)
     camera.set_roi(bins=binning)
-    if 'HardwareBin' in camera.get_controls():
-        camera.set_control_value(asi.ASI_HARDWARE_BIN, 1)
     camera.start_video_capture()
     camera.set_image_type(asi.ASI_IMG_RAW8)
 
@@ -145,7 +145,7 @@ def capture_asi(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, gain,
 
             # Display Frame
             if live is True:
-                cv2.imshow("Capture", cv2.resize(z, (nx//2, ny//2)))
+                cv2.imshow("Capture", z)                
                 cv2.waitKey(1)
 
             # Store results
