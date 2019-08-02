@@ -4,6 +4,7 @@ import glob
 import numpy as np
 from stvid.stio import fourframe
 from stvid.stars import generate_star_catalog
+from stvid.stars import store_calibration
 from stvid.astrometry import calibrate_from_reference
 from stvid.astrometry import is_calibrated
 from stvid.astrometry import generate_reference_with_anet
@@ -100,7 +101,7 @@ if __name__ == "__main__":
         fnames = sorted(glob.glob("2*.fits"))
 
         # Create reference calibration file
-        if os.path.exists("test.fits"):
+        if not os.path.exists("test.fits"):
             solved = False
             # Loop over files to find a suitable calibration file
             for fname in fnames:
@@ -125,6 +126,9 @@ if __name__ == "__main__":
             # Calibrate from reference
             calibrate_from_reference(fname, "test.fits", pix_catalog)
 
+            # Store calibration
+            store_calibration(pix_catalog, fname + ".cal")
+            
             # Generate satellite predictions
             generate_satellite_predictions(fname)
 
