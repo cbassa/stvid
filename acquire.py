@@ -99,10 +99,10 @@ def capture_asi(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, gain,
     camera.set_control_value(asi.ASI_WB_R, 75)
     camera.set_control_value(asi.ASI_GAMMA, 50)
     camera.set_control_value(asi.ASI_BRIGHTNESS, brightness)
-#    camera.set_control_value(asi.ASI_FLIP, 0)
-#    camera.set_control_value(asi.ASI_HIGH_SPEED_MODE, high_speed)
-#    if 'HardwareBin' in camera.get_controls():
-#        camera.set_control_value(asi.ASI_HARDWARE_BIN, 1)
+    camera.set_control_value(asi.ASI_FLIP, 0)
+    camera.set_control_value(asi.ASI_HIGH_SPEED_MODE, high_speed)
+    if 'HardwareBin' in camera.get_controls():
+        camera.set_control_value(asi.ASI_HARDWARE_BIN, 1)
     camera.set_roi(bins=binning)
     camera.start_video_capture()
     camera.set_image_type(asi.ASI_IMG_RAW8)
@@ -170,12 +170,38 @@ def capture_asi(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, gain,
     camera.stop_video_capture()
 
 
-def compress(buf, z1, t1, z2, t2, nx, ny, nz, tend, path):
+def compress(buf, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id):
     # Flag to keep track of processed buffer
     process_buf = 1
 
+    # Force a restart
+    controlpath = os.path.join(path, "control")
+    if not os.path.exists(controlpath):
+        os.makedirs(controlpath)
+    with open(os.path.join(controlpath, "state.txt"), "w") as fp:
+        fp.write("restart\n")
+
     # Start processing
     while True:
+        # Check mount state
+        restart = False
+        with open(os.path.join(controlpath, "state.txt"), "r") as fp:
+            line = fp.readline().rstrip()
+            if line == "restart":
+                restart = True
+
+        # Restart
+        if restart:
+            # Log state
+            with open(os.path.join(controlpath, "state.txt"), "w") as fp:
+                fp.write("observing\n")
+
+            # Get obsid
+            t = time.gmtime()
+            obsid = "%s_%d/%s" % (time.strftime("%Y%m%d", t), device_id, time.strftime("%H%M%S", t))
+            filepath = os.path.join(path, obsid)
+            logger.info("Storing files in %s" % filepath)
+                
         # Wait for buffer to become available
         while buf.value != process_buf:
             time.sleep(1.0)
@@ -242,10 +268,14 @@ def compress(buf, z1, t1, z2, t2, nx, ny, nz, tend, path):
         for i in range(10):
             hdr['DUMY%03d' % i] = 0.0
 
+        # Create output directory
+        if not os.path.exists(filepath):
+            os.makedirs(filepath)
+            
         # Write fits file
         hdu = fits.PrimaryHDU(data=np.array([zavg, zstd, zmax, znum]),
                               header=hdr)
-        hdu.writeto(os.path.join(path, fname))
+        hdu.writeto(os.path.join(filepath, fname))
         logger.info("Compressed %s" % fname)
 
         # Exit on end of capture
@@ -304,15 +334,8 @@ if __name__ == '__main__':
     # Current time
     tnow = Time.now()
 
-    # Get obsid
-    t = time.gmtime()
-    obsid = "%s_%d/%s" % (time.strftime("%Y%m%d", t), device_id, time.strftime("%H%M%S", t))
-
     # Generate directory
-    if testing:
-        path = os.path.join(cfg.get('Common', 'observations_path'), "acquire_test")
-    else:
-        path = os.path.join(cfg.get('Common', 'observations_path'), obsid)
+    path = os.path.abspath(cfg.get('Common', 'observations_path'))
     if not os.path.exists(path):
         os.makedirs(path)
 
@@ -364,7 +387,7 @@ if __name__ == '__main__':
             except KeyboardInterrupt:
                 sys.exit()
     else:
-        tend = tnow+31.0*u.minute
+        tend = tnow + 31.0*u.s
 
     logger.info("Starting data acquisition.")
     logger.info("Acquisition will end at "+tend.isot)
@@ -397,7 +420,7 @@ if __name__ == '__main__':
     # Set processes
     pcompress = multiprocessing.Process(target=compress,
                                         args=(buf, z1, t1, z2, t2, nx, ny,
-                                              nz, tend.unix, path))
+                                              nz, tend.unix, path, device_id))
     if camera_type == "CV2":
         pcapture = multiprocessing.Process(target=capture_cv2,
                                            args=(buf, z1, t1, z2, t2,
