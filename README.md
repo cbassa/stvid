@@ -1,19 +1,32 @@
 # STVID
 
-**stvid** is a set of *python* programs to detect and identify satellite tracks on video observations of the night sky, and measure the satellite positions to determine and/or update their orbits.
+**stvid** is a set of *python* programs to detect and identify satellite tracks on observations of the night sky, and measure the satellite positions to determine and/or update their orbits.
 
-This software will take over the satellite tracking functionality of my [sattools](https://github.com/cbassa/sattools). By porting the functionality to *python*, and using [astropy](https://github.com/astropy/astropy), and [opencv](https://opencv-python-tutroals.readthedocs.io/en/latest/), the software is easier to install and operate.
+## Background
+This software will take over the satellite tracking functionality of C.Bassa's [sattools](https://github.com/cbassa/sattools). By porting the functionality to *python*, and using [astropy](https://github.com/astropy/astropy), and [opencv](https://opencv-python-tutroals.readthedocs.io/en/latest/), the software is indented to be easier to install and operate.
 
-This repository is currently used for development, and relies, for the moment, on programs from the [sattools](https://github.com/cbassa/sattools) repository.
+This repository is currently used for development, and relies, for the moment, on programs from the [sattools](https://github.com/cbassa/sattools) repository (namely `satid`).
 
 ## Installation
-**stvid** handles requirements using pip. You can install requirements by running `pip install -r requirements.txt`. You should consider using a VirtualEnv to run stvid on a separate python virtual environment. You will also need to download the [Tycho 2 catalog](https://www.dropbox.com/s/isbq1wsmfr24zx5/tyc2.fits?dl=0).
+**stvid** handles requirements using pip. You can install requirements by running :
 
-You will also need to build and install [Hough3dLines](https://gitlab.com/pierros/hough3d-code) code, and have sextractor installed in your system.
+`pip install -r requirements.txt`
+
+Consider using a VirtualEnv to run stvid on a separate python virtual environment.
+
+### Additional requirements
+* [Hough3dLines](https://gitlab.com/pierros/hough3d-code)
+  * `hough3dlines` needs to be executable in your path
+* [Sextractor](https://github.com/astromatic/sextractor)
+  * `sextractor` needs to be executable in your path
+* [Astromentry.net](https://github.com/dstndstn/astrometry.net)
+  * `solve-field` needs to be executable in your path, with index files appropriate for your FOV
+* Download the [Tycho 2 catalog](https://www.dropbox.com/s/isbq1wsmfr24zx5/tyc2.fits?dl=0) and specify its path in configuration
 
 ## Configuration
 * Copy the `configuration.ini-dist` file to `configuration.ini`
 * Edit `configuration.ini` with your preferred settings
+* Make sure ST_DATADIR is set as an env variable pointing to the /data folder of sattools
 
 ## Running
 TBD
@@ -42,7 +55,7 @@ Features to be implemented.
 
 * Add user to video group (`sudo adduser <username> video`).
 * Add video device to udev rules (add `SUBSYSTEM=="video1", GROUP="video", MODE="0660"` in `/etc/udev/rules.d/10-webcam.rules`).
-* Create start up script in `/etc/init.d`. Call capture script as user with `su <username> -c "capture_1.sh"`.
+* Create start up script in `/etc/init.d`. Call capture script as user with `su <username> -c "acquire.py"`.
 
 ## License
 &copy; 2018-2019 Cees Bassa
