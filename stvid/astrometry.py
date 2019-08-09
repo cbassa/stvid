@@ -11,7 +11,6 @@ from astropy import wcs
 from astropy.coordinates import SkyCoord, FK5, ICRS
 from astropy.time import Time
 from scipy import optimize
-from stvid.stars import pixel_catalog
 
 
 # Class for the Tycho 2 catalog
@@ -229,24 +228,25 @@ def generate_reference_with_anet(fname, cmd_args, reffname="test.fits", tempfroo
     # Get center
     hdu = fits.open(fname)
     ny, nx = hdu[0].data[0].shape
-    
+
     # Generate command
-    command = "solve-field %s -l 20 -O -N %s --crpix-x %d --crpix-y %d -t 1 %s.fits" % (cmd_args, reffname, nx//2, ny//2, tempfroot)
-    
+    command = "solve-field %s -l 20 -O -N %s --crpix-x %d --crpix-y %d -t 1 %s.fits" \
+              % (cmd_args, reffname, nx//2, ny//2, tempfroot)
+
     # Run command
     try:
         subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
 
         # Did the astrometry succeed?
         solved = os.path.exists("%s.solved" % tempfroot)
-    except:
+    except OSError:
         solved = False
 
     # Remove temporary files
     for fname in glob.glob("%s*" % tempfroot):
         try:
             os.remove(fname)
-        except:
+        except OSError:
             pass
 
     return solved

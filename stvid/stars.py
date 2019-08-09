@@ -49,6 +49,7 @@ def generate_star_catalog(fname):
 
     return pixel_catalog(fname+".cat")
 
+
 def store_calibration(pix_catalog, fname):
     with open(fname, "w") as fp:
         for i in range(pix_catalog.nstars):

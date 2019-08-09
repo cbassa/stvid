@@ -107,7 +107,7 @@ if __name__ == "__main__":
             for fname in fnames:
                 # Generate star catalog
                 pix_catalog = generate_star_catalog(fname)
-        
+
                 # Solve
                 if pix_catalog.nstars > 10:
                     print(colored("Computing astrometric calibration for %s" % fname, "yellow"))
@@ -116,7 +116,7 @@ if __name__ == "__main__":
                 # Break when solved
                 if solved:
                     break
-                
+
         # Loop over files
         for fname in fnames:
             # Generate star catalog
@@ -128,7 +128,7 @@ if __name__ == "__main__":
 
             # Store calibration
             store_calibration(pix_catalog, fname + ".cal")
-            
+
             # Generate satellite predictions
             generate_satellite_predictions(fname)
 
