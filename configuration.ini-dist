@@ -10,7 +10,6 @@ observer_el = 100             # Elevation of location in meters
 observations_path = /path/to/obs/ # Path for raw acquisitions
 tle_path = /path/to/tle/          # Path where TLEs are stored (and updated)
 results_path = /path/to/results   # Path for results of processed obs
-tyc2_path = ./tyc2.fits           # Path to Tycho 2 catalogue
 
 [Credentials]
 st-username = username        # Space-track.org username

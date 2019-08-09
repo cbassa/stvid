@@ -6,7 +6,6 @@ import numpy as np
 import subprocess
 import shutil
 import astropy.units as u
-import configparser
 from astropy.io import fits
 from astropy import wcs
 from astropy.coordinates import SkyCoord, FK5, ICRS
@@ -14,14 +13,13 @@ from astropy.time import Time
 from scipy import optimize
 from stvid.stars import pixel_catalog
 
+
 # Class for the Tycho 2 catalog
 class tycho2_catalog:
     """Tycho2 catalog"""
 
     def __init__(self, maxmag=9.0):
-        cfg = configparser.ConfigParser(inline_comment_prefixes=('#', ';'))
-        cfg.read('../configuration.ini')
-        tyc2 = cfg.get('Common', 'tyc2_path')
+        tyc2 = os.path.join(os.path.dirname(__file__), '../data/tyc2.fits')
         hdu = fits.open(tyc2)
 
         ra = hdu[1].data.field('RA')*u.deg
