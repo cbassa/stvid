@@ -21,7 +21,6 @@ Consider using a VirtualEnv to run stvid on a separate python virtual environmen
   * `sextractor` needs to be executable in your path
 * [Astromentry.net](https://github.com/dstndstn/astrometry.net)
   * `solve-field` needs to be executable in your path, with index files appropriate for your FOV
-* Download the [Tycho 2 catalog](https://www.dropbox.com/s/isbq1wsmfr24zx5/tyc2.fits?dl=0) and specify its path in configuration
 
 ## Configuration
 * Copy the `configuration.ini-dist` file to `configuration.ini`

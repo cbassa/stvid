@@ -5,6 +5,7 @@ import numpy as np
 from stvid.stio import fourframe
 from stvid.stars import generate_star_catalog
 from stvid.stars import store_calibration
+from stvid.stars import pixel_catalog
 from stvid.astrometry import calibrate_from_reference
 from stvid.astrometry import is_calibrated
 from stvid.astrometry import generate_reference_with_anet
@@ -107,7 +108,7 @@ if __name__ == "__main__":
             for fname in fnames:
                 # Generate star catalog
                 pix_catalog = generate_star_catalog(fname)
-        
+
                 # Solve
                 if pix_catalog.nstars > 10:
                     print(colored("Computing astrometric calibration for %s" % fname, "yellow"))
@@ -116,19 +117,21 @@ if __name__ == "__main__":
                 # Break when solved
                 if solved:
                     break
-                
+
         # Loop over files
         for fname in fnames:
             # Generate star catalog
             if not os.path.exists(fname + ".cat"):
                 pix_catalog = generate_star_catalog(fname)
+            else:
+                pix_catalog = pixel_catalog(fname+".cat")
 
             # Calibrate from reference
             calibrate_from_reference(fname, "test.fits", pix_catalog)
 
             # Store calibration
             store_calibration(pix_catalog, fname + ".cal")
-            
+
             # Generate satellite predictions
             generate_satellite_predictions(fname)
 
@@ -166,6 +169,7 @@ if __name__ == "__main__":
             shutil.move(fname + ".png", os.path.join(processed_dir, fname + ".png"))
             shutil.move(fname + ".id", os.path.join(processed_dir, fname + ".id"))
             shutil.move(fname + ".cat", os.path.join(processed_dir, fname + ".cat"))
+            shutil.move(fname + ".cal", os.path.join(processed_dir, fname + ".cal"))
 
         # Sleep
         try:
