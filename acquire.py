@@ -95,6 +95,7 @@ def capture_asi(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, gain,
     camera.set_control_value(asi.ASI_GAIN, gain, auto=autogain)
     camera.set_control_value(asi.ASI_EXPOSURE, exposure, auto=False)
     camera.set_control_value(asi.ASI_AUTO_MAX_GAIN, maxgain)
+    camera.set_control_value(asi.ASI_AUTO_MAX_BRIGHTNESS, 20)
     camera.set_control_value(asi.ASI_WB_B, 99)
     camera.set_control_value(asi.ASI_WB_R, 75)
     camera.set_control_value(asi.ASI_GAMMA, 50)

@@ -169,6 +169,7 @@ def store_results(ident, fname, path, iod_line):
     pngfile = fname.replace(".fits", "_%05d.png" % ident.norad)
     shutil.copy2(fname, dest)
     shutil.copy2(fname + ".cat", dest)
+    shutil.copy2(fname + ".cal", dest)
     shutil.copy2(fname + ".id", dest)
     shutil.copy2(fname + ".png", dest)
     if os.path.exists(pngfile):
@@ -189,6 +190,7 @@ def store_not_seen(ident, fname, path):
     # Copy files
     shutil.copy2(fname, dest)
     shutil.copy2(fname + ".cat", dest)
+    shutil.copy2(fname + ".cal", dest)
     shutil.copy2(fname + ".id", dest)
     shutil.copy2(fname + ".png", dest)
 
