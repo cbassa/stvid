@@ -78,12 +78,13 @@ def capture_cv2(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live):
 
 # Capture images
 def capture_asi(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, gain,
-                maxgain, autogain, exposure, bins, brightness, bandwidth, high_speed):
+                maxgain, autogain, exposure, bins, brightness, bandwidth,
+                high_speed, sdk):
     # Array flag
     first = True
 
     # Initialize device
-    asi.init(os.getenv("ZWO_ASI_LIB"))
+    asi.init(sdk)
 
     camera = asi.Camera(device_id)
     camera_info = camera.get_camera_property()
@@ -405,6 +406,7 @@ if __name__ == '__main__':
         binning = cfg.getint(camera_type, 'bin')
         brightness = cfg.getint(camera_type, 'brightness')
         bandwidth = cfg.getint(camera_type, 'bandwidth')
+        sdk = cfg.get(camera_type, 'sdk')
         high_speed = cfg.getint(camera_type, 'high_speed')
 
     # Initialize arrays
@@ -431,7 +433,7 @@ if __name__ == '__main__':
                                            args=(buf, z1, t1, z2, t2,
                                                  nx, ny, nz, tend.unix, device_id, live, gain,
                                                  maxgain, autogain, exposure, binning,
-                                                 brightness, bandwidth, high_speed))
+                                                 brightness, bandwidth, high_speed, sdk))
 
     # Start
     pcapture.start()

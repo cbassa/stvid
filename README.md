@@ -21,6 +21,7 @@ Consider using a VirtualEnv to run stvid on a separate python virtual environmen
   * `sextractor` needs to be executable in your path
 * [Astromentry.net](https://github.com/dstndstn/astrometry.net)
   * `solve-field` needs to be executable in your path, with index files appropriate for your FOV
+* [ZWO ASI SDK](https://astronomy-imaging-camera.com/software-drivers) if using a ZWO camera
 
 ## Configuration
 * Copy the `configuration.ini-dist` file to `configuration.ini`
