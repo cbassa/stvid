@@ -10,7 +10,6 @@ from scipy import optimize, ndimage
 from termcolor import colored
 import datetime
 
-
 # Gaussian model
 def model(a, nx, ny):
     x, y = np.meshgrid(np.arange(nx), np.arange(ny))
@@ -206,7 +205,7 @@ def plot_header(fname, ff, iod_line):
 
     # Plot
     ppg.pgopen(fname)
-    ppg.pgpap(0.0, 1.0)
+    ppg.pgpap(14.0, 1.0)
     ppg.pgsvp(0.1, 0.95, 0.1, 0.8)
 
     ppg.pgsch(0.8)

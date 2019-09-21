@@ -61,9 +61,11 @@ if __name__ == "__main__":
 
     # Extract settings
     drdtmin = cfg.getfloat('Processing', 'drdtmin')
-    trkrmin = cfg.getfloat('Processing', 'trkrmin')
     trksig = cfg.getfloat('Processing', 'trksig')
+    trkrmin = cfg.getfloat('Processing', 'trkrmin')
     ntrkmin = cfg.getint('Processing', 'ntrkmin')
+    houghrmin = cfg.getfloat('Processing', 'houghrmin')
+    nhoughmin = cfg.getint('Processing', 'nhoughmin')
     nstarsmin = cfg.getint('Processing', 'nstarsmin')
     
     # Move to processing directory
@@ -130,7 +132,7 @@ if __name__ == "__main__":
             generate_satellite_predictions(fname)
 
             # Detect lines with 3D Hough transform
-            ids = find_hough3d_lines(fname, ntrkmin, trkrmin)
+            ids = find_hough3d_lines(fname, nhoughmin, houghrmin)
 
             # Get properties
             ff = fourframe(fname)
