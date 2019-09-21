@@ -48,3 +48,10 @@ sdk = /path/to/libASICamera2.so # path to the SDK library
 sex_config = /path/to/solve.sex
 low_app = 18            # Arcsec per pixel low scale - Resolution of camera
 high_app = 20           # Arcsec per pixel high scale - Resolution of camera
+
+[Processing]
+drdtmin = 5.0           # Minimum predicted velocity (pixels/s)
+trkrmin = 10.0          # Track selection region around prediction (pixels)
+trksig = 5.0            # Track selection sigma
+ntrkmin = 10            # Minimum track points
+nstarsmin = 10
