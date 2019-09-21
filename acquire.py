@@ -147,7 +147,7 @@ def capture_asi(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, gain,
 
             # Display Frame
             if live is True:
-                cv2.imshow("Capture", z)                
+                cv2.imshow("Capture", z)
                 cv2.waitKey(1)
 
             # Store results
@@ -203,7 +203,7 @@ def compress(buf, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id):
             obsid = "%s_%d/%s" % (time.strftime("%Y%m%d", t), device_id, time.strftime("%H%M%S", t))
             filepath = os.path.join(path, obsid)
             logger.info("Storing files in %s" % filepath)
-                
+
         # Wait for buffer to become available
         while buf.value != process_buf:
             time.sleep(1.0)
@@ -273,7 +273,7 @@ def compress(buf, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id):
         # Create output directory
         if not os.path.exists(filepath):
             os.makedirs(filepath)
-            
+
         # Write fits file
         hdu = fits.PrimaryHDU(data=np.array([zavg, zstd, zmax, znum]),
                               header=hdr)
