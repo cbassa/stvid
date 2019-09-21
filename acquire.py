@@ -79,7 +79,7 @@ def capture_cv2(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live):
 # Capture images
 def capture_asi(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, gain,
                 maxgain, autogain, exposure, bins, brightness, bandwidth,
-                high_speed, sdk):
+                high_speed, hardware_bin, sdk):
     # Array flag
     first = True
 
@@ -103,8 +103,7 @@ def capture_asi(buf, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, gain,
     camera.set_control_value(asi.ASI_BRIGHTNESS, brightness)
     camera.set_control_value(asi.ASI_FLIP, 0)
     camera.set_control_value(asi.ASI_HIGH_SPEED_MODE, high_speed)
-    if 'HardwareBin' in camera.get_controls():
-        camera.set_control_value(asi.ASI_HARDWARE_BIN, 1)
+    camera.set_control_value(asi.ASI_HARDWARE_BIN, hardware_bin)
     camera.set_roi(bins=binning)
     camera.start_video_capture()
     camera.set_image_type(asi.ASI_IMG_RAW8)
@@ -408,6 +407,7 @@ if __name__ == '__main__':
         bandwidth = cfg.getint(camera_type, 'bandwidth')
         sdk = cfg.get(camera_type, 'sdk')
         high_speed = cfg.getint(camera_type, 'high_speed')
+        hardware_bin = cfg.getint(camera_type, 'hardware_bin')
 
     # Initialize arrays
     z1base = multiprocessing.Array(ctypes.c_uint8, nx*ny*nz)
@@ -433,7 +433,8 @@ if __name__ == '__main__':
                                            args=(buf, z1, t1, z2, t2,
                                                  nx, ny, nz, tend.unix, device_id, live, gain,
                                                  maxgain, autogain, exposure, binning,
-                                                 brightness, bandwidth, high_speed, sdk))
+                                                 brightness, bandwidth, high_speed, hardware_bin,
+                                                 sdk))
 
     # Start
     pcapture.start()
