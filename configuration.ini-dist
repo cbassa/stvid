@@ -40,7 +40,8 @@ exposure = 100000       # Exposure time in microseconds
 bin = 2                 # Binning factor (1: 1x2, 2: 2x2 etc)
 brightness = 10         # Target brightness of pixels
 bandwidth = 90          # Bandwidth usage (percent)
-high_speed = 1          # High speed mode (0 for False, 1 for True)
+high_speed = 0          # High speed mode (0 for False, 1 for True)
+hardware_bin = 0        # Hardware binning (0 for False, 1 for True)
 sdk = /path/to/libASICamera2.so # path to the SDK library
 
 [Astrometry]
