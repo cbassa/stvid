@@ -17,7 +17,7 @@ def generate_satellite_predictions(fname):
     return output
 
 
-def find_hough3d_lines(fname, ntrkmin=20, dr=8):
+def find_hough3d_lines(fname, ntrkmin, trkrmin):
     # Read four frame
     ff = fourframe(fname)
 
@@ -38,7 +38,7 @@ def find_hough3d_lines(fname, ntrkmin=20, dr=8):
     f.close()
 
     # Run 3D Hough line-finding algorithm
-    command = "hough3dlines -dx %d -minvotes %d %s" % (dr, ntrkmin,
+    command = "hough3dlines -dx %d -minvotes %d %s" % (trkrmin, ntrkmin,
                                                        "/tmp/hough.dat")
     try:
         output = subprocess.check_output(command,

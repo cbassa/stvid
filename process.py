@@ -60,18 +60,12 @@ if __name__ == "__main__":
                         height=cfg.getfloat('Common', 'observer_el') * u.m)
 
     # Extract settings
-    # Minimum predicted velocity (pixels/s)
-    drdtmin = 5.0
-
-    # Track selection region around prediction (pixels)
-    trkrmin = 10.0
-
-    # Track selection sigma
-    trksig = 5.0
-
-    # Minimum track points
-    ntrkmin = 10
-
+    drdtmin = cfg.getfloat('Processing', 'drdtmin')
+    trkrmin = cfg.getfloat('Processing', 'trkrmin')
+    trksig = cfg.getfloat('Processing', 'trksig')
+    ntrkmin = cfg.getint('Processing', 'ntrkmin')
+    nstarsmin = cfg.getint('Processing', 'nstarsmin')
+    
     # Move to processing directory
     os.chdir(args.file_dir)
 
@@ -110,7 +104,7 @@ if __name__ == "__main__":
                 pix_catalog = generate_star_catalog(fname)
 
                 # Solve
-                if pix_catalog.nstars > 10:
+                if pix_catalog.nstars > nstarsmin:
                     print(colored("Computing astrometric calibration for %s" % fname, "yellow"))
                     solved = generate_reference_with_anet(fname, "")
 
@@ -136,7 +130,7 @@ if __name__ == "__main__":
             generate_satellite_predictions(fname)
 
             # Detect lines with 3D Hough transform
-            ids = find_hough3d_lines(fname)
+            ids = find_hough3d_lines(fname, ntrkmin, trkrmin)
 
             # Get properties
             ff = fourframe(fname)
