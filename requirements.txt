@@ -12,4 +12,5 @@ six
 spacetrack==0.13.0
 termcolor
 zwoasi
-git+https://github.com/haavee/ppgplot.git@master
+# Has problems finding arrayobject.h, but works with a manual build
+# git+https://github.com/haavee/ppgplot.git@master
