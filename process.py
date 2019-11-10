@@ -69,7 +69,6 @@ if __name__ == "__main__":
     houghrmin = cfg.getfloat('Processing', 'houghrmin')
     nhoughmin = cfg.getint('Processing', 'nhoughmin')
     nstarsmin = cfg.getint('Processing', 'nstarsmin')
-    tracking_mount = cfg.getboolean('Astrometry', 'tracking_mount')
     
     # Move to processing directory
     os.chdir(args.file_dir)
@@ -126,7 +125,7 @@ if __name__ == "__main__":
                 pix_catalog = pixel_catalog(fname+".cat")
 
             # Calibrate from reference
-            calibrate_from_reference(fname, "test.fits", pix_catalog, tracking_mount)
+            calibrate_from_reference(fname, "test.fits", pix_catalog)
 
             # Store calibration
             store_calibration(pix_catalog, fname + ".cal")

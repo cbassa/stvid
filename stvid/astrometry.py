@@ -32,12 +32,19 @@ class tycho2_catalog:
 
 
 # Estimate the WCS from a reference file
-def estimate_wcs_from_reference(ref, fname, tracking_mount):
+def estimate_wcs_from_reference(ref, fname):
     # Read header of reference
     hdu = fits.open(ref)
     hdu[0].header["NAXIS"] = 2
     w = wcs.WCS(hdu[0].header)
 
+    # Check for sidereal tracking
+    # TODO: use fourframe class
+    try:
+        tracked = bool(hdu[0].header['TRACKED'])
+    except KeyError:
+        tracked = False
+        
     # Get time and position from reference
     tref = Time(hdu[0].header["MJD-OBS"], format="mjd", scale="utc")
     pref = SkyCoord(ra=w.wcs.crval[0],
@@ -50,7 +57,7 @@ def estimate_wcs_from_reference(ref, fname, tracking_mount):
     t = Time(hdu[0].header["MJD-OBS"], format="mjd", scale="utc")
 
     # Correct wcs
-    if tracking_mount:
+    if tracked:
         dra = 0.0*u.deg
     else:
         dra = (t.sidereal_time("mean", "greenwich")
@@ -189,9 +196,9 @@ def add_wcs(fname, w, rmsx, rmsy):
     return
 
 
-def calibrate_from_reference(fname, ref, pix_catalog, tracking_mount):
+def calibrate_from_reference(fname, ref, pix_catalog):
     # Estimated WCS
-    w = estimate_wcs_from_reference(ref, fname, tracking_mount)
+    w = estimate_wcs_from_reference(ref, fname)
 
     # Default rms values
     rmsx = 0.0
