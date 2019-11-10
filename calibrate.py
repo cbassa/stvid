@@ -22,10 +22,12 @@ if __name__ == '__main__':
 
     # Process commandline options and parse configuration
     cfg = configparser.ConfigParser(inline_comment_prefixes=('#', ';'))
-    if args.conf_file:
-        cfg.read([args.conf_file])
-    else:
-        cfg.read('configuration.ini')
+    conf_file = args.conf_file if args.conf_file else "configuration.ini"
+    result = cfg.read([conf_file])
+
+    if not result:
+        print("Could not read config file: %s\nExiting..." % conf_file)
+        sys.exit()
 
     path = args.file_dir
     extension = 'fits'
@@ -37,16 +39,20 @@ if __name__ == '__main__':
         print("Found " + file_for_astrometry + " for astrometric solving.")
 
         sex_config = cfg.get('Astrometry', 'sex_config')
-        low_app = cfg.get('Astrometry', 'low_app')
-        high_app = cfg.get('Astrometry', 'high_app')
+        no_sex     = cfg.get('Astrometry', 'no_sex')
+        low_app    = cfg.get('Astrometry', 'low_app')
+        high_app   = cfg.get('Astrometry', 'high_app')
 
-        # Format command
-        command = "solve-field -O -y -u app -L %s -H %s --downsample 2 " % (low_app, high_app) + \
-                  "--use-sextractor --sextractor-config %s --x-column X_IMAGE " % sex_config + \
-                  "--y-column Y_IMAGE  --sort-column MAG_AUTO --sort-ascending " + \
-                  "--no-plots -T -N %s/test.fits %s" % (path, file_for_astrometry)
+        # Format solve-field command
+        command = "solve-field -O -y -u app -L %s -H %s --downsample 2 " % (low_app, high_app)
+        if (not no_sex):
+            command = command + \
+            "--use-sextractor --sextractor-config %s --x-column X_IMAGE " % sex_config + \
+            "--y-column Y_IMAGE  --sort-column MAG_AUTO --sort-ascending "
+        command = command + \
+        "--no-plots -T -N %s/test.fits %s" % (path, file_for_astrometry)
 
-        # Run sextractor
+        # Run solve-field
         subprocess.run(command, shell=True, stderr=subprocess.STDOUT)
 
     else:
