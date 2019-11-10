@@ -50,10 +50,10 @@ low_app = 18            # Arcsec per pixel low scale - Resolution of camera
 high_app = 20           # Arcsec per pixel high scale - Resolution of camera
 
 [Processing]
-nstarsmin = 10
-drdtmin = 5.0           # Minimum predicted velocity (pixels/s)
-trksig = 5.0            # Track selection sigma
-ntrkmin = 10            # Minimum track points
+drdtmin = 5.0           # Minimum predicted satellite velocity (pixels/s)
 trkrmin = 10.0          # Track selection region around prediction (pixels)
+ntrkmin = 10            # Minimum number of points making up a track
+trksig = 5.0            # Track selection sigma
+nstarsmin = 10          # Minimum number of stars to attempt astrometric calibration
 houghrmin = 10.0        # Hough3dLines: Track selection region around prediction (pixels)
 nhoughmin = 10          # Hough3dLines: Minimum track points
