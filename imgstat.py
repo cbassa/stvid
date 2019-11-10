@@ -59,7 +59,7 @@ if __name__ == "__main__":
     # Set location
     loc = EarthLocation(lat=cfg.getfloat('Common', 'observer_lat') * u.deg,
                         lon=cfg.getfloat('Common', 'observer_lon') * u.deg,
-                        height=cfg.getfloat('Common', 'observer_el') * u.m)
+                        height=cfg.getfloat('Common', 'observer_height') * u.m)
 
     pa = pos.transform_to(AltAz(obstime=t, location=loc))
 
