@@ -46,6 +46,7 @@ sdk = /path/to/libASICamera2.so # path to the SDK library
 
 [Astrometry]
 sex_config = /path/to/solve.sex
+no_sex = False          # Set to True to use only astrometry.net
 low_app = 18            # Arcsec per pixel low scale - Resolution of camera
 high_app = 20           # Arcsec per pixel high scale - Resolution of camera
 
