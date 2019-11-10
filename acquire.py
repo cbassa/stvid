@@ -222,7 +222,7 @@ def capture_asi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, 
             else:
                 buf = 2
             image_queue.put(buf)
-            logger.debug("Captured z%d" % buf)
+            logger.debug("Captured buffer %d" % buf)
 
             # Swap flag
             first = not first
@@ -291,7 +291,7 @@ def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id):
 
             # Get next buffer # from the work queue
             proc_buffer = image_queue.get()
-            logger.debug("Processing z%d" % proc_buffer)
+            logger.debug("Processing buffer %d" % proc_buffer)
 
             # Process first buffer
             if proc_buffer == 1:
@@ -370,7 +370,7 @@ def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id):
             # Exit on end of capture
             if t[-1] > tend:
                 break
-            logger.debug("Processed z%d" % proc_buffer)
+            logger.debug("Processed buffer %d" % proc_buffer)
             
 
     except KeyboardInterrupt:
@@ -445,6 +445,8 @@ if __name__ == '__main__':
     elif args.test is not False:
         test_duration = int(args.test)
         testing = True
+    else:
+        testing = False
     logger.info("Test mode: %s" % testing)
     if (testing):
         logger.info("Test duration: %ds" % test_duration)
