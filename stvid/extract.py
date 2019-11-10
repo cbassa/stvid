@@ -166,11 +166,18 @@ def store_results(ident, fname, path, iod_line):
 
     # Copy files
     pngfile = fname.replace(".fits", "_%05d.png" % ident.norad)
-    shutil.copy2(fname, dest)
-    shutil.copy2(fname + ".cat", dest)
-    shutil.copy2(fname + ".cal", dest)
-    shutil.copy2(fname + ".id", dest)
-    shutil.copy2(fname + ".png", dest)
+    try:
+        shutil.copy2(fname, dest)
+        shutil.copy2(fname + ".cat", dest)
+        shutil.copy2(fname + ".cal", dest)
+        shutil.copy2(fname + ".id", dest)
+        shutil.copy2(fname + ".png", dest)
+    except PermissionError:
+        shutil.copyfile(fname, os.path.join(dest,fname))
+        shutil.copyfile(fname + ".cat", os.path.join(dest, fname + ".cat"))
+        shutil.copyfile(fname + ".cal", os.path.join(dest, fname + ".cal"))
+        shutil.copyfile(fname + ".id", os.path.join(dest, fname + ".id"))
+        shutil.copyfile(fname + ".png", os.path.join(dest, fname + ".png"))
     if os.path.exists(pngfile):
         shutil.move(pngfile, os.path.join(dest, pngfile))
 
@@ -187,12 +194,18 @@ def store_not_seen(ident, fname, path):
     dest = os.path.join(path, "not_seen")
 
     # Copy files
-    shutil.copy2(fname, dest)
-    shutil.copy2(fname + ".cat", dest)
-    shutil.copy2(fname + ".cal", dest)
-    shutil.copy2(fname + ".id", dest)
-    shutil.copy2(fname + ".png", dest)
-
+    try:
+        shutil.copy2(fname, dest)
+        shutil.copy2(fname + ".cat", dest)
+        shutil.copy2(fname + ".cal", dest)
+        shutil.copy2(fname + ".id", dest)
+        shutil.copy2(fname + ".png", dest)
+    except PermissionError:
+        shutil.copyfile(fname, os.path.join(dest,fname))
+        shutil.copyfile(fname + ".cat", os.path.join(dest, fname + ".cat"))
+        shutil.copyfile(fname + ".cal", os.path.join(dest, fname + ".cal"))
+        shutil.copyfile(fname + ".id", os.path.join(dest, fname + ".id"))
+        shutil.copyfile(fname + ".png", os.path.join(dest, fname + ".png"))
     return
 
 
