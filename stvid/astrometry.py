@@ -32,7 +32,7 @@ class tycho2_catalog:
 
 
 # Estimate the WCS from a reference file
-def estimate_wcs_from_reference(ref, fname):
+def estimate_wcs_from_reference(ref, fname, tracking_mount):
     # Read header of reference
     hdu = fits.open(ref)
     hdu[0].header["NAXIS"] = 2
@@ -50,8 +50,11 @@ def estimate_wcs_from_reference(ref, fname):
     t = Time(hdu[0].header["MJD-OBS"], format="mjd", scale="utc")
 
     # Correct wcs
-    dra = (t.sidereal_time("mean", "greenwich")
-           - tref.sidereal_time("mean", "greenwich"))
+    if tracking_mount:
+        dra = 0.0*u.deg
+    else:
+        dra = (t.sidereal_time("mean", "greenwich")
+        - tref.sidereal_time("mean", "greenwich"))
     p = FK5(ra=pref.ra+dra, dec=pref.dec, equinox=t).transform_to(ICRS)
     w.wcs.crval = np.array([p.ra.degree, p.dec.degree])
 
@@ -186,9 +189,9 @@ def add_wcs(fname, w, rmsx, rmsy):
     return
 
 
-def calibrate_from_reference(fname, ref, pix_catalog):
+def calibrate_from_reference(fname, ref, pix_catalog, tracking_mount):
     # Estimated WCS
-    w = estimate_wcs_from_reference(ref, fname)
+    w = estimate_wcs_from_reference(ref, fname, tracking_mount)
 
     # Default rms values
     rmsx = 0.0
