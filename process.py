@@ -45,10 +45,12 @@ if __name__ == "__main__":
 
     # Process commandline options and parse configuration
     cfg = configparser.ConfigParser(inline_comment_prefixes=('#', ';'))
-    if args.conf_file:
-        cfg.read([args.conf_file])
-    else:
-        cfg.read('configuration.ini')
+    conf_file = args.conf_file if args.conf_file else "configuration.ini"
+    result = cfg.read([conf_file])
+
+    if not result:
+        print("Could not read config file: %s\nExiting..." % conf_file)
+        sys.exit()
 
     # Set warnings
     warnings.filterwarnings("ignore", category=UserWarning, append=True)
@@ -67,6 +69,7 @@ if __name__ == "__main__":
     houghrmin = cfg.getfloat('Processing', 'houghrmin')
     nhoughmin = cfg.getint('Processing', 'nhoughmin')
     nstarsmin = cfg.getint('Processing', 'nstarsmin')
+    tracking_mount = cfg.getboolean('Astrometry', 'tracking_mount')
     
     # Move to processing directory
     os.chdir(args.file_dir)
@@ -123,7 +126,7 @@ if __name__ == "__main__":
                 pix_catalog = pixel_catalog(fname+".cat")
 
             # Calibrate from reference
-            calibrate_from_reference(fname, "test.fits", pix_catalog)
+            calibrate_from_reference(fname, "test.fits", pix_catalog, tracking_mount)
 
             # Store calibration
             store_calibration(pix_catalog, fname + ".cal")
