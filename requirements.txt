@@ -12,4 +12,5 @@ six
 spacetrack==0.13.0
 termcolor
 zwoasi
+# Has problems finding arrayobject.h, but works with a manual build, or by calling pip -r requirements.txt twice
 git+https://github.com/haavee/ppgplot.git@master
