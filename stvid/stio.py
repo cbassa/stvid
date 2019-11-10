@@ -33,7 +33,10 @@ class observation:
 
         # Compute ra/dec
         world = ff.w.wcs_pix2world(np.array([[self.x0, self.y0]]), 1)
-        self.ra = world[0, 0] + hobs - hmid
+        if ff.tracked:
+            self.ra = world[0, 0]
+        else:
+            self.ra = world[0, 0] + hobs - hmid
         self.de = world[0, 1]
 
 
@@ -87,6 +90,7 @@ class fourframe:
             self.ctype = ["RA---TAN", "DEC--TAN"]
             self.cunit = np.array(["deg", "deg"])
             self.crres = np.array([0.0, 0.0])
+            self.tracked = False
         else:
             # Read FITS file
             hdu = fits.open(fname)
@@ -126,6 +130,12 @@ class fourframe:
             self.crres = np.array(
                 [hdu[0].header['CRRES1'], hdu[0].header['CRRES2']])
 
+            # Check for sidereal tracking
+            try:
+                self.tracked = bool(hdu[0].header['TRACKED'])
+            except KeyError:
+                self.tracked = False
+            
             hdu.close()
 
         # Compute image properties

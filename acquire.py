@@ -242,7 +242,7 @@ def capture_asi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, 
         camera.close()
 
 
-def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id):
+def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id, cfg):
     """ compress: Aggregate nframes of observations into a single FITS file, with statistics.
 
         ImageHDU[0]: mean pixel value nframes         (zmax)
@@ -348,6 +348,7 @@ def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id):
             hdr['RADECSYS'] = "ICRS"
             hdr['COSPAR']   = cfg.getint('Common', 'observer_cospar')
             hdr['OBSERVER'] = cfg.get('Common', 'observer_name')
+            hdr['TRACKED'] = int(cfg.getboolean('Astrometry', 'tracking_mount'))
             for i in range(nz):
                 hdr['DT%04d' % i] = dt[i]
             for i in range(10):
@@ -525,7 +526,7 @@ if __name__ == '__main__':
     # Set processes
     pcompress = multiprocessing.Process(target=compress,
                                         args=(image_queue, z1, t1, z2, t2, nx, ny,
-                                              nz, tend.unix, path, device_id))
+                                              nz, tend.unix, path, device_id, cfg))
     if camera_type == "CV2":
         pcapture = multiprocessing.Process(target=capture_cv2,
                                            args=(image_queue, z1, t1, z2, t2,
