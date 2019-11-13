@@ -151,10 +151,19 @@ def fit_wcs(w, pix_catalog):
         dr = np.sqrt(drx*drx+dry*dry)
         rms = np.sqrt(np.sum(dr[c]**2)/len(dr[c]))
 
+        # Break on nan
+        if np.isnan(rms):
+            return w, 0.0, 0.0, 0.0
+
+        # Recompute selection
         dr[~c] = 1.0
         c = (dr < 2.0*rms)
         pix_catalog.flag[~c] = 0
 
+        # Break if no stars
+        if np.sum(c) == 0:
+            return w, 0.0, 0.0, 0.0
+        
         # Break if converged
         if np.sum(c) == nstars:
             break
