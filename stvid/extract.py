@@ -9,6 +9,8 @@ import ppgplot as ppg
 from scipy import optimize, ndimage
 from termcolor import colored
 import datetime
+import astropy.units as u
+from astropy.coordinates import SkyCoord
 
 # Gaussian model
 def model(a, nx, ny):
@@ -246,8 +248,14 @@ def plot_header(fname, ff, iod_line):
     ppg.pgctab(heat_l, heat_r, heat_g, heat_b, 5, 1.0, 0.5)
 
 
+# Calculate angular velocity
+def angular_velocity(ident, w, texp):
+    p = SkyCoord.from_pixel([ident.x0, ident.x1], [ident.y0, ident.y1], w, 1, mode="all")
+    return p[0].separation(p[1]).to(u.deg).value/texp
+
+
 # Extract tracks
-def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path, results_path):
+def extract_tracks(fname, trkrmin, drdtmin, drdtmax, trksig, ntrkmin, path, results_path):
     # Read four frame
     ff = fourframe(fname)
 
@@ -295,9 +303,9 @@ def extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, path, results_path)
         if ident.state == "remove":
             continue
 
-        # Skip slow moving objects
-        drdt = np.sqrt(ident.dxdt**2 + ident.dydt**2)
-        if drdt < drdtmin:
+        # Select on angular velocity 
+        drdt = angular_velocity(ident, ff.w, ff.texp)
+        if (drdt < drdtmin) | (drdt > drdtmax):
             continue
 
         # Extract significant pixels along a track

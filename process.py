@@ -63,6 +63,7 @@ if __name__ == "__main__":
 
     # Extract settings
     drdtmin = cfg.getfloat('Processing', 'drdtmin')
+    drdtmax = cfg.getfloat('Processing', 'drdtmax')
     trksig = cfg.getfloat('Processing', 'trksig')
     trkrmin = cfg.getfloat('Processing', 'trkrmin')
     ntrkmin = cfg.getint('Processing', 'ntrkmin')
@@ -141,7 +142,7 @@ if __name__ == "__main__":
 
             # Extract tracks
             if is_calibrated(ff):
-                extract_tracks(fname, trkrmin, drdtmin, trksig, ntrkmin, root_dir, results_dir)
+                extract_tracks(fname, trkrmin, drdtmin, drdtmax, trksig, ntrkmin, root_dir, results_dir)
 
             # Stars available and used
             nused = np.sum(pix_catalog.flag == 1)
