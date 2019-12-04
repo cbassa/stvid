@@ -34,7 +34,7 @@ if __name__ == '__main__':
     now = datetime.datetime.utcnow()
     time = now.strftime("%Y%m%d_%H%M%S")
 
-    # Get Space Track TLEs
+    print('Get Space Track TLEs')
     catalog_tle = os.path.join(tle_path, 'catalog.tle')
     st = SpaceTrackClient(identity=cfg.get('Credentials', 'st-username'),
                           password=cfg.get('Credentials', 'st-password'))
@@ -57,7 +57,7 @@ if __name__ == '__main__':
 
     copyfile(catalog_tle, os.path.join(tle_path, time + '_catalog.txt'))
 
-    # Get classified TLEs
+    print('Get classified TLEs')
     resp = urlopen("http://www.prismnet.com/~mmccants/tles/classfd.zip")
     zipfile = ZipFile(BytesIO(resp.read()))
     zipfile.extractall(path=tle_path)
@@ -74,7 +74,7 @@ if __name__ == '__main__':
 
     copyfile(classfd_tle, os.path.join(tle_path, time + '_classfd.txt'))
 
-    # Get int TLEs
+    print('Get int TLEs')
     resp = urlopen("http://www.prismnet.com/~mmccants/tles/inttles.zip")
     zipfile = ZipFile(BytesIO(resp.read()))
     zipfile.extractall(path=tle_path)
@@ -91,7 +91,7 @@ if __name__ == '__main__':
 
     copyfile(int_tle, os.path.join(tle_path, time + '_inttles.txt'))
 
-    # Create bulk catalog
+    print('Create bulk catalog')
     catalogs = [catalog_tle, classfd_tle]
     with open(os.path.join(tle_path, 'bulk.tle'), 'w') as outfile:
         for fname in catalogs:
