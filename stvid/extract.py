@@ -7,7 +7,6 @@ from stvid.astrometry import is_calibrated
 import numpy as np
 import ppgplot as ppg
 from scipy import optimize, ndimage
-from termcolor import colored
 import datetime
 import astropy.units as u
 from astropy.coordinates import SkyCoord
@@ -163,9 +162,6 @@ def store_results(ident, fname, path, iod_line):
         outfname = os.path.join(path, "unid/unid.dat")
         color = "magenta"
 
-    # Print iod line
-    print(colored(iod_line, color))
-
     # Copy files
     pngfile = fname.replace(".fits", "_%05d.png" % ident.norad)
     try:
@@ -183,12 +179,8 @@ def store_results(ident, fname, path, iod_line):
     if os.path.exists(pngfile):
         shutil.move(pngfile, os.path.join(dest, pngfile))
 
-    # Write iodline
-    fp = open(outfname, "a")
-    fp.write("%s\n" % iod_line)
-    fp.close()
-
-    return
+    # Return IOD line for screen and file output
+    return (outfname, iod_line, color)
 
 
 def store_not_seen(ident, fname, path):
@@ -256,6 +248,8 @@ def angular_velocity(ident, w, texp):
 
 # Extract tracks
 def extract_tracks(fname, trkrmin, drdtmin, drdtmax, trksig, ntrkmin, path, results_path):
+    screenoutput_idents = []
+
     # Read four frame
     ff = fourframe(fname)
 
@@ -265,12 +259,10 @@ def extract_tracks(fname, trkrmin, drdtmin, drdtmax, trksig, ntrkmin, path, resu
 
     # Read satelite IDs
     try:
-        f = open(fname + ".id")
+        with open(fname + ".id") as f:
+            lines = f.readlines()
     except OSError:
         print("Cannot open", fname + ".id")
-    else:
-        lines = f.readlines()
-        f.close()
 
     tr = np.array([-0.5, 1.0, 0.0, -0.5, 0.0, 1.0])
 
@@ -367,7 +359,8 @@ def extract_tracks(fname, trkrmin, drdtmin, drdtmax, trksig, ntrkmin, path, resu
             ppg.pgend()
 
             # Store results
-            store_results(ident, fname, results_path, iod_line)
+            outfilename, iod_line, color = store_results(ident, fname, results_path, iod_line)
+            screenoutput_idents.append([outfilename, iod_line, color])
 
         elif ident.catalog.find("classfd.tle") > 0:
             # Track and stack
@@ -454,4 +447,8 @@ def extract_tracks(fname, trkrmin, drdtmin, drdtmax, trksig, ntrkmin, path, resu
             ppg.pgend()
 
             # Store results
-            store_results(ident, fname, results_path, iod_line)
+            outfilename, iod_line, color = store_results(ident, fname, results_path, iod_line)
+            screenoutput_idents.append([outfilename, iod_line, color])
+
+    # Return list of idents for screen output
+    return screenoutput_idents

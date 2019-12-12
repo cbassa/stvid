@@ -3,7 +3,8 @@ from __future__ import print_function
 import subprocess
 from stvid.stio import fourframe
 from stvid.stio import satid
-
+import os
+import tempfile
 
 def generate_satellite_predictions(fname):
     # Format command
@@ -31,22 +32,27 @@ def find_hough3d_lines(fname, ntrkmin, trkrmin):
     if len(t) < 2:
         return []
 
-    # Save points to temporary file
-    with open("/tmp/hough.dat", "w") as f:
-        for i in range(len(t)):
-            f.write("%f,%f,%f\n" % (x[i], y[i], z[i]))
-    f.close()
+    # Save points to a unique temporary file
+    (fd, tmpfile_path) = tempfile.mkstemp(prefix="hough_tmp",suffix=".dat")
 
-    # Run 3D Hough line-finding algorithm
-    command = "hough3dlines -dx %d -minvotes %d %s" % (trkrmin, ntrkmin,
-                                                       "/tmp/hough.dat")
     try:
-        output = subprocess.check_output(command,
-                                         shell=True,
-                                         stderr=subprocess.STDOUT)
-    except Exception:
-        return []
+        with os.fdopen(fd, "w") as f:
+            for i in range(len(t)):
+                f.write("%f,%f,%f\n" % (x[i], y[i], z[i]))
 
+        # Run 3D Hough line-finding algorithm
+        command = "hough3dlines -dx %d -minvotes %d %s" % (trkrmin, ntrkmin,
+                                                        tmpfile_path)
+        try:
+            output = subprocess.check_output(command,
+                                            shell=True,
+                                            stderr=subprocess.STDOUT)
+        except Exception:
+            return []
+    finally:
+        os.remove(tmpfile_path)    
+
+    # FIXME: Is this still needed? hough3dlines output does not appear to have these items -- interplanetarychris
     # Clean output (a bit cluncky)
     cleaned_output = output.decode("utf-8").replace("npoints=", "")
     cleaned_output = cleaned_output.replace(", a=(", " ")
@@ -76,9 +82,8 @@ def find_hough3d_lines(fname, ntrkmin, trkrmin):
         lines.append(line)
 
     # Store identifications
-    fp = open(fname + ".id", "a")
-    for line in lines:
-        fp.write(line)
-    fp.close()
+    with open(fname + ".id", "a") as fp:
+        for line in lines:
+            fp.write(line)
 
     return [satid(line) for line in lines]
