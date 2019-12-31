@@ -73,6 +73,8 @@ def process_loop(fname):
     # Extract tracks
     if is_calibrated(ff):
         screenoutput_idents = extract_tracks(fname, trkrmin, drdtmin, drdtmax, trksig, ntrkmin, root_dir, results_dir)
+    else:
+        screenoutput_idents = None 
 
     # Stars available and used
     nused = np.sum(pix_catalog.flag == 1)
