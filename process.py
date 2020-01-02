@@ -163,12 +163,17 @@ if __name__ == "__main__":
     fstat = open("imgstat.csv", "w")
     fstat.write("fname,mjd,ra,de,rmsx,rmsy,mean,std,nstars,nused\n")
 
-    # Create output dirs
+    # Directory logic
     file_dir = os.path.abspath(args.file_dir.rstrip("/"))
     root_dir = os.path.split(file_dir)[0]
-    results_dir = os.path.join(cfg.get('Common', 'results_path'),
-                               os.path.split(root_dir)[-1])
+    if cfg.has_option('Common', 'results_path'):
+        results_dir = os.path.join(cfg.get('Common', 'results_path'),
+                                   os.path.split(root_dir)[-1])
+    else:
+        results_dir = root_dir
     processed_dir = os.path.join(file_dir, "processed")
+
+    # Create output dirs
     if not os.path.exists(os.path.join(results_dir, "classfd")):
         os.makedirs(os.path.join(results_dir, "classfd"))
     if not os.path.exists(os.path.join(results_dir, "catalog")):
