@@ -72,6 +72,33 @@ def plot_selection(id, x0, y0, dt=2.0, w=10.0):
 
     return
 
+# Plot selection
+def plot_selection_new(ident, dt=1.0, w=10.0):
+    dx, dy = ident.x1 - ident.x0, ident.y1 - ident.y0
+    ang = np.mod(np.arctan2(dy, dx), 2.0*np.pi)
+    r = np.sqrt(dx**2 + dy**2)
+    drdt = r / (ident.t1 - ident.t0)
+    sa, ca = np.sin(ang), np.cos(ang)
+
+    dx = np.array([-dt, -dt, ident.t1 + dt, ident.t1 + dt, -dt]) * drdt
+    dy = np.array([w, -w, -w, w, w])
+    x = ca * dx - sa * dy + ident.x0
+    y = sa * dx + ca * dy + ident.y0
+
+    ppg.pgline(x, y)
+    ppg.pgpt1(x[0], y[0], 17)
+    ppg.pgpt1(x[1], y[1], 17)
+    ppg.pgsch(0.65)
+    ppg.pgslw(2)
+    if (x[0] < x[1]) & (ident.x0 < ident.x1):
+        ppg.pgptxt(x[1], y[1] - 1.5 * w, 0.0, 0.0, " %05d" % ident.norad)
+    else:
+        ppg.pgptxt(x[0], y[0] + 0.5 * w, 0.0, 0.0, " %05d" % ident.norad)
+    ppg.pgsch(1.0)
+    ppg.pgslw(1)
+    
+    return
+
 
 # Check if point is inside selection
 def inside_selection(ident, tmid, x0, y0, dt=2.0, w=10.0):
@@ -348,12 +375,13 @@ def extract_tracks(fname, trkrmin, drdtmin, drdtmax, trksig, ntrkmin, path, resu
             elif ident.catalog.find("inttles.tle") > 0:
                 ppg.pgsci(3)
 
-            ppg.pgpt(np.array([x0]), np.array([y0]), 4)
-            ppg.pgmove(xmin, ymin)
-            ppg.pgdraw(xmax, ymax)
-            ppg.pgsch(0.65)
-            ppg.pgtext(np.array([x0]), np.array([y0]), " %05d" % ident.norad)
-            ppg.pgsch(1.0)
+            #ppg.pgpt(np.array([x0]), np.array([y0]), 4)
+            #ppg.pgmove(xmin, ymin)
+            #ppg.pgdraw(xmax, ymax)
+            #ppg.pgsch(0.65)
+            #ppg.pgtext(np.array([x0]), np.array([y0]), " %05d" % ident.norad)
+            plot_selection_new(ident)
+            #ppg.pgsch(1.0)
             ppg.pgsci(1)
 
             ppg.pgend()
