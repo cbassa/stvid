@@ -217,11 +217,13 @@ if __name__ == "__main__":
 
                     fstat.write(fileoutput)
                     print(screenoutput)
-                    for [outfilename, iod_line, color] in screenoutput_idents:
-                        print(colored(iod_line,color))
-                        # Write iodline
-                        with open(outfilename, "a") as fp:
-                            fp.write("%s\n" % iod_line)
+
+                    if screenoutput_idents is not None:
+                        for [outfilename, iod_line, color] in screenoutput_idents:
+                            print(colored(iod_line,color))
+                            # Write iodline
+                            with open(outfilename, "a") as fp:
+                                fp.write("%s\n" % iod_line)
 
             p.close()
             p.join()
