@@ -163,7 +163,7 @@ def store_results(ident, fname, path, iod_line):
         color = "magenta"
 
     # Copy files
-    pngfile = fname.replace(".fits", "_%05d.png" % ident.norad)
+    pngfile = "%05d_%s" % (ident.norad, fname.replace(".fits", ".png"))
     try:
         shutil.copy2(fname, dest)
         shutil.copy2(fname + ".cat", dest)
@@ -334,8 +334,8 @@ def extract_tracks(fname, trkrmin, drdtmin, drdtmax, trksig, ntrkmin, path, resu
                                               obs.nfd, obs.ra, obs.de)
 
             # Create diagnostic plot
-            plot_header(fname.replace(".fits", "_%05d.png/png" % ident.norad),
-                        ff, iod_line)
+            pngfile = "%05d_%s" % (ident.norad, fname.replace(".fits", ".png"))
+            plot_header(pngfile + "/png", ff, iod_line)
 
             ppg.pgimag(ff.zmax, ff.nx, ff.ny, 0, ff.nx - 1, 0, ff.ny - 1,
                        ff.zmaxmax, ff.zmaxmin, tr)
@@ -419,7 +419,7 @@ def extract_tracks(fname, trkrmin, drdtmin, drdtmax, trksig, ntrkmin, path, resu
                                               obs.nfd, obs.ra, obs.de)
 
             # Create diagnostic plot
-            pngfile = fname.replace(".fits", "_%05d.png" % ident.norad)
+            pngfile = "%05d_%s" % (ident.norad, fname.replace(".fits", ".png"))
             plot_header(pngfile + "/png", ff, iod_line)
 
             ppg.pgimag(ztrk, ff.nx, ff.ny, 0, ff.nx - 1, 0, ff.ny - 1, vmax,
