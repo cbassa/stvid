@@ -242,7 +242,10 @@ def is_calibrated(ff):
 
 def generate_reference_with_anet(fname, cmd_args, reffname="test.fits", tempfroot="cal"):
     # Copy file to generic name
-    shutil.copy2(fname, tempfroot + ".fits")
+    try:
+        shutil.copy2(fname, tempfroot + ".fits")
+    except PermissionError:
+        shutil.copyfile(fname, tempfroot + ".fits")
 
     # Get center
     hdu = fits.open(fname)

@@ -31,23 +31,21 @@ class pixel_catalog:
 
 
 def generate_star_catalog(fname):
+    catalog_fname = fname + ".cat"
+
     # Skip if file already exists
-    if not os.path.exists(os.path.join(fname, ".cat")):
+    if not os.path.exists(catalog_fname):
         # Get sextractor location
         env = os.getenv("ST_DATADIR")
 
         # Format command
-        command = "sextractor %s -c %s/sextractor/default.sex" % (fname, env)
+        command = "sextractor %s -c %s/sextractor/default.sex -CATALOG_NAME %s " % (fname, env, catalog_fname)
 
         # Run sextractor
         output = subprocess.check_output(command, shell=True,
                                          stderr=subprocess.STDOUT)
 
-        # Rename file
-        if os.path.exists("test.cat"):
-            os.rename("test.cat", fname+".cat")
-
-    return pixel_catalog(fname+".cat")
+    return pixel_catalog(catalog_fname)
 
 
 def store_calibration(pix_catalog, fname):

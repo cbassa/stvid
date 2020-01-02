@@ -15,6 +15,8 @@ from stvid.extract import extract_tracks
 import astropy.units as u
 from astropy.utils.exceptions import AstropyWarning
 from astropy.coordinates import EarthLocation
+from astropy.time import Time # For getting IERS table in single-thread session
+import multiprocessing as mp
 import warnings
 import configparser
 import argparse
@@ -23,6 +25,85 @@ from termcolor import colored
 import time
 import shutil
 import sys
+
+""" 
+process.py - Utility to process stvid/acquire.py FITS images to detect and 
+   extract satellite positions and create IODs.
+
+Terminal output Color Codes:
+    GREEN:   Calibrated file
+    RED:     Not calibrated file
+    YELLOW:  Computing astrometric calibration
+    BLUE:    Classified satellite
+    GREY:    Catalog satellite
+    MAGENTA: UNID satellite
+"""
+
+def chunks(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
+
+def process_loop(fname):
+    """
+    Thread to process satobs FourFrame FITS files in a multi-thread compatible manner
+    """
+
+    # Generate star catalog
+    if not os.path.exists(fname + ".cat"):
+        pix_catalog = generate_star_catalog(fname)
+    else:
+        pix_catalog = pixel_catalog(fname + ".cat")
+
+    # Calibrate from reference
+    calibrate_from_reference(fname, "test.fits", pix_catalog)
+
+    # Store calibration
+    store_calibration(pix_catalog, fname + ".cal")
+
+    # Generate satellite predictions
+    generate_satellite_predictions(fname)
+
+    # Detect lines with 3D Hough transform
+    ids = find_hough3d_lines(fname, nhoughmin, houghrmin)
+
+    # Get properties
+    ff = fourframe(fname)
+
+    # Extract tracks
+    if is_calibrated(ff):
+        screenoutput_idents = extract_tracks(fname, trkrmin, drdtmin, drdtmax, trksig, ntrkmin, root_dir, results_dir)
+    else:
+        screenoutput_idents = None 
+
+    # Stars available and used
+    nused = np.sum(pix_catalog.flag == 1)
+    nstars = pix_catalog.nstars
+
+    # Write output
+    screenoutput = "%s %10.6f %10.6f %4d/%4d %5.1f %5.1f %6.2f +- %6.2f" % (
+        ff.fname, ff.crval[0], ff.crval[1], nused, nstars,
+        3600.0 * ff.crres[0], 3600.0 * ff.crres[1], np.mean(
+            ff.zavg), np.std(ff.zavg))
+
+    if is_calibrated(ff):
+        screenoutput = colored(screenoutput, "green")
+    else:
+        screenoutput = colored(screenoutput, "red")
+
+    imgstat_output = ("%s,%.8lf,%.6f,%.6f,%.3f,%.3f,%.3f," + "%.3f,%d,%d\n") % (
+        (ff.fname, ff.mjd, ff.crval[0], ff.crval[1],
+            3600 * ff.crres[0], 3600 * ff.crres[1], np.mean(
+                ff.zavg), np.std(ff.zavg), nstars, nused))
+
+    # Move processed files
+    shutil.move(fname, os.path.join(processed_dir, fname))
+    shutil.move(fname + ".png", os.path.join(processed_dir, fname + ".png"))
+    shutil.move(fname + ".id", os.path.join(processed_dir, fname + ".id"))
+    shutil.move(fname + ".cat", os.path.join(processed_dir, fname + ".cat"))
+    shutil.move(fname + ".cal", os.path.join(processed_dir, fname + ".cal"))
+
+    return (screenoutput, imgstat_output, screenoutput_idents)
 
 if __name__ == "__main__":
     # Read commandline options
@@ -74,6 +155,10 @@ if __name__ == "__main__":
     # Move to processing directory
     os.chdir(args.file_dir)
 
+    # Force single-threaded IERS table update, if needed
+    t = Time.now()
+    _ = t.ut1
+
     # Statistics file
     fstat = open("imgstat.csv", "w")
     fstat.write("fname,mjd,ra,de,rmsx,rmsy,mean,std,nstars,nused\n")
@@ -95,12 +180,16 @@ if __name__ == "__main__":
     if not os.path.exists(processed_dir):
         os.makedirs(processed_dir)
 
+    cpu_count = os.cpu_count()
+    if (cpu_count > 1):
+        print("Processing with {} threads".format(cpu_count))
+
     # Forever loop
     while True:
         # Get files
         fnames = sorted(glob.glob("2*.fits"))
 
-        # Create reference calibration file
+        # Create reference calibration file in single threaded environment
         if not os.path.exists("test.fits"):
             solved = False
             # Loop over files to find a suitable calibration file
@@ -117,63 +206,36 @@ if __name__ == "__main__":
                 if solved:
                     break
 
-        # Loop over files
-        for fname in fnames:
-            # Generate star catalog
-            if not os.path.exists(fname + ".cat"):
-                pix_catalog = generate_star_catalog(fname)
-            else:
-                pix_catalog = pixel_catalog(fname+".cat")
+        p = mp.Pool(processes=cpu_count)
 
-            # Calibrate from reference
-            calibrate_from_reference(fname, "test.fits", pix_catalog)
+        try:
+            # Loop over files in parallel, print output every batch size of cpu_count
+            satobs_chunks = chunks(fnames,cpu_count)
+            for chk in satobs_chunks:
+                for result in p.map(process_loop, chk):
+                    (screenoutput, fileoutput, screenoutput_idents) = result    
 
-            # Store calibration
-            store_calibration(pix_catalog, fname + ".cal")
+                    fstat.write(fileoutput)
+                    print(screenoutput)
+                    for [outfilename, iod_line, color] in screenoutput_idents:
+                        print(colored(iod_line,color))
+                        # Write iodline
+                        with open(outfilename, "a") as fp:
+                            fp.write("%s\n" % iod_line)
 
-            # Generate satellite predictions
-            generate_satellite_predictions(fname)
-
-            # Detect lines with 3D Hough transform
-            ids = find_hough3d_lines(fname, nhoughmin, houghrmin)
-
-            # Get properties
-            ff = fourframe(fname)
-
-            # Extract tracks
-            if is_calibrated(ff):
-                extract_tracks(fname, trkrmin, drdtmin, drdtmax, trksig, ntrkmin, root_dir, results_dir)
-
-            # Stars available and used
-            nused = np.sum(pix_catalog.flag == 1)
-            nstars = pix_catalog.nstars
-
-            # Write output
-            output = "%s %10.6f %10.6f %4d/%4d %5.1f %5.1f %6.2f +- %6.2f" % (
-                ff.fname, ff.crval[0], ff.crval[1], nused, nstars,
-                3600.0 * ff.crres[0], 3600.0 * ff.crres[1], np.mean(
-                    ff.zavg), np.std(ff.zavg))
-            if is_calibrated(ff):
-                print(colored(output, "green"))
-            else:
-                print(colored(output, "red"))
-            fstat.write(
-                ("%s,%.8lf,%.6f,%.6f,%.3f,%.3f,%.3f," + "%.3f,%d,%d\n") %
-                (ff.fname, ff.mjd, ff.crval[0], ff.crval[1],
-                 3600 * ff.crres[0], 3600 * ff.crres[1], np.mean(
-                     ff.zavg), np.std(ff.zavg), nstars, nused))
-
-            # Move processed files
-            shutil.move(fname, os.path.join(processed_dir, fname))
-            shutil.move(fname + ".png", os.path.join(processed_dir, fname + ".png"))
-            shutil.move(fname + ".id", os.path.join(processed_dir, fname + ".id"))
-            shutil.move(fname + ".cat", os.path.join(processed_dir, fname + ".cat"))
-            shutil.move(fname + ".cal", os.path.join(processed_dir, fname + ".cal"))
+            p.close()
+            p.join()
+        except KeyboardInterrupt:
+            fstat.close()
+            p.close()
+            sys.exit()
 
         # Sleep
         try:
+            print("File queue empty, waiting for new files...\r", end = '')
             time.sleep(10)
         except KeyboardInterrupt:
+            fstat.close()
             sys.exit()
 
     # Close files
