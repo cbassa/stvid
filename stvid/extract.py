@@ -123,18 +123,25 @@ def inside_selection(ident, tmid, x0, y0, dt=2.0, w=10.0):
 
 
 # Get COSPAR ID
-def get_cospar(norad, nfd):
-    f = open(os.path.join(os.getenv("ST_DATADIR"), "data/desig.txt"))
-    lines = f.readlines()
-    f.close()
+def get_cospar(norad, nfd, tlepath):
+    # Format COSPAR ID for unknown
+    t = datetime.datetime.strptime(nfd[:-4], "%Y-%m-%dT%H:%M:%S")
+    doy = int(t.strftime("%y%j")) + 500
+    cospar = "%sA" % doy
 
-    try:
-        cospar = ([line for line in lines if str(norad) in line])[0].split()[1]
-    except IndexError:
-        t = datetime.datetime.strptime(nfd[:-4], "%Y-%m-%dT%H:%M:%S")
-        doy = int(t.strftime("%y%j")) + 500
-        cospar = "%sA" % doy
+    # Open TLE file
+    tlefile = os.path.join(tlepath, "bulk.tle")
+    if os.path.exists(tlefile):
+        # Read TLEs
+        fp = open(tlefile, "r")
+        lines = fp.readlines()
+        fp.close()
 
+        # Loop over TLEs
+        for line in lines:
+            if line[:7] == "1 %05d" % norad:
+                cospar = line.split()[2]
+    
     return "%2s %s" % (cospar[0:2], cospar[2:])
 
 
@@ -274,7 +281,7 @@ def angular_velocity(ident, w, texp):
 
 
 # Extract tracks
-def extract_tracks(fname, trkrmin, drdtmin, drdtmax, trksig, ntrkmin, path, results_path):
+def extract_tracks(fname, trkrmin, drdtmin, drdtmax, trksig, ntrkmin, path, results_path, tle_dir):
     screenoutput_idents = []
 
     # Read four frame
@@ -355,7 +362,7 @@ def extract_tracks(fname, trkrmin, drdtmin, drdtmax, trksig, ntrkmin, path, resu
             xmax = x0 + dxdt * (tmax - tmid)
             ymax = y0 + dydt * (tmax - tmid)
 
-            cospar = get_cospar(ident.norad, ff.nfd)
+            cospar = get_cospar(ident.norad, ff.nfd, tle_dir)
             obs = observation(ff, mjd, x0, y0)
             iod_line = "%s" % format_iod_line(ident.norad, cospar, ff.site_id,
                                               obs.nfd, obs.ra, obs.de)
@@ -441,7 +448,7 @@ def extract_tracks(fname, trkrmin, drdtmin, drdtmax, trksig, ntrkmin, path, resu
                 continue
 
             # Format IOD line
-            cospar = get_cospar(ident.norad, ff.nfd)
+            cospar = get_cospar(ident.norad, ff.nfd, tle_dir)
             obs = observation(ff, mjd, x0, y0)
             iod_line = "%s" % format_iod_line(ident.norad, cospar, ff.site_id,
                                               obs.nfd, obs.ra, obs.de)
