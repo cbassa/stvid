@@ -72,7 +72,7 @@ def process_loop(fname):
 
     # Extract tracks
     if is_calibrated(ff):
-        screenoutput_idents = extract_tracks(fname, trkrmin, drdtmin, drdtmax, trksig, ntrkmin, root_dir, results_dir)
+        screenoutput_idents = extract_tracks(fname, trkrmin, drdtmin, drdtmax, trksig, ntrkmin, root_dir, results_dir, tle_dir)
     else:
         screenoutput_idents = None 
 
@@ -166,6 +166,7 @@ if __name__ == "__main__":
     # Directory logic
     file_dir = os.path.abspath(args.file_dir.rstrip("/"))
     root_dir = os.path.split(file_dir)[0]
+    tle_dir = cfg.get('Common', 'tle_path')
     if cfg.has_option('Common', 'results_path'):
         results_dir = os.path.join(cfg.get('Common', 'results_path'),
                                    os.path.split(root_dir)[-1])
