@@ -150,8 +150,14 @@ def capture_asi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, 
     camera.set_control_value(asi.ASI_GAMMA, 50)
     camera.set_control_value(asi.ASI_BRIGHTNESS, brightness)
     camera.set_control_value(asi.ASI_FLIP, 0)
-    camera.set_control_value(asi.ASI_HIGH_SPEED_MODE, high_speed)
-    camera.set_control_value(asi.ASI_HARDWARE_BIN, hardware_bin)
+    try:
+        camera.set_control_value(asi.ASI_HIGH_SPEED_MODE, high_speed)
+    except:
+        pass
+    try:
+        camera.set_control_value(asi.ASI_HARDWARE_BIN, hardware_bin)
+    except:
+        pass
     camera.set_roi(bins=binning)
     camera.start_video_capture()
     camera.set_image_type(asi.ASI_IMG_RAW8)
@@ -222,7 +228,7 @@ def capture_asi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, 
             else:
                 buf = 2
             image_queue.put(buf)
-            logger.debug("Captured buffer %d" % buf)
+            logger.debug("Captured buffer %d (%dx%dx%d)" % (buf, nx, ny, nz))
 
             # Swap flag
             first = not first
@@ -280,46 +286,49 @@ def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id, cfg
                     fp.write("observing\n")
 
                 # Get obsid
-                t = time.gmtime()
-                obsid = "%s_%d/%s" % (time.strftime("%Y%m%d", t), device_id, time.strftime("%H%M%S", t))
+                trestart = time.gmtime()
+                obsid = "%s_%d/%s" % (time.strftime("%Y%m%d", trestart), device_id, time.strftime("%H%M%S", trestart))
                 filepath = os.path.join(path, obsid)
                 logger.info("Storing files in %s" % filepath)
 
             # Wait for completed capture buffer to become available
             while (image_queue.qsize == 0):
                 time.sleep(0.1)
-
+                
             # Get next buffer # from the work queue
             proc_buffer = image_queue.get()
             logger.debug("Processing buffer %d" % proc_buffer)
 
+            # Log start time
+            tstart = time.time()
+
             # Process first buffer
             if proc_buffer == 1:
                 t = t1                
-                z = z1.astype('float32')
+                z = z1
             elif proc_buffer == 2:
                 t = t2
-                z = z2.astype('float32')
-
-            # Compute statistics
-            zmax = np.max(z, axis=0)
-            znum = np.argmax(z, axis=0)
-            zs1 = np.sum(z, axis=0)-zmax
-            zs2 = np.sum(z*z, axis=0)-zmax*zmax
-            zavg = zs1/float(nz-1)
-            zstd = np.sqrt((zs2-zs1*zavg)/float(nz-2))
-
-            # Convert to float and flip
-            zmax = np.flipud(zmax.astype('float32'))
-            znum = np.flipud(znum.astype('float32'))
-            zavg = np.flipud(zavg.astype('float32'))
-            zstd = np.flipud(zstd.astype('float32'))
+                z = z2
 
             # Format time
             nfd = "%s.%03d" % (time.strftime("%Y-%m-%dT%T",
-                            time.gmtime(t[0])), int((t[0]-np.floor(t[0]))*1000))
+                            time.gmtime(t[0])), int((t[0] - np.floor(t[0])) * 1000))
             t0 = Time(nfd, format='isot')
-            dt = t-t[0]
+            dt = t - t[0]
+            
+            # Compute statistics
+            zmax = np.max(z, axis=0)
+            znum = np.argmax(z, axis=0)
+            zs1 = np.sum(z, axis=0) - zmax
+            zs2 = np.sum(z * z, axis=0) - zmax * zmax 
+            zavg = zs1 / float(nz - 1)
+            zstd = np.sqrt((zs2 - zs1 * zavg) / float(nz - 2))
+
+            # Convert to float and flip
+            zmax = np.flipud(zmax.astype("float32"))
+            znum = np.flipud(znum.astype("float32"))
+            zavg = np.flipud(zavg.astype("float32"))
+            zstd = np.flipud(zstd.astype("float32"))
 
             # Generate fits
             fname = "%s.fits" % nfd
@@ -366,7 +375,7 @@ def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id, cfg
             hdu = fits.PrimaryHDU(data=np.array([zavg, zstd, zmax, znum]),
                                 header=hdr)
             hdu.writeto(os.path.join(filepath, fname))
-            logger.info("Compressed %s" % fname)
+            logger.info("Compressed %s in %.2f sec" % (fname, time.time() - tstart))
 
             # Exit on end of capture
             if t[-1] > tend:
