@@ -19,8 +19,9 @@ import zwoasi as asi
 
 # Capture images from cv2
 def capture_cv2(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live):
-    # Array flag
+    # Intialization
     first = True
+    slow_CPU = False
 
     # Initialize cv2 device
     device = cv2.VideoCapture(device_id)
@@ -290,6 +291,20 @@ def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id, cfg
                 filepath = os.path.join(path, obsid)
                 logger.info("Storing files in %s" % filepath)
 
+                # Create output directory
+                if not os.path.exists(filepath):
+                    try:
+                        os.makedirs(filepath)
+                    except PermissionError:
+                        logger.error("Can not create output directory: %s" % filepath)
+                        raise
+
+                # Get mount position
+                with open(os.path.join(controlpath, "position.txt"), "r") as fp:
+                    line = fp.readline()
+                with open(os.path.join(filepath, "position.txt"), "w") as fp:
+                    fp.write(line)
+
             # Wait for completed capture buffer to become available
             while (image_queue.qsize == 0):
                 time.sleep(0.1)
@@ -314,6 +329,9 @@ def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id, cfg
                             time.gmtime(t[0])), int((t[0] - np.floor(t[0])) * 1000))
             t0 = Time(nfd, format='isot')
             dt = t - t[0]
+
+            # Cast to 32 bit float
+            z = z.astype("float32")
             
             # Compute statistics
             zmax = np.max(z, axis=0)
@@ -356,19 +374,11 @@ def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id, cfg
             hdr['RADECSYS'] = "ICRS"
             hdr['COSPAR']   = cfg.getint('Common', 'observer_cospar')
             hdr['OBSERVER'] = cfg.get('Common', 'observer_name')
-            hdr['TRACKED'] = int(cfg.getboolean('Astrometry', 'tracking_mount'))
+            hdr['TRACKED'] = 0
             for i in range(nz):
                 hdr['DT%04d' % i] = dt[i]
             for i in range(10):
                 hdr['DUMY%03d' % i] = 0.0
-
-            # Create output directory
-            if not os.path.exists(filepath):
-                try:
-                    os.makedirs(filepath)
-                except PermissionError:
-                    logger.error("Can not create output directory: %s" % filepath)
-                    raise
 
             # Write fits file
             hdu = fits.PrimaryHDU(data=np.array([zavg, zstd, zmax, znum]),
