@@ -101,6 +101,7 @@ def capture_asi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, 
     first    = True  # Array flag
     slow_CPU = False # Performance issue flag
 
+    
     camera_type  = "ASI"
     gain         = cfg.getint(camera_type, 'gain')
     maxgain      = cfg.getint(camera_type, 'maxgain')
@@ -112,6 +113,10 @@ def capture_asi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, 
     high_speed   = cfg.getint(camera_type, 'high_speed')
     hardware_bin = cfg.getint(camera_type, 'hardware_bin')
     sdk          = cfg.get(camera_type, 'sdk')
+    try:
+        software_bin = cfg.getint(camera_type, 'software_bin')
+    except configparser.Error:
+        software_bin = 0
 
     # Initialize device
     asi.init(sdk)
@@ -207,6 +212,11 @@ def capture_asi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, 
                 # Get frame
                 z = camera.capture_video_frame()
 
+                # Apply software binning
+                if software_bin > 1:
+                    my, mx = z.shape
+                    z = cv2.resize(z, (mx // software_bin, my // software_bin))
+                
                 # Compute mid time
                 t = (float(time.time())+t0)/2.0
 
