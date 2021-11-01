@@ -384,7 +384,10 @@ def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id, cfg
             hdr['RADECSYS'] = "ICRS"
             hdr['COSPAR']   = cfg.getint('Common', 'observer_cospar')
             hdr['OBSERVER'] = cfg.get('Common', 'observer_name')
-            hdr['TRACKED'] = 0
+            if cfg.getboolean('Astrometry', 'tracking_mount'):
+                hdr['TRACKED'] = 1
+            else:
+                hdr['TRACKED'] = 0
             for i in range(nz):
                 hdr['DT%04d' % i] = dt[i]
             for i in range(10):
