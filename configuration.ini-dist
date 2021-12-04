@@ -20,7 +20,19 @@ alt_sunset = -6.0             # Solar altitude at sunset
 alt_sunrise = -6.0            # Solar altitude at sunrise
 
 [Camera]
-camera_type = CV2             # CV2 or ASI
+camera_type = CV2             # CV2 or ASI or PI
+
+[PI]
+device_id = 0
+nx =  800               # Camera horizontal pixel count
+ny =  600               # Camera vertical pixel count
+nframes = 100           # Number of frames for each image
+framerate = 5			# Take 5 frames per second
+exposure = 200000		# exposure time in us
+awb_gain_red = 2		# gain for red.
+awb_gain_blue = 2.3		# gain for blue
+analog_gain = 16		# analog gain
+digital_gain = 64		# digital gain
 
 [CV2]
 device_id = 0
