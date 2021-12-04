@@ -15,6 +15,110 @@ import logging
 import configparser
 import argparse
 import zwoasi as asi
+from picamerax.array import PiRGBArray
+from picamerax import PiCamera
+
+
+# Capture images from pi
+def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, cfg):
+    # Intialization
+    first = True
+    slow_CPU = False
+
+    # Initialize cv2 device
+    camera = PiCamera(sensor_mode=2)
+    camera.resolution = (nx, ny)    
+    # Turn off any thing automatic.
+    camera.exposure_mode = 'off'        
+    camera.awb_mode = 'off'
+    # ISO needs to be 0 otherwise analog and digital gain won't work.
+    camera.iso = 0
+    # set the camea settings
+    camera.framerate = cfg.getfloat(camera_type, 'framerate')
+    camera.awb_gains = (cfg.getfloat(camera_type, 'awb_gain_red'), cfg.getfloat(camera_type, 'awb_gain_blue'))    
+    camera.analog_gain = cfg.getfloat(camera_type, 'analog_gain')
+    camera.digital_gain = cfg.getfloat(camera_type, 'digital_gain')
+    camera.shutter_speed = cfg.getint(camera_type, 'exposure')
+
+    rawCapture = PiRGBArray(camera, size=(nx, ny))
+    # allow the camera to warmup
+    time.sleep(0.1)
+
+    try:
+        # Loop until reaching end time
+        while float(time.time()) < tend:
+            # Wait for available capture buffer to become available
+            if (image_queue.qsize() > 1):
+                logger.warning("Acquiring data faster than your CPU can process")
+                slow_CPU = True
+            while (image_queue.qsize() > 1):
+                time.sleep(0.1)
+            if slow_CPU:
+                lost_video = time.time() - t
+                logger.info("Waited %.3fs for available capture buffer" % lost_video)
+                slow_CPU = False
+
+            # Get frames
+            i = 0
+            for frameA in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+                            
+                # Store start time
+                t0 = float(time.time())                
+                # grab the raw NumPy array representing the image, then initialize the timestamp                
+                frame = frameA.array
+                                    
+                # Compute mid time
+                t = (float(time.time())+t0)/2.0
+                
+                # Skip lost frames
+                if frame is not None:
+                    # Convert image to grayscale
+                    z = np.asarray(cv2.cvtColor(
+                        frame, cv2.COLOR_BGR2GRAY)).astype(np.uint8)
+                    # optionally rotate the frame by 2 * 90 degrees.    
+                    # z = np.rot90(z, 2)
+                
+                    # Display Frame
+                    if live is True:                            
+                        cv2.imshow("Capture", z)    
+                        cv2.waitKey(1)
+                    
+                    # Store results
+                    if first:
+                        z1[i] = z
+                        t1[i] = t
+                    else:
+                        z2[i] = z
+                        t2[i] = t
+                        
+                # clear the stream in preparation for the next frame
+                rawCapture.truncate(0)
+                # count up to nz frames, then break out of the for loop.
+                i += 1
+                if i >= nz:
+                    break
+                
+            if first: 
+                buf = 1
+            else:
+                buf = 2
+            image_queue.put(buf)
+            logger.debug("Captured z%d" % buf)
+
+            # Swap flag
+            first = not first
+        reason = "Session complete"
+    except KeyboardInterrupt:
+        print()
+        reason = "Keyboard interrupt"
+    except ValueError as e:
+        logger.error("%s" % e)
+        reason = "Wrong image dimensions? Fix nx, ny in config."
+    finally:
+        # End capture
+        logger.info("Capture: %s - Exiting" % reason)
+        camera.close()
+
 
 
 # Capture images from cv2
@@ -558,7 +662,11 @@ if __name__ == '__main__':
     pcompress = multiprocessing.Process(target=compress,
                                         args=(image_queue, z1, t1, z2, t2, nx, ny,
                                               nz, tend.unix, path, device_id, cfg))
-    if camera_type == "CV2":
+    if camera_type == "PI":
+        pcapture = multiprocessing.Process(target=capture_pi,
+                                           args=(image_queue, z1, t1, z2, t2,
+                                                 nx, ny, nz, tend.unix, device_id, live, cfg))
+    elif camera_type == "CV2":
         pcapture = multiprocessing.Process(target=capture_cv2,
                                            args=(image_queue, z1, t1, z2, t2,
                                                  nx, ny, nz, tend.unix, device_id, live))
