@@ -22,6 +22,8 @@ Consider using a VirtualEnv to run stvid on a separate python virtual environmen
 * [Astromentry.net](https://github.com/dstndstn/astrometry.net)
   * `solve-field` needs to be executable in your path, with index files appropriate for your FOV
 * [ZWO ASI SDK](https://astronomy-imaging-camera.com/software-drivers) if using a ZWO camera
+* [picamerax](https://github.com/labthings/picamerax) if using a Raspberry Pi camera. It can be installed by running:
+`sudo pip install "picamerax[array]"`
 
 ## Configuration
 * Copy the `configuration.ini-dist` file to `configuration.ini`
