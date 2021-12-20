@@ -200,43 +200,50 @@ if __name__ == "__main__":
             solved = False
             # Loop over files to find a suitable calibration file
             for fname in fnames:
-                # Generate star catalog
-                pix_catalog = generate_star_catalog(fname)
+                # Was this file already tried?
+                if not os.path.exists(fname+".cat"):
+                    # Generate star catalog
+                    pix_catalog = generate_star_catalog(fname)
 
-                # Solve
-                if pix_catalog.nstars > nstarsmin:
-                    print(colored("Computing astrometric calibration for %s" % fname, "yellow"))
-                    solved = generate_reference_with_anet(fname, "")
+                    # Solve
+                    if pix_catalog.nstars > nstarsmin:
+                        print(colored("Computing astrometric calibration for %s" % fname, "yellow"))
+                        solved = generate_reference_with_anet(fname, "")
 
-                # Break when solved
-                if solved:
-                    break
+                    # Break when solved
+                    if solved:
+                        break
+        else:
+            # test.fits exists, so calibration has been solved
+            solved = True
 
-        p = mp.Pool(processes=cpu_count)
+        # Only attempt processing if we have a calibration file
+        if solved:
+            p = mp.Pool(processes=cpu_count)
 
-        try:
-            # Loop over files in parallel, print output every batch size of cpu_count
-            satobs_chunks = chunks(fnames,cpu_count)
-            for chk in satobs_chunks:
-                for result in p.map(process_loop, chk):
-                    (screenoutput, fileoutput, screenoutput_idents) = result    
+            try:
+                # Loop over files in parallel, print output every batch size of cpu_count
+                satobs_chunks = chunks(fnames,cpu_count)
+                for chk in satobs_chunks:
+                   for result in p.map(process_loop, chk):
+                        (screenoutput, fileoutput, screenoutput_idents) = result
 
-                    fstat.write(fileoutput)
-                    print(screenoutput)
+                        fstat.write(fileoutput)
+                        print(screenoutput)
 
-                    if screenoutput_idents is not None:
-                        for [outfilename, iod_line, color] in screenoutput_idents:
-                            print(colored(iod_line,color))
-                            # Write iodline
-                            with open(outfilename, "a") as fp:
-                                fp.write("%s\n" % iod_line)
+                        if screenoutput_idents is not None:
+                            for [outfilename, iod_line, color] in screenoutput_idents:
+                                print(colored(iod_line,color))
+                                # Write iodline
+                                with open(outfilename, "a") as fp:
+                                    fp.write("%s\n" % iod_line)
 
-            p.close()
-            p.join()
-        except KeyboardInterrupt:
-            fstat.close()
-            p.close()
-            sys.exit()
+                p.close()
+                p.join()
+            except KeyboardInterrupt:
+                fstat.close()
+                p.close()
+                sys.exit()
 
         # Sleep
         try:
