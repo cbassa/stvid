@@ -32,7 +32,7 @@ exposure = 200000		# exposure time in us
 awb_gain_red = 2		# gain for red.
 awb_gain_blue = 2.3		# gain for blue
 analog_gain = 16		# analog gain
-digital_gain = 64		# digital gain
+digital_gain = 8		# digital gain
 
 [CV2]
 device_id = 0
