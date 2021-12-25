@@ -27,7 +27,7 @@ Consider using a VirtualEnv to run stvid on a separate python virtual environmen
 
 ## Installation on a Raspberry Pi for Acquistion.
 
-**stvid** can be run on a Raspberry Pi 4B 8Gb with the Raspberry HQ Camera. Installation is not as easy as a on regular Linux and this installation step only supports the filming using acquire.py. The processing can be done on a dektop PC or laptop which has the complete installations of **sattools** and **stvid**. 
+**stvid** can be run on a Raspberry Pi 4B 8Gb with the Raspberry HQ Camera. Installation is not as easy as a on regular Linux and this installation step only supports the filming using acquire.py. The processing can be done on a dektop PC or laptop which has the complete installations of **sattools** and **stvid**. This guide is not complete nor correct. If you try this, please let me know what needs to be improved! 
 
 ### Requirements
 
@@ -113,7 +113,117 @@ cp configuration.ini-dist configuration.ini
 ```
 
 ## Installation on a Raspberry Pi for Processing.
-This chapter is TBD
+
+The processing can also be done on the Raspberry Pi, using process.py. But it has some dependecies that have no packages for the Raspberry, and need to be installed from source. This makes it difficult to install. I have it working and tried to document it here. But this guide is not complete nor correct. If you try this, please let me know what needs to be improved! The process.py make use of pgplot, and pgplot is dependent on libpng, bit does not work with the current version it needs an older version of libpng. Another problem is that giza is installed as replacement of pgplot, but does not seem usable from a quick test.
+
+First we need to uninstall giza. Find if you have pgplotclib installed:
+
+`sudo find / -name libcpgplot.so`
+
+If so then it is probably giza, that needs to be uninstalled:
+
+`sudo apt-get purge giza-dev`
+
+Check if it has been removed.
+
+`sudo find / -name libcpgplot.so`
+
+Next we need an older version of libpng. I used version 1.4. Download it from [https://sourceforge.net/projects/libpng/files/libpng14/1.4.22/libpng-1.4.22.tar.gz/download](https://sourceforge.net/projects/libpng/files/libpng14/1.4.22/libpng-1.4.22.tar.gz/download)
+
+And compile and install libpng:
+
+```
+cd libpng-1.4.22/
+sudo ./install-sh 
+sudo ./configure
+sudo make
+sudo make install
+```
+
+### PGPLOT
+
+Next is pgplot based on [https://sites.astro.caltech.edu/~tjp/pgplot/install-unix.html](https://sites.astro.caltech.edu/~tjp/pgplot/install-unix.html)
+
+It needs a fortran compiler:
+
+```
+sudo apt-get install gfortran
+```
+
+Download the source from [ftp://ftp.astro.caltech.edu/pub/pgplot/pgplot5.2.tar.gz](ftp://ftp.astro.caltech.edu/pub/pgplot/pgplot5.2.tar.gz) as follows:
+
+```
+cd /usr/local
+mkdir src
+cd src
+wget ftp://ftp.astro.caltech.edu/pub/pgplot/pgplot5.2.tar.gz
+gunzip -c pgplot5.2.tar.gz | tar xvof -
+```
+
+Make the target directory and generate the makefile:
+
+```
+cd ..
+mkdir pgplot
+cd pgplot
+```
+
+Copy the drivers list file:
+
+`cp /usr/local/src/pgplot/drivers.list .`
+
+And edit it to enable /XWINDOW and /PNG, by removing the !
+Generate the makefile.
+
+`sudo /usr/local/src/pgplot/makemake /usr/local/pgplot linux f77_gcc`
+
+Now this makefile needs some editing. Remove -u at:
+
+`FFLAGC=`
+
+Change png to png14:
+
+```
+PGPLOT_LIB=-L`pwd` -lpgplot -lpng14 -lz
+CPGPLOT_LIB=-L`pwd` -lcpgplot -lpgplot -lpng14 -lz
+
+pndriv.o : /usr/local/include/libpng14/png.h /usr/local/include/libpng14/pngconf.h /usr/include/zlib.h /usr/include/zconf.h
+```
+
+Setup static linking of libpng14:
+
+`SHARED_LIB_LIBS= -Wl,-Bstatic -L/usr/X11R6/lib -lX11 -lpng14 -lz -lg2c -Wl,-Bdynamic`
+
+Now compile pgplot:
+
+```
+make
+make clean
+make cpg
+ld -shared -o libcpgplot.so --whole-archive libcpgplot.a
+ld -shared -o libpgplot.so --whole-archive libpgplot.a
+```
+
+If all goes well, this leaves the compiled lib togheter with some demo programs in /usr/local/src/pgplot Setup the environment variables:
+
+```
+PGPLOT_DIR="/usr/local/pgplot/"; export PGPLOT_DIR
+PGPLOT_DEV=/xwindow; export PGPLOT_DEV
+```
+
+Run the demo programs to see if pgplot is working:
+
+```
+./pgdemo1
+./cpgdemo
+```
+
+### Sattools
+
+See [https://github.com/cbassa/sattools](https://github.com/cbassa/sattools) for installation of sattools. Do not install pgplot5, as we already have it. Replace the installation of requirements with:
+
+`sudo apt install git make dos2unix sextractor wcslib-dev libgsl-dev gfortran libpng-dev libx11-dev libjpeg-dev libexif-dev`
+
 
 ## Configuration
 * Edit `configuration.ini` with your preferred settings. Especially [Common], [Credentials] and [Camera]: camera_type = PI. You may also want to experiment with the analog_gain and digital_gain settings.
@@ -129,6 +239,14 @@ cd stvid
 ```
 
 You may want to add `-l` for a live view window. And for testing during daylight use `-t 120`, for a test of 120 seconds. 
+
+For processing run:
+```
+cd /obs/20211225_0/203637
+~/stvid/process.py -c ~/stvid/configuration.ini
+```
+
+
 
 ## Todo
 Features to be implemented.
