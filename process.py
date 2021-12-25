@@ -188,6 +188,8 @@ if __name__ == "__main__":
 
     cpu_count = os.cpu_count()
     if (cpu_count > 1):
+        # Leave one cpu unused for acquire.py and other processes.
+        cpu_count = cpu_count - 1
         print("Processing with {} threads".format(cpu_count))
 
     # Forever loop
@@ -249,6 +251,7 @@ if __name__ == "__main__":
         try:
             print("File queue empty, waiting for new files...\r", end = '')
             time.sleep(1)
+            print("Processing...                              \r", end = '')
         except KeyboardInterrupt:
             fstat.close()
             sys.exit()
