@@ -163,9 +163,8 @@ gunzip -c pgplot5.2.tar.gz | tar xvof -
 Make the target directory and generate the makefile:
 
 ```
-cd ..
-mkdir pgplot
-cd pgplot
+mkdir /usr/local/pgplot
+cd /usr/local/pgplot
 ```
 
 Copy the drivers list file:
@@ -204,7 +203,7 @@ ld -shared -o libcpgplot.so --whole-archive libcpgplot.a
 ld -shared -o libpgplot.so --whole-archive libpgplot.a
 ```
 
-If all goes well, this leaves the compiled lib togheter with some demo programs in /usr/local/src/pgplot Setup the environment variables:
+If all goes well, this leaves the compiled lib togheter with some demo programs in /usr/local/pgplot Setup the environment variables:
 
 ```
 PGPLOT_DIR="/usr/local/pgplot/"; export PGPLOT_DIR
