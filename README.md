@@ -160,7 +160,7 @@ wget ftp://ftp.astro.caltech.edu/pub/pgplot/pgplot5.2.tar.gz
 gunzip -c pgplot5.2.tar.gz | tar xvof -
 ```
 
-Make the target directory and generate the makefile:
+Make the target directory, go there to generate the makefile:
 
 ```
 mkdir /usr/local/pgplot
@@ -169,14 +169,54 @@ cd /usr/local/pgplot
 
 Copy the drivers list file:
 
-`cp /usr/local/src/pgplot/drivers.list .`
+`sudo cp /usr/local/src/pgplot/drivers.list .`
 
-And edit it to enable /XWINDOW and /PNG, by removing the !
+And edit it to enable /XWINDOW and /PNG, by removing the ! Or use mine:
+
+```
+sudo mv drivers.list drivers.list.backup
+sudo wget https://raw.githubusercontent.com/EelkeVisser/stvid/master/readme/drivers.list
+```
+
 Generate the makefile.
 
-`sudo /usr/local/src/pgplot/makemake /usr/local/pgplot linux f77_gcc`
+`sudo /usr/local/src/pgplot/makemake /usr/local/src/pgplot linux f77_gcc`
 
-Now this makefile needs some editing. Remove -u at:
+This should result in:
+
+```
+For additional information, read file /usr/local/src/pgplot/sys_linux/aaaread.me
+Reading configuration file: /usr/local/src/pgplot/sys_linux/f77_gcc.conf
+Selecting uncommented drivers from ./drivers.list
+Found drivers NUDRIV PNDRIV XWDRIV
+Copying color database.
+Creating make file: makefile
+Determining object file dependencies.
+```
+
+You should have the following files, when running `ls -l`:
+
+```
+total 128
+-rw-r--r-- 1 root root  6577 Jan  7 21:02 drivers.list
+-rw-r--r-- 1 root root  6577 Jan  7 21:01 drivers.list.backup
+-rw-r--r-- 1 root root   750 Jan  7 21:02 grexec.f
+-rw-r--r-- 1 root root  3911 Jan  7 21:02 grpckg1.inc
+-rw-r--r-- 1 root root 40893 Jan  7 21:03 makefile
+-rw-r--r-- 1 root root 40731 Jan  7 21:02 makefile.backup
+-rw-r--r-- 1 root root  6287 Jan  7 21:02 pgplot.inc
+-rw-r--r-- 1 root root 16059 Jan  7 21:02 rgb.txt
+
+```
+
+Now the makefile needs some editing. Or download mine:
+
+```
+sudo mv makefile makefile.backup
+sudo wget https://raw.githubusercontent.com/EelkeVisser/stvid/master/readme/makefile
+```
+
+Remove -u at:
 
 `FFLAGC=`
 
@@ -196,14 +236,56 @@ Setup static linking of libpng14:
 Now compile pgplot:
 
 ```
-make
-make clean
-make cpg
-ld -shared -o libcpgplot.so --whole-archive libcpgplot.a
-ld -shared -o libpgplot.so --whole-archive libpgplot.a
+sudo make
+sudo make clean
+sudo make cpg
+sudo ld -shared -o libcpgplot.so --whole-archive libcpgplot.a
+sudo ld -shared -o libpgplot.so --whole-archive libpgplot.a
 ```
 
-If all goes well, this leaves the compiled lib togheter with some demo programs in /usr/local/pgplot Setup the environment variables:
+If all goes well, this leaves the compiled lib togheter with some demo programs in /usr/local/pgplot 
+
+If you check the contents of this dir you should get `ls -l`:
+```
+total 4472
+-rwxr-xr-x 1 root root 185060 Jan  7 21:10 cpgdemo
+-rw-r--r-- 1 root root   6393 Jan  7 21:10 cpgplot.h
+-rw-r--r-- 1 root root   6577 Jan  7 21:02 drivers.list
+-rw-r--r-- 1 root root   6577 Jan  7 21:01 drivers.list.backup
+-rw-r--r-- 1 root root    750 Jan  7 21:02 grexec.f
+-rw-r--r-- 1 root root  66020 Jan  7 21:09 grfont.dat
+-rw-r--r-- 1 root root   3911 Jan  7 21:02 grpckg1.inc
+-rw-r--r-- 1 root root 110340 Jan  7 21:10 libcpgplot.a
+-rwxr-xr-x 1 root root  27772 Jan  7 21:10 libcpgplot.so
+-rw-r--r-- 1 root root 550670 Jan  7 21:09 libpgplot.a
+-rwxr-xr-x 1 root root 306172 Jan  7 21:10 libpgplot.so
+-rw-r--r-- 1 root root  40893 Jan  7 21:03 makefile
+-rw-r--r-- 1 root root  40731 Jan  7 21:02 makefile.backup
+-rwxr-xr-x 1 root root  22012 Jan  7 21:10 pgbind
+-rwxr-xr-x 1 root root 228440 Jan  7 21:09 pgdemo1
+-rwxr-xr-x 1 root root 160332 Jan  7 21:09 pgdemo10
+-rwxr-xr-x 1 root root 155884 Jan  7 21:09 pgdemo11
+-rwxr-xr-x 1 root root 150740 Jan  7 21:09 pgdemo12
+-rwxr-xr-x 1 root root 233596 Jan  7 21:09 pgdemo13
+-rwxr-xr-x 1 root root 148732 Jan  7 21:09 pgdemo14
+-rwxr-xr-x 1 root root 173648 Jan  7 21:09 pgdemo15
+-rwxr-xr-x 1 root root 161616 Jan  7 21:09 pgdemo16
+-rwxr-xr-x 1 root root 169096 Jan  7 21:09 pgdemo17
+-rwxr-xr-x 1 root root 180412 Jan  7 21:09 pgdemo2
+-rwxr-xr-x 1 root root 196516 Jan  7 21:09 pgdemo3
+-rwxr-xr-x 1 root root 188944 Jan  7 21:09 pgdemo4
+-rwxr-xr-x 1 root root 164360 Jan  7 21:09 pgdemo5
+-rwxr-xr-x 1 root root 155500 Jan  7 21:09 pgdemo6
+-rwxr-xr-x 1 root root 155248 Jan  7 21:09 pgdemo7
+-rwxr-xr-x 1 root root 124804 Jan  7 21:09 pgdemo8
+-rwxr-xr-x 1 root root 168648 Jan  7 21:09 pgdemo9
+-rw-r--r-- 1 root root 162651 Jan  7 21:09 pgplot.doc
+-rw-r--r-- 1 root root   6287 Jan  7 21:02 pgplot.inc
+-rwxr-xr-x 1 root root  33076 Jan  7 21:09 pgxwin_server
+-rw-r--r-- 1 root root  16059 Jan  7 21:02 rgb.txt
+
+```
+Setup the environment variables:
 
 ```
 PGPLOT_DIR="/usr/local/pgplot/"; export PGPLOT_DIR
@@ -215,6 +297,15 @@ Run the demo programs to see if pgplot is working:
 ```
 ./pgdemo1
 ./cpgdemo
+```
+Should show:
+![pgdemo1](./readme/pgdemo1.png)
+
+Now you have a working pgplot in the folder /usr/local/pgplot but if you want to compile sattools, it can not find it. I solved this the ugly way by copying this whole dir to the include and library dir:
+```
+sudo cp * /usr/include -r
+sudo cp * /usr/lib -r
+
 ```
 
 ### Sattools
