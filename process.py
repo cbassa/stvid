@@ -65,7 +65,7 @@ def process_loop(fname):
     generate_satellite_predictions(fname)
 
     # Detect lines with 3D Hough transform
-    ids = find_hough3d_lines(fname, nhoughmin, houghrmin)
+    ids = find_hough3d_lines(fname, nhoughmin, houghrmin, trksig)
 
     # Get properties
     ff = fourframe(fname)

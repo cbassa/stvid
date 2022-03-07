@@ -98,6 +98,8 @@ class fourframe:
             # Read image planes
             self.zavg, self.zstd, self.zmax, self.znum = hdu[0].data
 
+            self.zstd = np.clip(self.zstd, 1, None)
+
             # Generate sigma frame
             self.zsig = (self.zmax - self.zavg) / (self.zstd + 1e-9)
 

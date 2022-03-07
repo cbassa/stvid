@@ -363,6 +363,8 @@ def extract_tracks(fname, trkrmin, drdtmin, drdtmax, trksig, ntrkmin, path, resu
             xmax = x0 + dxdt * (tmax - tmid)
             ymax = y0 + dydt * (tmax - tmid)
 
+            print('norad=%05d, len=%d, sig=%d, %d, %d, %d' % (ident.norad, len(t), np.mean(sig), np.std(sig), np.min(sig), np.max(sig) ) );
+
             cospar = get_cospar(ident.norad, ff.nfd, tle_dir)
             obs = observation(ff, mjd, x0, y0)
             iod_line = "%s" % format_iod_line(ident.norad, cospar, ff.site_id,

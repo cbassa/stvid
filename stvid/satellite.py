@@ -18,7 +18,7 @@ def generate_satellite_predictions(fname):
     return output
 
 
-def find_hough3d_lines(fname, ntrkmin, trkrmin):
+def find_hough3d_lines(fname, ntrkmin, trkrmin,  trksig):
     # Read four frame
     ff = fourframe(fname)
 
@@ -26,7 +26,7 @@ def find_hough3d_lines(fname, ntrkmin, trkrmin):
     ff.mask(10, 10, 5, 5)
 
     # Compute selection mask
-    x, y, z, t, sig = ff.selection_mask(5.0, 40.0)
+    x, y, z, t, sig = ff.selection_mask(trksig, 20.0)
 
     # Skip if not enough points
     if len(t) < 2:
