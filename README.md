@@ -58,6 +58,6 @@ Features to be implemented.
 * Create start up script in `/etc/init.d`. Call capture script as user with `su <username> -c "acquire.py"`.
 
 ## License
-&copy; 2018-2019 Cees Bassa
+&copy; 2018-2022 Cees Bassa
 
 Licensed under the [GPLv3](LICENSE).
