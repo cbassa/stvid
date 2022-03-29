@@ -188,6 +188,7 @@ def add_wcs(fname, w, rmsx, rmsy):
     # Read fits
     hdu = fits.open(fname)
 
+    # Keywords to add
     whdr = {"CRPIX1": w.wcs.crpix[0], "CRPIX2": w.wcs.crpix[1],
             "CRVAL1": w.wcs.crval[0], "CRVAL2": w.wcs.crval[1],
             "CD1_1": w.wcs.cd[0, 0], "CD1_2": w.wcs.cd[0, 1],
@@ -199,6 +200,7 @@ def add_wcs(fname, w, rmsx, rmsy):
     hdr = hdu[0].header
     for k, v in whdr.items():
         hdr[k] = v
+
     hdu = fits.PrimaryHDU(header=hdr, data=hdu[0].data)
     hdu.writeto(fname, overwrite=True, output_verify="ignore")
 
