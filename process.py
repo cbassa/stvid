@@ -241,7 +241,7 @@ if __name__ == "__main__":
         # Sleep
         try:
             print("File queue empty, waiting for new files...\r", end = '')
-            time.sleep(10)
+            time.sleep(1)
         except KeyboardInterrupt:
             fstat.close()
             sys.exit()
