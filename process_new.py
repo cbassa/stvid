@@ -2,7 +2,6 @@
 import configparser
 
 from stvid.stio import FourFrame
-from stvid import predict
 
 import numpy as np
 import matplotlib
@@ -73,7 +72,7 @@ def plot_prediction(p, ax, tlefiles, colors, dt=2.0, w=10.0):
     return
 
 if __name__ == "__main__":
-    config_file = "config.ini"
+    config_file = "config_new.ini"
 
     fname = "/data3/satobs/test/185300/processed/2022-03-24T18:53:20.708.fits"
 #    fname = "/data3/satobs/test/2022-04-02T21:35:17.038.fits"
@@ -92,7 +91,7 @@ if __name__ == "__main__":
 
     ff = FourFrame(fname)
 
-    predictions = predict.generate_satellite_predictions(ff, cfg)
+    predictions = ff.generate_satellite_predictions(cfg)
 
     fig, ax = plt.subplots(figsize=(15, 10), dpi=75)
 
