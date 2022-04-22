@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-
+#!/usr/bin/env python3
 import numpy as np
 from astropy.io import fits
 from astropy.time import Time
@@ -7,7 +6,7 @@ from astropy import wcs
 from scipy import ndimage
 
 
-class observation:
+class Observation:
     """Satellite observation"""
 
     def __init__(self, ff, mjd, x0, y0):
@@ -19,15 +18,15 @@ class observation:
         self.y0 = y0
 
         # Get times
-        self.nfd = Time(self.mjd, format='mjd', scale='utc').isot
+        self.nfd = Time(self.mjd, format="mjd", scale="utc").isot
 
         # Correct for rotation
         tobs = Time(ff.mjd + 0.5 * ff.texp / 86400.0,
-                    format='mjd',
-                    scale='utc')
+                    format="mjd",
+                    scale="utc")
         tobs.delta_ut1_utc = 0
         hobs = tobs.sidereal_time("mean", longitude=0.0).degree
-        tmid = Time(self.mjd, format='mjd', scale='utc')
+        tmid = Time(self.mjd, format="mjd", scale="utc")
         tmid.delta_ut1_utc = 0
         hmid = tmid.sidereal_time("mean", longitude=0.0).degree
 
@@ -40,7 +39,7 @@ class observation:
         self.de = world[0, 1]
 
 
-class satid:
+class SatId:
     """Satellite identifications"""
 
     def __init__(self, line):
@@ -64,8 +63,8 @@ class satid:
             self.norad, self.catalog, self.state)
 
 
-class fourframe:
-    """Four frame class"""
+class FourFrame:
+    """Four Frame class"""
 
     def __init__(self, fname=None):
         if fname is None:
@@ -103,36 +102,36 @@ class fourframe:
 
             # Frame properties
             self.ny, self.nx = self.zavg.shape
-            self.nz = hdu[0].header['NFRAMES']
+            self.nz = hdu[0].header["NFRAMES"]
 
             # Read frame time oselfsets
             self.dt = np.array(
-                [hdu[0].header['DT%04d' % i] for i in range(self.nz)])
+                [hdu[0].header["DT%04d" % i] for i in range(self.nz)])
 
             # Read header
-            self.mjd = hdu[0].header['MJD-OBS']
-            self.nfd = hdu[0].header['DATE-OBS']
-            self.site_id = hdu[0].header['COSPAR']
-            self.observer = hdu[0].header['OBSERVER']
-            self.texp = hdu[0].header['EXPTIME']
+            self.mjd = hdu[0].header["MJD-OBS"]
+            self.nfd = hdu[0].header["DATE-OBS"]
+            self.site_id = hdu[0].header["COSPAR"]
+            self.observer = hdu[0].header["OBSERVER"]
+            self.texp = hdu[0].header["EXPTIME"]
             self.fname = fname
 
             # Astrometry keywords
             self.crpix = np.array(
-                [hdu[0].header['CRPIX1'], hdu[0].header['CRPIX2']])
+                [hdu[0].header["CRPIX1"], hdu[0].header["CRPIX2"]])
             self.crval = np.array(
-                [hdu[0].header['CRVAL1'], hdu[0].header['CRVAL2']])
+                [hdu[0].header["CRVAL1"], hdu[0].header["CRVAL2"]])
             self.cd = np.array(
-                [[hdu[0].header['CD1_1'], hdu[0].header['CD1_2']],
-                 [hdu[0].header['CD2_1'], hdu[0].header['CD2_2']]])
-            self.ctype = [hdu[0].header['CTYPE1'], hdu[0].header['CTYPE2']]
-            self.cunit = [hdu[0].header['CUNIT1'], hdu[0].header['CUNIT2']]
+                [[hdu[0].header["CD1_1"], hdu[0].header["CD1_2"]],
+                 [hdu[0].header["CD2_1"], hdu[0].header["CD2_2"]]])
+            self.ctype = [hdu[0].header["CTYPE1"], hdu[0].header["CTYPE2"]]
+            self.cunit = [hdu[0].header["CUNIT1"], hdu[0].header["CUNIT2"]]
             self.crres = np.array(
-                [hdu[0].header['CRRES1'], hdu[0].header['CRRES2']])
+                [hdu[0].header["CRRES1"], hdu[0].header["CRRES2"]])
 
             # Check for sidereal tracking
             try:
-                self.tracked = bool(hdu[0].header['TRACKED'])
+                self.tracked = bool(hdu[0].header["TRACKED"])
             except KeyError:
                 self.tracked = False
             
@@ -171,8 +170,8 @@ class fourframe:
 
     def selection_mask(self, sigma, zstd):
         """Create a selection mask"""
-        c1 = ndimage.uniform_filter(self.znum, 3, mode='constant')
-        c2 = ndimage.uniform_filter(self.znum * self.znum, 3, mode='constant')
+        c1 = ndimage.uniform_filter(self.znum, 3, mode="constant")
+        c2 = ndimage.uniform_filter(self.znum * self.znum, 3, mode="constant")
 
         # Add epsilon to keep square root positive
         z = np.sqrt(c2 - c1 * c1 + 1e-9)
@@ -192,7 +191,7 @@ class fourframe:
         c = self.zsel == 1.0
         xm, ym = np.meshgrid(np.arange(self.nx), np.arange(self.ny))
         x, y = np.ravel(xm[c]), np.ravel(ym[c])
-        inum = np.ravel(self.znum[c]).astype('int')
+        inum = np.ravel(self.znum[c]).astype("int")
         sig = np.ravel(self.zsig[c])
         t = np.array([self.dt[i] for i in inum])
 
@@ -216,7 +215,7 @@ class fourframe:
         # Positions
         xm, ym = np.meshgrid(np.arange(self.nx), np.arange(self.ny))
         x, y = np.ravel(xm[c]), np.ravel(ym[c])
-        inum = np.ravel(self.znum[c]).astype('int')
+        inum = np.ravel(self.znum[c]).astype("int")
         sig = np.ravel(zsig[c])
         t = np.array([self.dt[i] for i in inum])
 
@@ -240,7 +239,7 @@ class fourframe:
         # Positions
         xm, ym = np.meshgrid(np.arange(self.nx), np.arange(self.ny))
         x, y = np.ravel(xm[c]), np.ravel(ym[c])
-        inum = np.ravel(self.znum[c]).astype('int')
+        inum = np.ravel(self.znum[c]).astype("int")
         sig = np.ravel(zsig[c])
         t = np.array([self.dt[i] for i in inum])
 
@@ -280,6 +279,12 @@ class fourframe:
 
         return ztrk
 
+    def in_frame(self, x, y):
+        if (x >= 0) & (x <= self.nx) & (y >= 0) & (y <= self.ny):
+            return True
+        else:
+            return False
+    
     def __repr__(self):
         return "%s %dx%dx%d %s %.3f %d %s" % (self.fname, self.nx, self.ny,
                                               self.nz, self.nfd, self.texp,

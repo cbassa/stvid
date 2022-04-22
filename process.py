@@ -2,7 +2,7 @@
 from __future__ import print_function
 import glob
 import numpy as np
-from stvid.stio import fourframe
+from stvid.stio import FourFrame
 from stvid.stars import generate_star_catalog
 from stvid.stars import store_calibration
 from stvid.stars import pixel_catalog
@@ -68,7 +68,7 @@ def process_loop(fname):
     ids = find_hough3d_lines(fname, nhoughmin, houghrmin)
 
     # Get properties
-    ff = fourframe(fname)
+    ff = FourFrame(fname)
 
     # Extract tracks
     if is_calibrated(ff):
