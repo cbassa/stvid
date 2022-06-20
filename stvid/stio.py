@@ -8,10 +8,57 @@ from astropy import wcs
 from scipy import ndimage
 
 import subprocess
+import tempfile
 
 from astropy.io import ascii
 from astropy.coordinates import SkyCoord
 
+class ThreeDLine:
+    """3D defined line"""
+
+    def __init__(self, line, nx, ny, nz):
+        p = line.split(" ")
+        self.ax = float(p[0])
+        self.ay = float(p[1])
+        self.az = float(p[2])
+        self.bx = float(p[3])
+        self.by = float(p[4])
+        self.bz = float(p[5])
+        self.n = int(p[6])
+        self.nx = nx
+        self.ny = ny
+        self.nz = nz
+
+    def extrema(self):
+        fzmin, fzmax = -self.az / self.bz, (self.nz - self.az) / self.bz
+
+        xmin, xmax = self.ax + fzmin * self.bx, self.ax + fzmax * self.bx
+        ymin, ymax = self.ay + fzmin * self.by, self.ay + fzmax * self.by
+
+        if xmin < 0:
+            fzmin = -self.ax / self.bx
+        if xmax >= self.nx:
+            fzmax = (self.nx - self.ax) / self.bx
+        if ymin < 0:
+            fzmin = -self.ay / self.by
+        if ymax >= self.ny:
+            fzmax = (self.ny - self.ay) / self.by
+
+        self.xmin, self.xmax = self.ax + fzmin * self.bx, self.ax + fzmax * self.bx
+        self.ymin, self.ymax = self.ay + fzmin * self.by, self.ay + fzmax * self.by
+        self.zmin, self.zmax = int(self.az + fzmin * self.bz), int(self.az + fzmax * self.bz)
+        if self.zmin < 0:
+            self.zmin = 0
+        if self.zmax > self.nz:
+            self.zmax = self.nz
+        self.fmin, self.fmax = fzmin, fzmax
+
+        return self.fmin, self.fmax
+        
+    def __repr__(self):
+        return f"{self.ax} {self.ay} {self.az} {self.bx} {self.by} {self.bz} {self.n}"
+
+        
 class Prediction:
     """Prediction class"""
 
@@ -169,7 +216,9 @@ class FourFrame:
         self.zmaxmax = np.mean(self.zmax) + 6.0 * np.std(self.zmax)
         self.zavgmin = np.mean(self.zavg) - 2.0 * np.std(self.zavg)
         self.zavgmax = np.mean(self.zavg) + 6.0 * np.std(self.zavg)
-
+        self.zsigmin = 0
+        self.zsigmax = 10
+        
         # Setup WCS
         self.w = wcs.WCS(naxis=2)
         self.w.wcs.crpix = self.crpix
@@ -353,6 +402,51 @@ class FourFrame:
             predictions.append(p)
         
         return predictions
+
+    def find_lines(self, cfg):
+        # Config settings
+        sigma = cfg.getfloat("LineDetection", "trksig")
+        trkrmin = cfg.getfloat("LineDetection", "trkrmin")
+        ntrkmin = cfg.getfloat("LineDetection", "ntrkmin")
+        
+        # Find significant pixels (TODO: store in function?)
+        c = self.zsig > sigma
+        xm, ym = np.meshgrid(np.arange(self.nx), np.arange(self.ny))
+        x, y = np.ravel(xm[c]), np.ravel(ym[c])
+        z = np.ravel(self.znum[c]).astype("int")
+        sig = np.ravel(self.zsig[c])
+        t = np.array([self.dt[i] for i in z])
+
+        # Skip if not enough points
+        if len(t) < ntrkmin:
+            return []
+
+        # Save points to temporary file
+        (fd, tmpfile_path) = tempfile.mkstemp(prefix="hough_tmp", suffix=".dat")
+
+        try:
+            with os.fdopen(fd, "w") as f:
+                for i in range(len(t)):
+                    f.write(f"{x[i]:f},{y[i]:f},{z[i]:f}\n")
+
+            # Run 3D Hough line-finding algorithm
+            command = f"hough3dlines -dx {trkrmin} -minvotes {ntrkmin} -raw {tmpfile_path}"
+            
+            try:
+                output = subprocess.check_output(command,
+                                                 shell=True,
+                                                 stderr=subprocess.STDOUT)
+            except Exception:
+                return []
+        finally:
+            os.remove(tmpfile_path)
+
+        # Decode output
+        lines = []
+        for line in output.decode("utf-8").splitlines()[2:]:
+            lines.append(ThreeDLine(line, self.nx, self.ny, self.nz))
+
+        return lines
         
     def __repr__(self):
         return "%s %dx%dx%d %s %.3f %d %s" % (self.fname, self.nx, self.ny,

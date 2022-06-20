@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 import configparser
 
+import glob
+
 from stvid.stio import FourFrame
+
+from scipy import ndimage
 
 import numpy as np
 import matplotlib
@@ -74,8 +78,6 @@ def plot_prediction(p, ax, tlefiles, colors, dt=2.0, w=10.0):
 if __name__ == "__main__":
     config_file = "config_new.ini"
 
-    fname = "/data3/satobs/test/185300/processed/2022-03-24T18:53:20.708.fits"
-#    fname = "/data3/satobs/test/2022-04-02T21:35:17.038.fits"
     cfg = configparser.ConfigParser(inline_comment_prefixes=("#", ":"))
     result = cfg.read([config_file])
 
@@ -88,33 +90,68 @@ if __name__ == "__main__":
             colors.append(value)
         elif "name" in key:
             catalognames.append(value)
-
-    ff = FourFrame(fname)
-
-    predictions = ff.generate_satellite_predictions(cfg)
-
-    fig, ax = plt.subplots(figsize=(15, 10), dpi=75)
-
-    ax.set_title(f"UT Date: {ff.nfd} COSPAR ID: {ff.site_id}\nR.A.: {ff.crval[0]:10.6f} ({3600 * ff.crres[0]:.1f}\") Decl.: {ff.crval[1]:10.6f} ({3600 * ff.crres[1]:.1f}\")\nFOV: {ff.wx:.2f}$^\circ$x{ff.wy:.2f}$^\circ$ Scale: {3600 * ff.sx:.2f}\"x{3600 * ff.sy:.2f}\" pix$^{{-1}}$", fontdict={"fontsize": 14, "horizontalalignment": "left"}, loc="left")
     
-    ax.imshow(ff.zmax, origin="lower", interpolation="none", vmin=ff.zmaxmin, vmax=ff.zmaxmax,
-              cmap="viridis")
+    fname = "/data3/satobs/test/185300/processed/2022-03-24T18:53:20.708.fits"
+    fnames = sorted(glob.glob("/data3/satobs/test/185300/processed/2*.fits"))
+    #    fname = "/data3/satobs/test/2022-04-02T21:35:17.038.fits"
 
-    for p in predictions:
-        plot_prediction(p, ax, tlefiles, colors, dt=0)
+    for fname in fnames[2:3]:
+        ff = FourFrame(fname)
 
-    ax.set_xlim(0, ff.nx)
-    ax.set_ylim(0, ff.ny)
-    ax.xaxis.set_ticklabels([])
-    ax.yaxis.set_ticklabels([])
+        predictions = ff.generate_satellite_predictions(cfg)
 
-    # Create legend handles
-    handles = []
-    for catalogname, color in zip(catalognames, colors):
-        handles.append(mlines.Line2D([], [], color=color, marker="", label=catalogname))
-    for state, linestyle in zip(["Sunlit", "Penumbra", "Eclipsed"], ["solid", "dashed", "dotted"]):
-        handles.append(mlines.Line2D([], [], color="k", linestyle=linestyle, marker="", label=state))
-    ax.legend(handles=handles, ncol=6, bbox_to_anchor=(0.5, -0.02), loc="center", frameon=False)
+        fig, ax = plt.subplots(figsize=(15, 10), dpi=75)
+
+        ax.set_title(f"UT Date: {ff.nfd} COSPAR ID: {ff.site_id}\nR.A.: {ff.crval[0]:10.6f} ({3600 * ff.crres[0]:.1f}\") Decl.: {ff.crval[1]:10.6f} ({3600 * ff.crres[1]:.1f}\")\nFOV: {ff.wx:.2f}$^\circ$x{ff.wy:.2f}$^\circ$ Scale: {3600 * ff.sx:.2f}\"x{3600 * ff.sy:.2f}\" pix$^{{-1}}$", fontdict={"fontsize": 14, "horizontalalignment": "left"}, loc="left")
+    
+        ax.imshow(ff.zmax, origin="lower", interpolation="none", vmin=ff.zmaxmin, vmax=ff.zmaxmax,
+                  cmap="gray_r")
+        #        ax.imshow(ff.zsig, origin="lower", interpolation="none", vmin=5.0, vmax=ff.zsigmax,
+        #                  cmap="gray_r")
+
+        #ax.imshow(ff.znum, origin="lower", interpolation="none", vmin=0, vmax=100,
+        #          cmap="gray_r")
+
+        for p in predictions:
+            plot_prediction(p, ax, tlefiles, colors, dt=0)
+
+        lines = ff.find_lines(cfg)
+
+        c = ff.zsig > 5
+        xm, ym = np.meshgrid(np.arange(ff.nx), np.arange(ff.ny))
+        x, y = np.ravel(xm[c]), np.ravel(ym[c])
+        inum = np.ravel(ff.znum[c]).astype("int")
+        t = np.array([ff.dt[i] for i in inum])
+        
+        for line in lines:
+            fmin, fmax = line.extrema()
+            print(line.zmin, line.zmax)
+            #z = np.arange(line.zmin, line.zmax)
+            f = (inum - line.az) / line.bz
+            x0 = line.ax + f * line.bx
+            y0 = line.ay + f * line.by
+            r = np.sqrt((x - x0)**2 + (y - y0)**2)
+            c = r < 20
+            print(np.sum(c))
+            ax.plot(x[c], y[c], ".")
+            ax.plot(x0, y0, "r+")
+            ax.plot(line.xmin, line.ymin, "rs")
+            ax.plot(line.xmax, line.ymax, "ro")
+
+        ax.set_xlim(0, ff.nx)
+        ax.set_ylim(0, ff.ny)
+        ax.xaxis.set_ticklabels([])
+        ax.yaxis.set_ticklabels([])
+
+        # Create legend handles
+        handles = []
+        for catalogname, color in zip(catalognames, colors):
+            handles.append(mlines.Line2D([], [], color=color, marker="", label=catalogname))
+        for state, linestyle in zip(["Sunlit", "Penumbra", "Eclipsed"], ["solid", "dashed", "dotted"]):
+            handles.append(mlines.Line2D([], [], color="k", linestyle=linestyle, marker="", label=state))
+        ax.legend(handles=handles, ncol=6, bbox_to_anchor=(0.5, -0.02), loc="center", frameon=False)
                     
-    plt.tight_layout()
-    plt.savefig("test.png", bbox_inches="tight")
+        plt.tight_layout()
+        plt.show()
+#        plt.savefig(f"{fname}.png", bbox_inches="tight")
+#        plt.close()
