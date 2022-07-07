@@ -447,7 +447,52 @@ class FourFrame:
             lines.append(ThreeDLine(line, self.nx, self.ny, self.nz))
 
         return lines
+
+    def find_tracks(self, cfg):
+        # Config settings
+        sigma = cfg.getfloat("LineDetection", "trksig")
+        trkrmin = cfg.getfloat("LineDetection", "trkrmin")
+        ntrkmin = cfg.getfloat("LineDetection", "ntrkmin")
         
+        # Find significant pixels (TODO: store in function?)
+        c = self.zsig > sigma
+        xm, ym = np.meshgrid(np.arange(self.nx), np.arange(self.ny))
+        x, y = np.ravel(xm[c]), np.ravel(ym[c])
+        z = np.ravel(self.znum[c]).astype("int")
+        sig = np.ravel(self.zsig[c])
+        t = np.array([self.dt[i] for i in z])
+
+        # Skip if not enough points
+        if len(t) < ntrkmin:
+            return []
+
+        # Save points to temporary file
+        (fd, tmpfile_path) = tempfile.mkstemp(prefix="hough_tmp", suffix=".dat")
+
+        try:
+            with os.fdopen(fd, "w") as f:
+                for i in range(len(t)):
+                    f.write(f"{x[i]:f},{y[i]:f},{z[i]:f}\n")
+
+            # Run 3D Hough line-finding algorithm
+            command = f"hough3dlines -dx {trkrmin} -minvotes {ntrkmin} -raw {tmpfile_path}"
+            
+            try:
+                output = subprocess.check_output(command,
+                                                 shell=True,
+                                                 stderr=subprocess.STDOUT)
+            except Exception:
+                return []
+        finally:
+            os.remove(tmpfile_path)
+
+        # Decode output
+        lines = []
+        for line in output.decode("utf-8").splitlines()[2:]:
+            lines.append(ThreeDLine(line, self.nx, self.ny, self.nz))
+
+        return lines
+    
     def __repr__(self):
         return "%s %dx%dx%d %s %.3f %d %s" % (self.fname, self.nx, self.ny,
                                               self.nz, self.nfd, self.texp,
