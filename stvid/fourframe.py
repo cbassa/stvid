@@ -15,7 +15,7 @@ from astropy.coordinates import SkyCoord
 class Prediction:
     """Prediction class"""
 
-    def __init__(self, satno, mjd, ra, dec, x, y, state, tlefile, age):
+    def __init__(self, satno, mjd, ra, dec, x, y, rx, ry, state, tlefile, age):
         self.satno = satno
         self.age = age
         self.mjd = mjd
@@ -25,62 +25,182 @@ class Prediction:
         self.dec = dec
         self.x = x
         self.y = y
+        self.rx = rx
+        self.ry = ry
         self.state = state
         self.tlefile = tlefile
 
+    def position_and_velocity(self, t, dt):
+        # Skip if predicted track is too short to fit a 3rd order polynomial
+        if len(self.t) < 3:
+            return np.nan, np.nan, np.nan, np.nan, np.nan
+
+        # Create polynomials
+        px = np.polyfit(self.t, self.rx, 2)
+        py = np.polyfit(self.t, self.ry, 2)
+
+        # Derivatives
+        dpx = np.polyder(px)
+        dpy = np.polyder(py)
+        
+        # Evaluate
+        rx0, ry0 = np.polyval(px, t), np.polyval(py, t)
+        drxdt, drydt = np.polyval(dpx, t), np.polyval(dpy, t)
+        drdt = np.sqrt(drxdt**2 + drydt**2)
+        pa = np.mod(np.arctan2(-drxdt, drydt), 2 * np.pi)
+        dr = drdt * dt
+        
+        return rx0, ry0, drdt, pa, dr
+
+    def predicted_track(self, tmin, tmid, tmax, ax, color):
+        # Skip if predicted track is too short to fit a 3rd order polynomial
+        if len(self.t) < 3:
+            return np.nan, np.nan, np.nan, np.nan
+
+        # Create polynomials
+        px = np.polyfit(self.t, self.x, 2)
+        py = np.polyfit(self.t, self.y, 2)
+
+        # Derivatives
+        dpx = np.polyder(px)
+        dpy = np.polyder(py)
+        
+        # Evaluate
+        x0, y0 = np.polyval(px, tmid), np.polyval(py, tmid)
+        dxdt, dydt = np.polyval(dpx, tmid), np.polyval(dpy, tmid)
+
+        # Extrema
+        xmin = x0 + dxdt * (tmin - tmid)
+        xmax = x0 + dxdt * (tmax - tmid)
+        ymin = y0 + dydt * (tmin - tmid)
+        ymax = y0 + dydt * (tmax - tmid)        
+
+        ax.plot([xmin, xmax], [ymin, ymax], color=color, linestyle="-")
+        ax.plot(x0, y0, color=color, marker="o", markerfacecolor="none")
+
+    def residual(self, t0, rx0, ry0):
+        # Skip if predicted track is too short to fit a 3rd order polynomial
+        if len(self.t) < 3:
+            return np.nan, np.nan
+
+        # Create polynomials
+        px = np.polyfit(self.t, self.rx, 2)
+        py = np.polyfit(self.t, self.ry, 2)
+
+        # Derivatives
+        dpx = np.polyder(px)
+        dpy = np.polyder(py)
+        
+        # Evaluate
+        rx, ry = np.polyval(px, t0), np.polyval(py, t0)
+        drxdt, drydt = np.polyval(dpx, t0), np.polyval(dpy, t0)
+        drdt = np.sqrt(drxdt**2 + drydt**2)
+        pa = np.arctan2(-drxdt, drydt)
+
+        # Compute cross-track, in-track residual
+        drx, dry = rx0 - rx, ry0 - ry
+        ca, sa = np.cos(pa), np.sin(pa)
+        rm = ca * drx - sa * dry
+        wm = sa * drx + ca * dry
+        dtm = rm / drdt
+        
+        return dtm, wm
+        
 class Track:
     """Track class"""
 
-    def __init__(self, x, y, t, z):
+    def __init__(self, t, x, y, z, ra, dec, rx, ry):
         self.x = x
         self.y = y
         self.t = t
         self.z = z
+        self.ra = ra
+        self.dec = dec
+        self.rx = rx
+        self.ry = ry
         self.n = len(x)
+        self.satno = None
+        self.cospar = None
 
         # Compute mean position
-        tmin, tmax = np.min(self.t), np.max(self.t)
-        self.tmid = 0.5 * (tmax + tmin)
+        self.tmin, self.tmax = np.min(self.t), np.max(self.t)
+        self.tmid = 0.5 * (self.tmax + self.tmin)
 
-        self.px = np.polyfit(self.t - self.tmid, self.x, 1)
-        self.py = np.polyfit(self.t - self.tmid, self.y, 1)
-        self.xp = np.polyval(self.px, self.t - self.tmid)
-        self.yp = np.polyval(self.py, self.t - self.tmid)        
+        # Position and velocity on the sky
+        px = np.polyfit(self.t - self.tmid, self.rx, 1)
+        py = np.polyfit(self.t - self.tmid, self.ry, 1)
+        self.rx0 = px[-1]
+        self.ry0 = py[-1]
+        self.drxdt = px[-2]
+        self.drydt = py[-2]
+        self.rxmin = self.rx0 + self.drxdt * (self.tmin - self.tmid)
+        self.rxmax = self.rx0 + self.drxdt * (self.tmax - self.tmid)
+        self.rymin = self.ry0 + self.drydt * (self.tmin - self.tmid)
+        self.rymax = self.ry0 + self.drydt * (self.tmax - self.tmid)
+        self.drdt = np.sqrt(self.drxdt**2 + self.drydt**2)
+        self.pa = np.mod(np.arctan2(-self.drxdt, self.drydt), 2 * np.pi)
+        self.dr = self.drdt * (self.tmax - self.tmin)
+        
+        # Position and velocity on the image
+        px = np.polyfit(self.t - self.tmid, self.x, 1)
+        py = np.polyfit(self.t - self.tmid, self.y, 1)
+        self.x0 = px[-1]
+        self.y0 = py[-1]
+        self.dxdt = px[-2]
+        self.dydt = py[-2]
+        self.xmin = self.x0 + self.dxdt * (self.tmin - self.tmid)
+        self.xmax = self.x0 + self.dxdt * (self.tmax - self.tmid)
+        self.ymin = self.y0 + self.dydt * (self.tmin - self.tmid)
+        self.ymax = self.y0 + self.dydt * (self.tmax - self.tmid)        
+        
+    def match_to_prediction(self, p, dt, w):
+        # Return if predicted track is too short to fit a 3rd order polynomial
+        if len(p.t) < 3:
+            return False
+        
+        # Create polynomials
+        px = np.polyfit(p.t, p.x, 2)
+        py = np.polyfit(p.t, p.y, 2)
 
-        # Compute averaged positions
-        self.tm = np.unique(self.t)
-        self.xm = np.array([np.mean(self.x[self.t==t]) for t in self.tm])
-        self.ym = np.array([np.mean(self.y[self.t==t]) for t in self.tm])
-        self.zm = np.array([np.mean(self.z[self.t==t]) for t in self.tm])        
+        # Compute extrema
+        xmin = np.polyval(px, self.tmin)
+        xmax = np.polyval(px, self.tmax)
+        ymin = np.polyval(py, self.tmin)
+        ymax = np.polyval(py, self.tmax)
+
+        
+        # Check if observed track endpoints match with prediction
+        pmin = inside_selection_area(self.tmin, self.tmax, self.x0, self.y0, self.dxdt, self.dydt, xmin, ymin, dt, w)
+        pmax = inside_selection_area(self.tmin, self.tmax, self.x0, self.y0, self.dxdt, self.dydt, xmax, ymax, dt, w)        
+
+        return pmin & pmax
         
 class Observation:
     """Satellite observation"""
 
     def __init__(self, ff, t, x, y, site_id, norad, cospar):
-        self.mjd = ff.mjd + t / 86400
-        self.t = Time(self.mjd, format="mjd", scale="utc")
+        self.t = t
+        self.mjd = ff.mjd + self.t / 86400
+        self.nfd = Time(self.mjd, format="mjd", scale="utc").isot
         self.x = x
         self.y = y
         self.site_id = site_id
         self.norad = norad
         self.cospar = cospar
         
-        p = SkyCoord.from_pixel(self.x, self.y, ff.w, 1)
+        p = SkyCoord.from_pixel(self.x, self.y, ff.w, 0)
         self.ra = p.ra.degree
         self.dec = p.dec.degree
 
-    def to_iod_lines(self, norad):
-        iod_lines = []
-        for tm, ra, dec in zip(self.t, self.ra, self.dec):
-            pstr = format_position(ra, dec)
-            tstr = tm.isot.replace("-", "") \
-                          .replace("T", "") \
-                          .replace(":", "") \
-                          .replace(".", "")
-            iod_line = "%05d %-9s %04d G %s 17 25 %s 37 S" % (90000 + norad, self.cospar, self.site_id, tstr,
-                                                              pstr)
-            iod_lines.append(iod_line)
-        return iod_lines
+    def to_iod_line(self):
+        pstr = format_position(self.ra, self.dec)
+        tstr = self.nfd.replace("-", "") \
+                       .replace("T", "") \
+                       .replace(":", "") \
+                      .replace(".", "")
+        iod_line = "%05d %-9s %04d G %s 17 25 %s 37 S" % (self.norad, self.cospar, self.site_id, tstr,
+                                                          pstr)
+        return iod_line
 
     
 class FourFrame:
@@ -109,6 +229,8 @@ class FourFrame:
             self.ctype = ["RA---TAN", "DEC--TAN"]
             self.cunit = np.array(["deg", "deg"])
             self.crres = np.array([0.0, 0.0])
+            self.ra0 = None
+            self.dec0 = None
             self.tracked = False
         else:
             # Read FITS file
@@ -148,7 +270,9 @@ class FourFrame:
             self.cunit = [hdu[0].header["CUNIT1"], hdu[0].header["CUNIT2"]]
             self.crres = np.array(
                 [hdu[0].header["CRRES1"], hdu[0].header["CRRES2"]])
-
+            self.ra0 = self.crval[0]
+            self.dec0 = self.crval[1]
+            
             # Check for sidereal tracking
             try:
                 self.tracked = bool(hdu[0].header["TRACKED"])
@@ -210,7 +334,10 @@ class FourFrame:
         # Compute frame coordinates
         p = SkyCoord(ra=d["ra"], dec=d["dec"], unit="deg", frame="icrs")
         x, y = p.to_pixel(self.w, 0)
-    
+
+        # Compute angular offsets
+        rx, ry = deproject(self.ra0, self.dec0, p.ra.degree, p.dec.degree)
+        
         # Loop over satnos
         satnos = np.unique(d["satno"])
         predictions = []
@@ -218,7 +345,7 @@ class FourFrame:
             c = d["satno"] == satno
             tlefile = np.unique(d["tlefile"][c])[0]
             age = np.unique(np.asarray(d["age"])[c])[0]
-            p = Prediction(satno, np.asarray(d["mjd"])[c], np.asarray(d["ra"])[c], np.asarray(d["dec"])[c], x[c], y[c], np.array(d["state"])[c], tlefile, age)
+            p = Prediction(satno, np.asarray(d["mjd"])[c], np.asarray(d["ra"])[c], np.asarray(d["dec"])[c], x[c], y[c], rx[c], ry[c], np.array(d["state"])[c], tlefile, age)
             predictions.append(p)
         
         return predictions
@@ -246,6 +373,13 @@ class FourFrame:
         sig = np.ravel(self.zsig[c])
         t = np.array([self.dt[i] for i in znum])
 
+        # Compute ra/dec
+        p = SkyCoord.from_pixel(x, y, self.w, 0)
+        ra, dec = p.ra.degree, p.dec.degree
+
+        # Compute angular offsets
+        rx, ry = deproject(self.ra0, self.dec0, ra, dec)
+        
         # Skip if not enough points
         if len(t) < ntrkmin:
             return []
@@ -283,7 +417,7 @@ class FourFrame:
             r = np.sqrt((x - xr)**2 + (y - yr)**2)
             c = r < trkrmin
             if np.sum(c) > 0:
-                tracks.append(Track(x[c], y[c], t[c], zmax[c]))
+                tracks.append(Track(t[c], x[c], y[c], zmax[c], ra[c], dec[c], rx[c], ry[c]))
             
         return tracks
 
@@ -319,3 +453,62 @@ def format_position(ra, de):
 
     return ("%02d%06.3f%c%02d%05.2f" % (rah, ram, sign, ded, dem)).replace(
         ".", "")
+
+# Inside selection
+def inside_selection_area(tmin, tmax, x0, y0, dxdt, dydt, x, y, dt=2.0, w=10.0):
+    dx, dy = x - x0, y - y0
+    ang = -np.arctan2(dy, dx)
+    r = np.sqrt(dx**2 + dy**2)
+    drdt = r / (tmax - tmin)
+    sa, ca = np.sin(ang), np.cos(ang)
+    tmid = 0.5 * (tmin + tmax)
+    
+    xmid = x0 + dxdt * tmid
+    ymid = y0 + dydt * tmid
+
+    dx, dy = x0 - xmid, y0 - ymid
+    rm = ca * dx - sa * dy
+    wm = sa * dx + ca * dy
+    dtm = rm / drdt
+
+    print(">> ", wm, dtm)
+    
+    if (np.abs(wm) < w) & (np.abs(dtm) < dt):
+        return True
+    else:
+        return False
+    
+# Angular offsets from spherical angles                
+def deproject(l0, b0, l, b):
+    lt = l * np.pi / 180
+    bt = b * np.pi / 180
+    l0t = l0 * np.pi / 180
+    b0t = b0 * np.pi / 180
+    
+    # To vector
+    r = np.array([np.cos(lt) * np.cos(bt),
+                  np.sin(lt) * np.cos(bt),
+                  np.sin(bt)])
+
+    # Rotation matrices
+    cl, sl = np.cos(l0t), np.sin(l0t)
+    Rl = np.array([[cl, sl, 0],
+                    [-sl, cl, 0],
+                    [0, 0, 1]])
+    cb, sb = np.cos(b0t), np.sin(b0t)
+    Rb = np.array([[cb, 0, sb],
+                     [0, 1, 0],
+                     [-sb, 0, cb]])    
+
+    # Apply rotations
+    r = Rl.dot(r)
+    r = Rb.dot(r)
+
+    # Back to angles
+    radius = np.arccos(r[0])
+    position_angle = np.arctan2(r[1], r[2]) 
+
+    # To offsets
+    dl, db = radius * np.sin(position_angle), radius * np.cos(position_angle)
+
+    return dl * 180 / np.pi, db * 180 / np.pi
