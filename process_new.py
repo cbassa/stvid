@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-import configparser
-
+import os
 import glob
+
+import configparser
 
 from stvid.fourframe import FourFrame
 from stvid.fourframe import Observation
@@ -64,7 +65,7 @@ def plot_prediction(p, ax, tlefiles, colors, dt=2.0, w=10.0):
 
     
     if ff.in_frame(xs[0], ys[0]):
-        ax.text(xs[0], ys[0], f" {p.satno:05d} ", color=color, ha=ha)
+        ax.text(xs[0], ys[0], f" {p.satno:05d} ", color=color, ha=ha, in_layout=False)
     
     for state, linestyle in zip(["sunlit", "umbra", "eclipsed"], ["solid", "dashed", "dotted"]):
         c = correct_bool_state(p.state == state)
@@ -145,8 +146,11 @@ if __name__ == "__main__":
     cfg = configparser.ConfigParser(inline_comment_prefixes=("#", ":"))
     result = cfg.read([config_file])
 
+    # Observer settings
+    site_id = cfg.getint("Observer", "cospar")
+    
     # Extract colors for TLE files
-    colors, tlefiles, catalognames = [], [], []
+    colors, abbrevs, tlefiles, catalognames = [], [], [], []
     for key, value in cfg.items("Elements"):
         if "tlefile" in key:
             tlefiles.append(value)
@@ -154,6 +158,8 @@ if __name__ == "__main__":
             colors.append(value)
         elif "name" in key:
             catalognames.append(value)
+        elif "abbrev" in key:
+            abbrevs.append(value)
     color_detected = cfg.get("LineDetection", "color")
 
     # Colormap
@@ -169,9 +175,12 @@ if __name__ == "__main__":
     fnames = sorted(glob.glob("/data3/satobs/test/185300/processed/2*.fits"))
     #    fname = "/data3/satobs/test/2022-04-02T21:35:17.038.fits"
 
+    
     for fname in fnames:
-        print(fname)
         ff = FourFrame(fname)
+
+        # Output file root
+        froot = os.path.splitext(fname)[0]
 
         # Generate predictions
         predictions = ff.generate_satellite_predictions(cfg)
@@ -185,6 +194,7 @@ if __name__ == "__main__":
             # Default satno
             satno = 90000 + i
             cospar = "22 500A"
+            tlefile = None
             for p in predictions:
                 # Compute identification constraints
                 rx0, ry0, drdt, pa, dr = p.position_and_velocity(t.tmid, t.tmax - t.tmin)
@@ -193,100 +203,77 @@ if __name__ == "__main__":
                 fdr = (dr / t.dr - 1) * 100
                 if (np.abs(dtm) < dtm_max) & (np.abs(rm) < rm_max) & (np.abs(dpa) < dpa_max) & (np.abs(fdr) < fdr_max):
                     satno = p.satno
-#                    print(f"{p.satno}: {rx0:6.2f} {ry0:6.2f}, {drdt:7.4f} {pa * 180 / np.pi:6.2f} {dr:8.4f} {dpa} {fdr}")
+                    cospar = p.cospar
+                    tlefile = p.tlefile
 
             t.satno = satno
             t.cospar = cospar
+            t.catalogname = "unid"
+
+            # Get catalog abbreviation
+            for abbrev, tfile in zip(abbrevs, tlefiles):
+                if tfile == tlefile:
+                    t.catalogname = abbrev
 
             # Add to observation
-            obs.append(Observation(ff, t.tmid, t.x0, t.y0, 4171, t.satno, t.cospar))
+            obs.append(Observation(ff, t.tmid, t.x0, t.y0, site_id, t.satno, t.cospar, t.catalogname))
 
+        # Write observations
         for o in obs:
             iod_line = o.to_iod_line()
-            print(iod_line)
-        
-        for t in tracks:
-            print(t.satno)
 
-            ny, nx = ff.zmax.shape
-            rmax = np.sqrt(nx**2 + ny**2)
-            w = 50
+            # Open file
+            outfname = f"{froot}_{o.satno:05d}_{o.catalogname}.dat"
+            with open(outfname, "w") as fp:
+                fp.write(f"{iod_line}\n")
+            print(iod_line, o.catalogname)
 
-            fig, axes = plt.subplots(5, 1, figsize=(15, 10), dpi=75, sharex=True, sharey=True)
-
-            for i, ax in enumerate(axes.ravel()):
-                if i == 0:
-                    z, zmin, zmax = ff.zavg, ff.zavgmin, ff.zavgmax
-                elif i == 1:
-                    z, zmin, zmax = ff.zstd, ff.zstdmin, ff.zstdmax                    
-                elif i == 2:
-                    z, zmin, zmax = ff.zmax, ff.zmaxmin, ff.zmaxmax                    
-                elif i == 3:
-                    z, zmin, zmax = ff.znum, ff.znummin, ff.znummax                    
-                elif i == 4:
-                    z, zmin, zmax = ff.zsig, 5, ff.zsigmax                    
-                im = ax.imshow(z,  origin="lower", interpolation="none", vmin=zmin, vmax=zmax,
-                               cmap=cmap)
-                tr = mtransforms.Affine2D().rotate_around(t.x0, t.y0, t.pa - 0.5 * np.pi) + ax.transData
-                im.set_transform(tr)
-                ax.set_xlim(t.x0 - w - 0.5 * rmax, t.x0 + w + 0.5 * rmax)
-                ax.set_ylim(t.y0 - w, t.y0 + w)
-
-                ax.plot(t.xp, t.yp, color=color_detected, transform=tr)
-
-            plt.show()
-            plt.close()
-
-            fig, axes = plt.subplots(3, 1, figsize=(15, 10), dpi=75)
-
-            for i, ax in enumerate(axes.ravel()):
-                if i == 0:
-                    ax.plot(t.t, t.x, ".")
-                    ax.plot(t.t, t.xp)
-                elif i == 1:
-                    ax.plot(t.t, t.y, ".")
-                    ax.plot(t.t, t.yp)
-                elif i == 2:
-                    ax.plot(t.t, t.z, ".")
-                
-            plt.show()
-            plt.close()
+        # Generate plots
+        for i in range(len(tracks) + 1):
+            if i < len(tracks):
+                track = tracks[i]
+                iod_line = obs[i].to_iod_line()
+                satno = obs[i].satno
+                catalogname = obs[i].catalogname
+                outfname = f"{froot}_{satno:05d}_{catalogname}.png"
+            else:
+                track = None
+                iod_line = ""
+                outfname = f"{fname}.png"
             
-        fig, ax = plt.subplots(figsize=(15, 10), dpi=75)
+            fig, ax = plt.subplots(figsize=(12, 10), dpi=75)
 
-        ax.set_title(f"UT Date: {ff.nfd} COSPAR ID: {ff.site_id}\nR.A.: {ff.crval[0]:10.6f} ({3600 * ff.crres[0]:.1f}\") Decl.: {ff.crval[1]:10.6f} ({3600 * ff.crres[1]:.1f}\")\nFOV: {ff.wx:.2f}$^\circ$x{ff.wy:.2f}$^\circ$ Scale: {3600 * ff.sx:.2f}\"x{3600 * ff.sy:.2f}\" pix$^{{-1}}$", fontdict={"fontsize": 14, "horizontalalignment": "left"}, loc="left")
+            ax.set_title(f"UT Date: {ff.nfd} COSPAR ID: {ff.site_id}\nR.A.: {ff.crval[0]:10.6f} ({3600 * ff.crres[0]:.1f}\") Decl.: {ff.crval[1]:10.6f} ({3600 * ff.crres[1]:.1f}\")\nFOV: {ff.wx:.2f}$^\circ$x{ff.wy:.2f}$^\circ$ Scale: {3600 * ff.sx:.2f}\"x{3600 * ff.sy:.2f}\" pix$^{{-1}}$\n\n{iod_line}", fontdict={"fontsize": 14, "horizontalalignment": "left"}, loc="left")
     
-        ax.imshow(ff.zmax, origin="lower", interpolation="none", vmin=ff.zmaxmin, vmax=ff.zmaxmax,
-                  cmap=cmap)
-#        ax.imshow(ff.zsig, origin="lower", interpolation="none", vmin=5.0, vmax=ff.zsigmax,
-#                  cmap="gray_r")
+            ax.imshow(ff.zmax, origin="lower", interpolation="none", vmin=ff.zmaxmin, vmax=ff.zmaxmax,
+                      cmap=cmap)
 
-        #ax.imshow(ff.znum, origin="lower", interpolation="none", vmin=0, vmax=100,
-        #          cmap="gray_r")
+            for p in predictions:
+                plot_prediction(p, ax, tlefiles, colors, dt=0)
 
-        for p in predictions:
-            plot_prediction(p, ax, tlefiles, colors, dt=0)
-
-        for track in tracks:
-            ax.plot(track.xp, track.yp, color=color_detected, linestyle="-")
-            ax.plot(track.x0, track.y0, color=color_detected, marker="o", markerfacecolor="none")
-            ax.text(track.x0, track.y0, f" {track.satno:05d}", color=color_detected, ha="center")
+            if track is not None:
+                ax.plot(track.xp, track.yp, color=color_detected, linestyle="-")
+                ax.plot(track.x0, track.y0, color=color_detected, marker="o", markerfacecolor="none")
+                ax.text(track.x0, track.y0, f" {track.satno:05d}", color=color_detected, ha="center", in_layout=False)
             
-        ax.set_xlim(0, ff.nx)
-        ax.set_ylim(0, ff.ny)
-        ax.xaxis.set_ticklabels([])
-        ax.yaxis.set_ticklabels([])
+            ax.set_xlim(0, ff.nx)
+            ax.set_ylim(0, ff.ny)
+            ax.set_xlabel("x (pixel)")
+            ax.set_ylabel("y (pixel)")
+            #        ax.xaxis.set_ticklabels([])
+            #        ax.yaxis.set_ticklabels([])
 
-        # Create legend handles
-        handles = []
-        for catalogname, color in zip(catalognames, colors):
-            handles.append(mlines.Line2D([], [], color=color, marker="", label=catalogname))
-        handles.append(mlines.Line2D([], [], color=color_detected, marker="o", markerfacecolor="none", label="Detected"))
-        for state, linestyle in zip(["Sunlit", "Penumbra", "Eclipsed"], ["solid", "dashed", "dotted"]):
-            handles.append(mlines.Line2D([], [], color="k", linestyle=linestyle, marker="", label=state))
-        ax.legend(handles=handles, ncol=7, bbox_to_anchor=(0.5, -0.02), loc="center", frameon=False)
+
+            # Create legend handles
+            handles = []
+            for catalogname, color in zip(catalognames, colors):
+                handles.append(mlines.Line2D([], [], color=color, marker="", label=catalogname))
+            handles.append(mlines.Line2D([], [], color=color_detected, marker="o", markerfacecolor="none", label="Detected"))
+            for state, linestyle in zip(["Sunlit", "Penumbra", "Eclipsed"], ["solid", "dashed", "dotted"]):
+                handles.append(mlines.Line2D([], [], color="k", linestyle=linestyle, marker="", label=state))
+            ax.legend(handles=handles, ncol=7, bbox_to_anchor=(0.5, -0.1), loc="center", frameon=True)
                     
-        plt.tight_layout()
-#        plt.show()
-        plt.savefig(f"{fname}.png", bbox_inches="tight")
-        plt.close()
+            plt.tight_layout()
+            #        plt.show()
+            plt.savefig(outfname, bbox_inches="tight", pad_inches=0.5)
+            plt.close()

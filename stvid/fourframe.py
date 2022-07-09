@@ -5,6 +5,9 @@ import tempfile
 import subprocess
 
 import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
 
 from astropy import wcs
 from astropy.time import Time
@@ -15,8 +18,9 @@ from astropy.coordinates import SkyCoord
 class Prediction:
     """Prediction class"""
 
-    def __init__(self, satno, mjd, ra, dec, x, y, rx, ry, state, tlefile, age):
+    def __init__(self, satno, cospar, mjd, ra, dec, x, y, rx, ry, state, tlefile, age):
         self.satno = satno
+        self.cospar = cospar
         self.age = age
         self.mjd = mjd
         self.t = 86400 * (self.mjd - self.mjd[0])
@@ -121,6 +125,7 @@ class Track:
         self.n = len(x)
         self.satno = None
         self.cospar = None
+        self.tlefile = None
 
         # Compute mean position
         self.tmin, self.tmax = np.min(self.t), np.max(self.t)
@@ -142,8 +147,8 @@ class Track:
         self.dr = self.drdt * (self.tmax - self.tmin)
         
         # Position and velocity on the image
-        self.px = np.polyfit(self.t - self.tmid, self.x, 2)
-        self.py = np.polyfit(self.t - self.tmid, self.y, 2)
+        self.px = np.polyfit(self.t - self.tmid, self.x, 1)
+        self.py = np.polyfit(self.t - self.tmid, self.y, 1)
         self.x0 = self.px[-1]
         self.y0 = self.py[-1]
         self.dxdt = self.px[-2]
@@ -178,18 +183,20 @@ class Track:
 
         return pmin & pmax
 
+    
 class Observation:
     """Satellite observation"""
 
-    def __init__(self, ff, t, x, y, site_id, norad, cospar):
+    def __init__(self, ff, t, x, y, site_id, satno, cospar, catalogname):
         self.t = t
         self.mjd = ff.mjd + self.t / 86400
         self.nfd = Time(self.mjd, format="mjd", scale="utc").isot
         self.x = x
         self.y = y
         self.site_id = site_id
-        self.norad = norad
+        self.satno = satno
         self.cospar = cospar
+        self.catalogname = catalogname
         
         p = SkyCoord.from_pixel(self.x, self.y, ff.w, 0)
         self.ra = p.ra.degree
@@ -201,7 +208,7 @@ class Observation:
                        .replace("T", "") \
                        .replace(":", "") \
                       .replace(".", "")
-        iod_line = "%05d %-9s %04d G %s 17 25 %s 37 S" % (self.norad, self.cospar, self.site_id, tstr,
+        iod_line = "%05d %-9s %04d G %s 17 25 %s 37 S" % (self.satno, self.cospar, self.site_id, tstr,
                                                           pstr)
         return iod_line
 
@@ -329,7 +336,7 @@ class FourFrame:
             for key, value in cfg.items("Elements"):
                 if "tlefile" in key:
                     command += f" -c {value}"
-            print(command)
+
             # Run command
             output = subprocess.check_output(command,
                                              shell=True,
@@ -352,7 +359,13 @@ class FourFrame:
             c = d["satno"] == satno
             tlefile = np.unique(d["tlefile"][c])[0]
             age = np.unique(np.asarray(d["age"])[c])[0]
-            p = Prediction(satno, np.asarray(d["mjd"])[c], np.asarray(d["ra"])[c], np.asarray(d["dec"])[c], x[c], y[c], rx[c], ry[c], np.array(d["state"])[c], tlefile, age)
+            cospar = str(np.unique(np.asarray(d["cospar"])[c])[0])
+
+            # Fix COSPAR designation for IOD format
+            if len(cospar) > 1:
+                if cospar[2] != " ":
+                    cospar = f"{cospar[0:2]} {cospar[2:]}"
+            p = Prediction(satno, cospar, np.asarray(d["mjd"])[c], np.asarray(d["ra"])[c], np.asarray(d["dec"])[c], x[c], y[c], rx[c], ry[c], np.array(d["state"])[c], tlefile, age)
             predictions.append(p)
         
         return predictions
@@ -428,6 +441,7 @@ class FourFrame:
             
         return tracks
 
+   
 
 def decode_line(line):
     p = line.split(" ")
@@ -519,3 +533,5 @@ def deproject(l0, b0, l, b):
     dl, db = radius * np.sin(position_angle), radius * np.cos(position_angle)
 
     return dl * 180 / np.pi, db * 180 / np.pi
+
+
