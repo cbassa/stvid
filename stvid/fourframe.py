@@ -142,16 +142,19 @@ class Track:
         self.dr = self.drdt * (self.tmax - self.tmin)
         
         # Position and velocity on the image
-        px = np.polyfit(self.t - self.tmid, self.x, 1)
-        py = np.polyfit(self.t - self.tmid, self.y, 1)
-        self.x0 = px[-1]
-        self.y0 = py[-1]
-        self.dxdt = px[-2]
-        self.dydt = py[-2]
+        self.px = np.polyfit(self.t - self.tmid, self.x, 2)
+        self.py = np.polyfit(self.t - self.tmid, self.y, 2)
+        self.x0 = self.px[-1]
+        self.y0 = self.py[-1]
+        self.dxdt = self.px[-2]
+        self.dydt = self.py[-2]
+        self.xp = np.polyval(self.px, self.t - self.tmid)
+        self.yp = np.polyval(self.py, self.t - self.tmid)
         self.xmin = self.x0 + self.dxdt * (self.tmin - self.tmid)
         self.xmax = self.x0 + self.dxdt * (self.tmax - self.tmid)
         self.ymin = self.y0 + self.dydt * (self.tmin - self.tmid)
-        self.ymax = self.y0 + self.dydt * (self.tmax - self.tmid)        
+        self.ymax = self.y0 + self.dydt * (self.tmax - self.tmid)
+        self.r = np.sqrt((self.xmax - self.xmin)**2 + (self.ymax - self.ymin)**2)
         
     def match_to_prediction(self, p, dt, w):
         # Return if predicted track is too short to fit a 3rd order polynomial
@@ -174,7 +177,7 @@ class Track:
         pmax = inside_selection_area(self.tmin, self.tmax, self.x0, self.y0, self.dxdt, self.dydt, xmax, ymax, dt, w)        
 
         return pmin & pmax
-        
+
 class Observation:
     """Satellite observation"""
 
@@ -290,6 +293,10 @@ class FourFrame:
         self.zmaxmax = np.mean(self.zmax) + 6.0 * np.std(self.zmax)
         self.zavgmin = np.mean(self.zavg) - 2.0 * np.std(self.zavg)
         self.zavgmax = np.mean(self.zavg) + 6.0 * np.std(self.zavg)
+        self.zstdmin = np.mean(self.zstd) - 2.0 * np.std(self.zstd)
+        self.zstdmax = np.mean(self.zstd) + 6.0 * np.std(self.zstd)
+        self.znummin = 0
+        self.znummax = self.nz
         self.zsigmin = 0
         self.zsigmax = 10
         

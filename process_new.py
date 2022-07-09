@@ -10,6 +10,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
+import matplotlib.transforms as mtransforms
 
 def correct_bool_state(c):
     # Return on no changes
@@ -204,8 +205,53 @@ if __name__ == "__main__":
             iod_line = o.to_iod_line()
             print(iod_line)
         
-        
+        for t in tracks:
+            print(t.satno)
 
+            ny, nx = ff.zmax.shape
+            rmax = np.sqrt(nx**2 + ny**2)
+            w = 50
+
+            fig, axes = plt.subplots(5, 1, figsize=(15, 10), dpi=75, sharex=True, sharey=True)
+
+            for i, ax in enumerate(axes.ravel()):
+                if i == 0:
+                    z, zmin, zmax = ff.zavg, ff.zavgmin, ff.zavgmax
+                elif i == 1:
+                    z, zmin, zmax = ff.zstd, ff.zstdmin, ff.zstdmax                    
+                elif i == 2:
+                    z, zmin, zmax = ff.zmax, ff.zmaxmin, ff.zmaxmax                    
+                elif i == 3:
+                    z, zmin, zmax = ff.znum, ff.znummin, ff.znummax                    
+                elif i == 4:
+                    z, zmin, zmax = ff.zsig, 5, ff.zsigmax                    
+                im = ax.imshow(z,  origin="lower", interpolation="none", vmin=zmin, vmax=zmax,
+                               cmap=cmap)
+                tr = mtransforms.Affine2D().rotate_around(t.x0, t.y0, t.pa - 0.5 * np.pi) + ax.transData
+                im.set_transform(tr)
+                ax.set_xlim(t.x0 - w - 0.5 * rmax, t.x0 + w + 0.5 * rmax)
+                ax.set_ylim(t.y0 - w, t.y0 + w)
+
+                ax.plot(t.xp, t.yp, color=color_detected, transform=tr)
+
+            plt.show()
+            plt.close()
+
+            fig, axes = plt.subplots(3, 1, figsize=(15, 10), dpi=75)
+
+            for i, ax in enumerate(axes.ravel()):
+                if i == 0:
+                    ax.plot(t.t, t.x, ".")
+                    ax.plot(t.t, t.xp)
+                elif i == 1:
+                    ax.plot(t.t, t.y, ".")
+                    ax.plot(t.t, t.yp)
+                elif i == 2:
+                    ax.plot(t.t, t.z, ".")
+                
+            plt.show()
+            plt.close()
+            
         fig, ax = plt.subplots(figsize=(15, 10), dpi=75)
 
         ax.set_title(f"UT Date: {ff.nfd} COSPAR ID: {ff.site_id}\nR.A.: {ff.crval[0]:10.6f} ({3600 * ff.crres[0]:.1f}\") Decl.: {ff.crval[1]:10.6f} ({3600 * ff.crres[1]:.1f}\")\nFOV: {ff.wx:.2f}$^\circ$x{ff.wy:.2f}$^\circ$ Scale: {3600 * ff.sx:.2f}\"x{3600 * ff.sy:.2f}\" pix$^{{-1}}$", fontdict={"fontsize": 14, "horizontalalignment": "left"}, loc="left")
@@ -220,11 +266,9 @@ if __name__ == "__main__":
 
         for p in predictions:
             plot_prediction(p, ax, tlefiles, colors, dt=0)
-            if p.satno == 51804:
-                p.predicted_track(tracks[0].tmin, tracks[0].tmid, tracks[0].tmax, ax, "C1")
 
         for track in tracks:
-            ax.plot([track.xmin, track.xmax], [track.ymin, track.ymax], color=color_detected, linestyle="-")
+            ax.plot(track.xp, track.yp, color=color_detected, linestyle="-")
             ax.plot(track.x0, track.y0, color=color_detected, marker="o", markerfacecolor="none")
             ax.text(track.x0, track.y0, f" {track.satno:05d}", color=color_detected, ha="center")
             
