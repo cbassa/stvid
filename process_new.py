@@ -173,10 +173,12 @@ if __name__ == "__main__":
     
     fname = "/data3/satobs/test/185300/processed/2022-03-24T18:53:20.708.fits"
     fnames = sorted(glob.glob("/data3/satobs/test/185300/processed/2*.fits"))
+    fnames = sorted(glob.glob("/data3/satobs/test/asi174mm/2*.fits"))    
     #    fname = "/data3/satobs/test/2022-04-02T21:35:17.038.fits"
 
     
     for fname in fnames:
+        print(fname)
         ff = FourFrame(fname)
 
         # Output file root
