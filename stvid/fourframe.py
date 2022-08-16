@@ -233,6 +233,7 @@ class FourFrame:
             self.observer = None
             self.texp = 0.0
             self.fname = None
+            self.froot = None
             self.crpix = np.array([0.0, 0.0])
             self.crval = np.array([0.0, 0.0])
             self.cd = np.array([[1.0, 0.0], [0.0, 1.0]])
@@ -267,6 +268,7 @@ class FourFrame:
             self.observer = hdu[0].header["OBSERVER"]
             self.texp = hdu[0].header["EXPTIME"]
             self.fname = fname
+            self.froot = os.path.splitext(fname)[0]
 
             # Astrometry keywords
             self.crpix = np.array(
@@ -317,7 +319,7 @@ class FourFrame:
 
     def generate_satellite_predictions(self, cfg):
         # Output file name
-        outfname = f"{self.fname}.csv"
+        outfname = f"{self.froot}_predict.csv"
 
         # Run predictions
         if not os.path.exists(outfname):
@@ -405,41 +407,30 @@ class FourFrame:
             return []
 
         # Save points to temporary file
-        (fd, tmpfile_path) = tempfile.mkstemp(prefix="hough_tmp", suffix=".dat")
+        fname = f"{self.froot}_threshold.csv"
+        with open(fname, "w") as fp:
+            for i in range(len(t)):
+                fp.write(f"{x[i]:f},{y[i]:f},{znum[i]:f}\n")
 
+        # Run 3D Hough line-finding algorithm
+        command = f"hough3dlines -dx {trkrmin} -minvotes {ntrkmin} -raw {fname}"
+            
         try:
-            with os.fdopen(fd, "w") as f:
-                for i in range(len(t)):
-                    f.write(f"{x[i]:f},{y[i]:f},{znum[i]:f}\n")
+            output = subprocess.check_output(command,
+                                             shell=True,
+                                             stderr=subprocess.STDOUT)
+        except Exception:
+            return []
 
-            # Run 3D Hough line-finding algorithm
-            command = f"hough3dlines -dx {trkrmin} -minvotes {ntrkmin} -raw {tmpfile_path}"
+        # Store output
+        fname = f"{self.froot}_hough.csv"
+        with open(fname, "w") as fp:
+            for line in output.decode("utf-8").splitlines()[2:]:
+                ax, ay, az, bx, by, bz, n = decode_line(line)
+
+                fp.write(f"{ax},{ay},{az},{bx},{by},{bz},{n}\n")
             
-            try:
-                output = subprocess.check_output(command,
-                                                 shell=True,
-                                                 stderr=subprocess.STDOUT)
-            except Exception:
-                return []
-        finally:
-            os.remove(tmpfile_path)
-
-        # Decode output
-        tracks = []
-        for line in output.decode("utf-8").splitlines()[2:]:
-            #lines.append(ThreeDLine(line, self.nx, self.ny, self.nz))
-            ax, ay, az, bx, by, bz, n = decode_line(line)
-
-            # Select points
-            f = (znum - az) / bz
-            xr = ax + f * bx
-            yr = ay + f * by
-            r = np.sqrt((x - xr)**2 + (y - yr)**2)
-            c = r < trkrmin
-            if np.sum(c) > 0:
-                tracks.append(Track(t[c], x[c], y[c], zmax[c], ra[c], dec[c], rx[c], ry[c]))
-            
-        return tracks
+        return []
 
    
 

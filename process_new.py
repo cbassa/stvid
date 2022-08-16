@@ -190,35 +190,35 @@ if __name__ == "__main__":
         # Detect tracks
         tracks = ff.find_tracks_by_hough3d(cfg)
 
-        # Identify tracks and format observations
+#        # Identify tracks and format observations
         obs = []
-        for i, t in enumerate(tracks):
-            # Default satno
-            satno = 90000 + i
-            cospar = "22 500A"
-            tlefile = None
-            for p in predictions:
-                # Compute identification constraints
-                rx0, ry0, drdt, pa, dr = p.position_and_velocity(t.tmid, t.tmax - t.tmin)
-                dtm, rm = p.residual(t.tmid, t.rx0, t.ry0)
-                dpa = angle_difference(t.pa, pa) * 180 / np.pi
-                fdr = (dr / t.dr - 1) * 100
-                if (np.abs(dtm) < dtm_max) & (np.abs(rm) < rm_max) & (np.abs(dpa) < dpa_max) & (np.abs(fdr) < fdr_max):
-                    satno = p.satno
-                    cospar = p.cospar
-                    tlefile = p.tlefile
-
-            t.satno = satno
-            t.cospar = cospar
-            t.catalogname = "unid"
-
-            # Get catalog abbreviation
-            for abbrev, tfile in zip(abbrevs, tlefiles):
-                if tfile == tlefile:
-                    t.catalogname = abbrev
-
-            # Add to observation
-            obs.append(Observation(ff, t.tmid, t.x0, t.y0, site_id, t.satno, t.cospar, t.catalogname))
+#        for i, t in enumerate(tracks):
+#            # Default satno
+#            satno = 90000 + i
+#            cospar = "22 500A"
+#            tlefile = None
+#            for p in predictions:
+#                # Compute identification constraints
+#                rx0, ry0, drdt, pa, dr = p.position_and_velocity(t.tmid, t.tmax - t.tmin)
+#                dtm, rm = p.residual(t.tmid, t.rx0, t.ry0)
+#                dpa = angle_difference(t.pa, pa) * 180 / np.pi
+#                fdr = (dr / t.dr - 1) * 100
+#                if (np.abs(dtm) < dtm_max) & (np.abs(rm) < rm_max) & (np.abs(dpa) < dpa_max) & (np.abs(fdr) < fdr_max):
+#                    satno = p.satno
+#                    cospar = p.cospar
+#                    tlefile = p.tlefile
+#
+#            t.satno = satno
+#            t.cospar = cospar
+#            t.catalogname = "unid"
+#
+#            # Get catalog abbreviation
+#            for abbrev, tfile in zip(abbrevs, tlefiles):
+#                if tfile == tlefile:
+#                    t.catalogname = abbrev
+#
+#            # Add to observation
+#            obs.append(Observation(ff, t.tmid, t.x0, t.y0, site_id, t.satno, t.cospar, t.catalogname))
 
         # Write observations
         for o in obs:
