@@ -15,16 +15,6 @@ from astropy.io import fits
 from astropy.io import ascii
 from astropy.coordinates import SkyCoord
 
-class Hough3DLine:
-
-    def __init__(self, x0, y0, t0, dxdt, dydt, n):
-        self.x0 = x0
-        self.y0 = y0
-        self.t0 = t0
-        self.dxdt = dxdt
-        self.dydt = dydt
-        self.n = n
-
 class Prediction:
     """Prediction class"""
 
@@ -170,6 +160,35 @@ class Track:
         self.ymin = self.y0 + self.dydt * (self.tmin - self.tmid)
         self.ymax = self.y0 + self.dydt * (self.tmax - self.tmid)
         self.r = np.sqrt((self.xmax - self.xmin)**2 + (self.ymax - self.ymin)**2)
+
+    def identify(self, predictions, satno, cospar, tlefile, cfg, abbrevs, tlefiles):
+        # Identification settings
+        rm_max = cfg.getfloat("Identification", "max_off_track_offset_deg")
+        dtm_max = cfg.getfloat("Identification", "max_along_track_offset_s")
+        dpa_max = cfg.getfloat("Identification", "max_direction_difference_deg")
+        fdr_max = cfg.getfloat("Identification", "max_velocity_difference_percent")
+
+        # Loop over predictions
+        for p in predictions:
+            # Compute identification constraints
+            rx0, ry0, drdt, pa, dr = p.position_and_velocity(self.tmid, self.tmax - self.tmin)
+            dtm, rm = p.residual(self.tmid, self.rx0, self.ry0)
+            dpa = angle_difference(self.pa, pa) * 180 / np.pi
+            fdr = (dr / self.dr - 1) * 100
+            if (np.abs(dtm) < dtm_max) & (np.abs(rm) < rm_max) & (np.abs(dpa) < dpa_max) & (np.abs(fdr) < fdr_max):
+                satno = p.satno
+                cospar = p.cospar
+                tlefile = p.tlefile
+
+        self.satno = satno
+        self.cospar = cospar
+        self.catalogname = "unid"
+
+        # Get catalog abbreviation
+        for abbrev, tfile in zip(abbrevs, tlefiles):
+            if tfile == tlefile:
+                self.catalogname = abbrev
+
         
     def match_to_prediction(self, p, dt, w):
         # Return if predicted track is too short to fit a 3rd order polynomial
@@ -461,8 +480,6 @@ class FourFrame:
         return tracks
 
 
-   
-
 def decode_line(line):
     p = line.split(" ")
     ax = float(p[0])
@@ -555,3 +572,8 @@ def deproject(l0, b0, l, b):
     return dl * 180 / np.pi, db * 180 / np.pi
 
 
+def angle_difference(ang1, ang2):
+    x1, y1 = np.cos(ang1), np.sin(ang1)
+    x2, y2 = np.cos(ang2), np.sin(ang2)
+
+    return np.arccos(x1 * x2 + y1 * y2)

@@ -134,11 +134,6 @@ def residuals(o, p):
 
     return np.sqrt(np.sum(r**2) / len(r))
 
-def angle_difference(ang1, ang2):
-    x1, y1 = np.cos(ang1), np.sin(ang1)
-    x2, y2 = np.cos(ang2), np.sin(ang2)
-
-    return np.arccos(x1 * x2 + y1 * y2)
 
 if __name__ == "__main__":
     # Read configuration file
@@ -165,16 +160,11 @@ if __name__ == "__main__":
     # Colormap
     cmap = cfg.get("DiagnosticPlot", "colormap")
 
-    # Identification settings
-    rm_max = cfg.getfloat("Identification", "max_off_track_offset_deg")
-    dtm_max = cfg.getfloat("Identification", "max_along_track_offset_s")
-    dpa_max = cfg.getfloat("Identification", "max_direction_difference_deg")
-    fdr_max = cfg.getfloat("Identification", "max_velocity_difference_percent")
     
     fname = "/data3/satobs/test/185300/processed/2022-03-24T18:53:20.708.fits"
     fnames = sorted(glob.glob("/data3/satobs/test/185300/processed/2*.fits"))
     fnames = sorted(glob.glob("/data/projects/stvid/test/2*.fits"))
-    fnames = sorted(glob.glob("/data/projects/stvid/proc/2022-08-13T20:2*.fits"))
+    fnames = sorted(glob.glob("/data3/satobs/test/asi174mm/2*.fits"))
     #    fname = "/data3/satobs/test/2022-04-02T21:35:17.038.fits"
 
     
@@ -191,33 +181,13 @@ if __name__ == "__main__":
         # Detect 3D lines
         tracks = ff.find_tracks_by_hough3d(cfg)
 
-        # Identify tracks and format observations
-        obs = []
+        # Identify tracks
         for i, t in enumerate(tracks):
-            # Default satno
-            satno = 90000 + i
-            cospar = "22 500A"
-            tlefile = None
-            for p in predictions:
-                # Compute identification constraints
-                rx0, ry0, drdt, pa, dr = p.position_and_velocity(t.tmid, t.tmax - t.tmin)
-                dtm, rm = p.residual(t.tmid, t.rx0, t.ry0)
-                dpa = angle_difference(t.pa, pa) * 180 / np.pi
-                fdr = (dr / t.dr - 1) * 100
-                if (np.abs(dtm) < dtm_max) & (np.abs(rm) < rm_max) & (np.abs(dpa) < dpa_max) & (np.abs(fdr) < fdr_max):
-                    satno = p.satno
-                    cospar = p.cospar
-                    tlefile = p.tlefile
+            t.identify(predictions, 90000 + i, "22 500A", None, cfg, abbrevs, tlefiles)
 
-            t.satno = satno
-            t.cospar = cospar
-            t.catalogname = "unid"
-
-            # Get catalog abbreviation
-            for abbrev, tfile in zip(abbrevs, tlefiles):
-                if tfile == tlefile:
-                    t.catalogname = abbrev
-
+        # Format observations
+        obs = []
+        for t in tracks:
             # Add to observation
             obs.append(Observation(ff, t.tmid, t.x0, t.y0, site_id, t.satno, t.cospar, t.catalogname))
 
