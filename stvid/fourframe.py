@@ -15,6 +15,16 @@ from astropy.io import fits
 from astropy.io import ascii
 from astropy.coordinates import SkyCoord
 
+class Hough3DLine:
+
+    def __init__(self, x0, y0, t0, dxdt, dydt, n):
+        self.x0 = x0
+        self.y0 = y0
+        self.t0 = t0
+        self.dxdt = dxdt
+        self.dydt = dydt
+        self.n = n
+
 class Prediction:
     """Prediction class"""
 
@@ -126,7 +136,7 @@ class Track:
         self.satno = None
         self.cospar = None
         self.tlefile = None
-
+        
         # Compute mean position
         self.tmin, self.tmax = np.min(self.t), np.max(self.t)
         self.tmid = 0.5 * (self.tmax + self.tmin)
@@ -379,14 +389,14 @@ class FourFrame:
         else:
             return False
 
-
+        
     def find_tracks_by_hough3d(self, cfg):
         # Config settings
         sigma = cfg.getfloat("LineDetection", "trksig")
         trkrmin = cfg.getfloat("LineDetection", "trkrmin")
         ntrkmin = cfg.getfloat("LineDetection", "ntrkmin")
         
-        # Find significant pixels (TODO: store in function?)
+        # Find significant pixels
         c = self.zsig > sigma
         xm, ym = np.meshgrid(np.arange(self.nx), np.arange(self.ny))
         x, y = np.ravel(xm[c]), np.ravel(ym[c])
@@ -401,12 +411,12 @@ class FourFrame:
 
         # Compute angular offsets
         rx, ry = deproject(self.ra0, self.dec0, ra, dec)
-        
+       
         # Skip if not enough points
         if len(t) < ntrkmin:
             return []
 
-        # Save points to temporary file
+        # Save points to file
         fname = f"{self.froot}_threshold.csv"
         with open(fname, "w") as fp:
             for i in range(len(t)):
@@ -422,15 +432,34 @@ class FourFrame:
         except Exception:
             return []
 
-        # Store output
+        # Decode output
         fname = f"{self.froot}_hough.csv"
         with open(fname, "w") as fp:
+            fp.write("ax,ay,az,bx,by,bz,n\n")
+            tracks = []
             for line in output.decode("utf-8").splitlines()[2:]:
+                #lines.append(ThreeDLine(line, self.nx, self.ny, self.nz))
                 ax, ay, az, bx, by, bz, n = decode_line(line)
 
+                # Write result
                 fp.write(f"{ax},{ay},{az},{bx},{by},{bz},{n}\n")
+                
+                # Select points
+                f = (znum - az) / bz
+                xr = ax + f * bx
+                yr = ay + f * by
+                r = np.sqrt((x - xr)**2 + (y - yr)**2)
+                c = r < trkrmin
+
+                # Number of selected points and unique times
+                nsel = np.sum(c)
+                nt = len(np.unique(t[c]))
+                
+                if (nsel > 0) & (nt > 1):
+                    tracks.append(Track(t[c], x[c], y[c], zmax[c], ra[c], dec[c], rx[c], ry[c]))
             
-        return []
+        return tracks
+
 
    
 

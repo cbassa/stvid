@@ -173,7 +173,8 @@ if __name__ == "__main__":
     
     fname = "/data3/satobs/test/185300/processed/2022-03-24T18:53:20.708.fits"
     fnames = sorted(glob.glob("/data3/satobs/test/185300/processed/2*.fits"))
-    fnames = sorted(glob.glob("/data3/satobs/test/asi174mm/2*.fits"))    
+    fnames = sorted(glob.glob("/data/projects/stvid/test/2*.fits"))
+    fnames = sorted(glob.glob("/data/projects/stvid/proc/2022-08-13T20:2*.fits"))
     #    fname = "/data3/satobs/test/2022-04-02T21:35:17.038.fits"
 
     
@@ -187,38 +188,38 @@ if __name__ == "__main__":
         # Generate predictions
         predictions = ff.generate_satellite_predictions(cfg)
 
-        # Detect tracks
+        # Detect 3D lines
         tracks = ff.find_tracks_by_hough3d(cfg)
 
-#        # Identify tracks and format observations
+        # Identify tracks and format observations
         obs = []
-#        for i, t in enumerate(tracks):
-#            # Default satno
-#            satno = 90000 + i
-#            cospar = "22 500A"
-#            tlefile = None
-#            for p in predictions:
-#                # Compute identification constraints
-#                rx0, ry0, drdt, pa, dr = p.position_and_velocity(t.tmid, t.tmax - t.tmin)
-#                dtm, rm = p.residual(t.tmid, t.rx0, t.ry0)
-#                dpa = angle_difference(t.pa, pa) * 180 / np.pi
-#                fdr = (dr / t.dr - 1) * 100
-#                if (np.abs(dtm) < dtm_max) & (np.abs(rm) < rm_max) & (np.abs(dpa) < dpa_max) & (np.abs(fdr) < fdr_max):
-#                    satno = p.satno
-#                    cospar = p.cospar
-#                    tlefile = p.tlefile
-#
-#            t.satno = satno
-#            t.cospar = cospar
-#            t.catalogname = "unid"
-#
-#            # Get catalog abbreviation
-#            for abbrev, tfile in zip(abbrevs, tlefiles):
-#                if tfile == tlefile:
-#                    t.catalogname = abbrev
-#
-#            # Add to observation
-#            obs.append(Observation(ff, t.tmid, t.x0, t.y0, site_id, t.satno, t.cospar, t.catalogname))
+        for i, t in enumerate(tracks):
+            # Default satno
+            satno = 90000 + i
+            cospar = "22 500A"
+            tlefile = None
+            for p in predictions:
+                # Compute identification constraints
+                rx0, ry0, drdt, pa, dr = p.position_and_velocity(t.tmid, t.tmax - t.tmin)
+                dtm, rm = p.residual(t.tmid, t.rx0, t.ry0)
+                dpa = angle_difference(t.pa, pa) * 180 / np.pi
+                fdr = (dr / t.dr - 1) * 100
+                if (np.abs(dtm) < dtm_max) & (np.abs(rm) < rm_max) & (np.abs(dpa) < dpa_max) & (np.abs(fdr) < fdr_max):
+                    satno = p.satno
+                    cospar = p.cospar
+                    tlefile = p.tlefile
+
+            t.satno = satno
+            t.cospar = cospar
+            t.catalogname = "unid"
+
+            # Get catalog abbreviation
+            for abbrev, tfile in zip(abbrevs, tlefiles):
+                if tfile == tlefile:
+                    t.catalogname = abbrev
+
+            # Add to observation
+            obs.append(Observation(ff, t.tmid, t.x0, t.y0, site_id, t.satno, t.cospar, t.catalogname))
 
         # Write observations
         for o in obs:
