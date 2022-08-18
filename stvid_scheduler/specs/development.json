@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/cbassa/stvid/master/stvid_scheduler/specs/development.json",
+  "title": "SatNOGS Optical (STVID) Station Configuration",
+  "description": "A configuration object for an optical SatNOGS Station",
+  "type": "object",
+  "properties": {
+    "satnogs_network_api_token": {
+      "description": "SatNOGS Network API Token",
+      "type": "string"
+    },
+    "satnogs_db_api_token": {
+      "description": "SatNOGS DB API Token",
+      "type": "string"
+    },
+    "satnogs_station_id": {
+      "description": "Station ID",
+      "type": "integer"
+    },
+    "satnogs_station_elev": {
+      "description": "Station Elevation above ground in meter",
+      "type": "number"
+    },
+    "satnogs_station_lat": {
+      "description": "Station Latitude in decimal degrees",
+      "type": "number",
+      "minimum": -90,
+      "maximum": 90
+    },
+    "satnogs_station_lon": {
+      "description": "Station Longitude in decimal degrees",
+      "type": "number",
+      "minimum": -180,
+      "maximum": 180
+    },
+    "satnogs_camera_preset": {
+      "description": "Configuration preset for a certain Camera+Lens reference configuration",
+      "type": "string"
+    }
+  },
+  "required": [  
+      "satnogs_network_api_token",
+      "satnogs_db_api_token",
+      "satnogs_station_id",
+      "satnogs_station_lat",
+      "satnogs_station_lon"
+      "satnogs_station_elev",
+      "satnogs_camera_preset"
+    ],
+  "additional_properties": true
+}
