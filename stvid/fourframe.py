@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 import os
 
-import tempfile
 import subprocess
 
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 
@@ -14,6 +12,7 @@ from astropy.time import Time
 from astropy.io import fits
 from astropy.io import ascii
 from astropy.coordinates import SkyCoord
+
 
 class Prediction:
     """Prediction class"""
@@ -46,14 +45,14 @@ class Prediction:
         # Derivatives
         dpx = np.polyder(px)
         dpy = np.polyder(py)
-        
+
         # Evaluate
         rx0, ry0 = np.polyval(px, t), np.polyval(py, t)
         drxdt, drydt = np.polyval(dpx, t), np.polyval(dpy, t)
         drdt = np.sqrt(drxdt**2 + drydt**2)
         pa = np.mod(np.arctan2(-drxdt, drydt), 2 * np.pi)
         dr = drdt * dt
-        
+
         return rx0, ry0, drdt, pa, dr
 
     def predicted_track(self, tmin, tmid, tmax, ax, color):
@@ -68,7 +67,7 @@ class Prediction:
         # Derivatives
         dpx = np.polyder(px)
         dpy = np.polyder(py)
-        
+
         # Evaluate
         x0, y0 = np.polyval(px, tmid), np.polyval(py, tmid)
         dxdt, dydt = np.polyval(dpx, tmid), np.polyval(dpy, tmid)
@@ -77,7 +76,7 @@ class Prediction:
         xmin = x0 + dxdt * (tmin - tmid)
         xmax = x0 + dxdt * (tmax - tmid)
         ymin = y0 + dydt * (tmin - tmid)
-        ymax = y0 + dydt * (tmax - tmid)        
+        ymax = y0 + dydt * (tmax - tmid)
 
         ax.plot([xmin, xmax], [ymin, ymax], color=color, linestyle="-")
         ax.plot(x0, y0, color=color, marker="o", markerfacecolor="none")
@@ -94,7 +93,7 @@ class Prediction:
         # Derivatives
         dpx = np.polyder(px)
         dpy = np.polyder(py)
-        
+
         # Evaluate
         rx, ry = np.polyval(px, t0), np.polyval(py, t0)
         drxdt, drydt = np.polyval(dpx, t0), np.polyval(dpy, t0)
@@ -107,9 +106,10 @@ class Prediction:
         rm = ca * drx - sa * dry
         wm = sa * drx + ca * dry
         dtm = rm / drdt
-        
+
         return dtm, wm
-        
+
+
 class Track:
     """Track class"""
 
@@ -126,7 +126,7 @@ class Track:
         self.satno = None
         self.cospar = None
         self.tlefile = None
-        
+
         # Compute mean position
         self.tmin, self.tmax = np.min(self.t), np.max(self.t)
         self.tmid = 0.5 * (self.tmax + self.tmin)
@@ -145,7 +145,7 @@ class Track:
         self.drdt = np.sqrt(self.drxdt**2 + self.drydt**2)
         self.pa = np.mod(np.arctan2(-self.drxdt, self.drydt), 2 * np.pi)
         self.dr = self.drdt * (self.tmax - self.tmin)
-        
+
         # Position and velocity on the image
         self.px = np.polyfit(self.t - self.tmid, self.x, 1)
         self.py = np.polyfit(self.t - self.tmid, self.y, 1)
@@ -159,7 +159,7 @@ class Track:
         self.xmax = self.x0 + self.dxdt * (self.tmax - self.tmid)
         self.ymin = self.y0 + self.dydt * (self.tmin - self.tmid)
         self.ymax = self.y0 + self.dydt * (self.tmax - self.tmid)
-        self.r = np.sqrt((self.xmax - self.xmin)**2 + (self.ymax - self.ymin)**2)
+        self.r = np.sqrt((self.xmax - self.xmin) ** 2 + (self.ymax - self.ymin) ** 2)
 
     def identify(self, predictions, satno, cospar, tlefile, cfg, abbrevs, tlefiles):
         # Identification settings
@@ -169,16 +169,25 @@ class Track:
         fdr_max = cfg.getfloat("Identification", "max_velocity_difference_percent")
 
         # Loop over predictions
+        is_identified = False
         for p in predictions:
             # Compute identification constraints
-            rx0, ry0, drdt, pa, dr = p.position_and_velocity(self.tmid, self.tmax - self.tmin)
+            rx0, ry0, drdt, pa, dr = p.position_and_velocity(
+                self.tmid, self.tmax - self.tmin
+            )
             dtm, rm = p.residual(self.tmid, self.rx0, self.ry0)
             dpa = angle_difference(self.pa, pa) * 180 / np.pi
             fdr = (dr / self.dr - 1) * 100
-            if (np.abs(dtm) < dtm_max) & (np.abs(rm) < rm_max) & (np.abs(dpa) < dpa_max) & (np.abs(fdr) < fdr_max):
+            if (
+                (np.abs(dtm) < dtm_max)
+                & (np.abs(rm) < rm_max)
+                & (np.abs(dpa) < dpa_max)
+                & (np.abs(fdr) < fdr_max)
+            ):
                 satno = p.satno
                 cospar = p.cospar
                 tlefile = p.tlefile
+                is_identified = True
 
         self.satno = satno
         self.cospar = cospar
@@ -189,12 +198,13 @@ class Track:
             if tfile == tlefile:
                 self.catalogname = abbrev
 
-        
+        return is_identified
+
     def match_to_prediction(self, p, dt, w):
         # Return if predicted track is too short to fit a 3rd order polynomial
         if len(p.t) < 3:
             return False
-        
+
         # Create polynomials
         px = np.polyfit(p.t, p.x, 2)
         py = np.polyfit(p.t, p.y, 2)
@@ -205,14 +215,35 @@ class Track:
         ymin = np.polyval(py, self.tmin)
         ymax = np.polyval(py, self.tmax)
 
-        
         # Check if observed track endpoints match with prediction
-        pmin = inside_selection_area(self.tmin, self.tmax, self.x0, self.y0, self.dxdt, self.dydt, xmin, ymin, dt, w)
-        pmax = inside_selection_area(self.tmin, self.tmax, self.x0, self.y0, self.dxdt, self.dydt, xmax, ymax, dt, w)        
+        pmin = inside_selection_area(
+            self.tmin,
+            self.tmax,
+            self.x0,
+            self.y0,
+            self.dxdt,
+            self.dydt,
+            xmin,
+            ymin,
+            dt,
+            w,
+        )
+        pmax = inside_selection_area(
+            self.tmin,
+            self.tmax,
+            self.x0,
+            self.y0,
+            self.dxdt,
+            self.dydt,
+            xmax,
+            ymax,
+            dt,
+            w,
+        )
 
         return pmin & pmax
 
-    
+
 class Observation:
     """Satellite observation"""
 
@@ -226,22 +257,26 @@ class Observation:
         self.satno = satno
         self.cospar = cospar
         self.catalogname = catalogname
-        
+
         p = SkyCoord.from_pixel(self.x, self.y, ff.w, 0)
         self.ra = p.ra.degree
         self.dec = p.dec.degree
 
     def to_iod_line(self):
         pstr = format_position(self.ra, self.dec)
-        tstr = self.nfd.replace("-", "") \
-                       .replace("T", "") \
-                       .replace(":", "") \
-                      .replace(".", "")
-        iod_line = "%05d %-9s %04d G %s 17 25 %s 37 S" % (self.satno, self.cospar, self.site_id, tstr,
-                                                          pstr)
+        tstr = (
+            self.nfd.replace("-", "").replace("T", "").replace(":", "").replace(".", "")
+        )
+        iod_line = "%05d %-9s %04d G %s 17 25 %s 37 S" % (
+            self.satno,
+            self.cospar,
+            self.site_id,
+            tstr,
+            pstr,
+        )
         return iod_line
 
-    
+
 class FourFrame:
     """Four Frame class"""
 
@@ -287,8 +322,7 @@ class FourFrame:
             self.nz = hdu[0].header["NFRAMES"]
 
             # Read frame time oselfsets
-            self.dt = np.array(
-                [hdu[0].header["DT%04d" % i] for i in range(self.nz)])
+            self.dt = np.array([hdu[0].header["DT%04d" % i] for i in range(self.nz)])
 
             # Read header
             self.mjd = hdu[0].header["MJD-OBS"]
@@ -300,31 +334,31 @@ class FourFrame:
             self.froot = os.path.splitext(fname)[0]
 
             # Astrometry keywords
-            self.crpix = np.array(
-                [hdu[0].header["CRPIX1"], hdu[0].header["CRPIX2"]])
-            self.crval = np.array(
-                [hdu[0].header["CRVAL1"], hdu[0].header["CRVAL2"]])
+            self.crpix = np.array([hdu[0].header["CRPIX1"], hdu[0].header["CRPIX2"]])
+            self.crval = np.array([hdu[0].header["CRVAL1"], hdu[0].header["CRVAL2"]])
             self.cd = np.array(
-                [[hdu[0].header["CD1_1"], hdu[0].header["CD1_2"]],
-                 [hdu[0].header["CD2_1"], hdu[0].header["CD2_2"]]])
+                [
+                    [hdu[0].header["CD1_1"], hdu[0].header["CD1_2"]],
+                    [hdu[0].header["CD2_1"], hdu[0].header["CD2_2"]],
+                ]
+            )
             self.ctype = [hdu[0].header["CTYPE1"], hdu[0].header["CTYPE2"]]
             self.cunit = [hdu[0].header["CUNIT1"], hdu[0].header["CUNIT2"]]
-            self.crres = np.array(
-                [hdu[0].header["CRRES1"], hdu[0].header["CRRES2"]])
+            self.crres = np.array([hdu[0].header["CRRES1"], hdu[0].header["CRRES2"]])
             self.ra0 = self.crval[0]
             self.dec0 = self.crval[1]
-            
+
             # Check for sidereal tracking
             try:
                 self.tracked = bool(hdu[0].header["TRACKED"])
             except KeyError:
                 self.tracked = False
-            
+
             hdu.close()
 
         # Compute image properties
-        self.sx = np.sqrt(self.cd[0, 0]**2 + self.cd[1, 0]**2)
-        self.sy = np.sqrt(self.cd[0, 1]**2 + self.cd[1, 1]**2)
+        self.sx = np.sqrt(self.cd[0, 0] ** 2 + self.cd[1, 0] ** 2)
+        self.sy = np.sqrt(self.cd[0, 1] ** 2 + self.cd[1, 1] ** 2)
         self.wx = self.nx * self.sx
         self.wy = self.ny * self.sy
         self.zmaxmin = np.mean(self.zmax) - 2.0 * np.std(self.zmax)
@@ -337,7 +371,7 @@ class FourFrame:
         self.znummax = self.nz
         self.zsigmin = 0
         self.zsigmax = 10
-        
+
         # Setup WCS
         self.w = wcs.WCS(naxis=2)
         self.w.wcs.crpix = self.crpix
@@ -361,17 +395,18 @@ class FourFrame:
             lat = cfg.getfloat("Observer", "latitude")
             lon = cfg.getfloat("Observer", "longitude")
             height = cfg.getfloat("Observer", "height")
-    
+
             # Format command
-            command = f"satpredict -t {nfd} -l {texp} -n {nmjd} -L {lon} -B {lat} -H {height} -o {outfname} -R {ra0} -D {de0} -r {radius}"
+            command = f"satpredict -t {nfd} -l {texp} -n {nmjd} -L {lon} -B {lat} -H {height}"
+            command = command + " -o {outfname} -R {ra0} -D {de0} -r {radius}"
             for key, value in cfg.items("Elements"):
                 if "tlefile" in key:
                     command += f" -c {value}"
 
             # Run command
-            output = subprocess.check_output(command,
-                                             shell=True,
-                                             stderr=subprocess.STDOUT)
+            output = subprocess.check_output(
+                command, shell=True, stderr=subprocess.STDOUT
+            )
 
         # Read results
         d = ascii.read(outfname, format="csv")
@@ -382,7 +417,7 @@ class FourFrame:
 
         # Compute angular offsets
         rx, ry = deproject(self.ra0, self.dec0, p.ra.degree, p.dec.degree)
-        
+
         # Loop over satnos
         satnos = np.unique(d["satno"])
         predictions = []
@@ -396,11 +431,23 @@ class FourFrame:
             if len(cospar) > 1:
                 if cospar[2] != " ":
                     cospar = f"{cospar[0:2]} {cospar[2:]}"
-            p = Prediction(satno, cospar, np.asarray(d["mjd"])[c], np.asarray(d["ra"])[c], np.asarray(d["dec"])[c], x[c], y[c], rx[c], ry[c], np.array(d["state"])[c], tlefile, age)
+            p = Prediction(
+                satno,
+                cospar,
+                np.asarray(d["mjd"])[c],
+                np.asarray(d["ra"])[c],
+                np.asarray(d["dec"])[c],
+                x[c],
+                y[c],
+                rx[c],
+                ry[c],
+                np.array(d["state"])[c],
+                tlefile,
+                age,
+            )
             predictions.append(p)
-        
-        return predictions
 
+        return predictions
 
     def in_frame(self, x, y):
         if (x >= 0) & (x <= self.nx) & (y >= 0) & (y <= self.ny):
@@ -408,13 +455,12 @@ class FourFrame:
         else:
             return False
 
-        
     def find_tracks_by_hough3d(self, cfg):
         # Config settings
         sigma = cfg.getfloat("LineDetection", "trksig")
         trkrmin = cfg.getfloat("LineDetection", "trkrmin")
         ntrkmin = cfg.getfloat("LineDetection", "ntrkmin")
-        
+
         # Find significant pixels
         c = self.zsig > sigma
         xm, ym = np.meshgrid(np.arange(self.nx), np.arange(self.ny))
@@ -430,7 +476,7 @@ class FourFrame:
 
         # Compute angular offsets
         rx, ry = deproject(self.ra0, self.dec0, ra, dec)
-       
+
         # Skip if not enough points
         if len(t) < ntrkmin:
             return []
@@ -443,11 +489,11 @@ class FourFrame:
 
         # Run 3D Hough line-finding algorithm
         command = f"hough3dlines -dx {trkrmin} -minvotes {ntrkmin} -raw {fname}"
-            
+
         try:
-            output = subprocess.check_output(command,
-                                             shell=True,
-                                             stderr=subprocess.STDOUT)
+            output = subprocess.check_output(
+                command, shell=True, stderr=subprocess.STDOUT
+            )
         except Exception:
             return []
 
@@ -457,27 +503,187 @@ class FourFrame:
             fp.write("ax,ay,az,bx,by,bz,n\n")
             tracks = []
             for line in output.decode("utf-8").splitlines()[2:]:
-                #lines.append(ThreeDLine(line, self.nx, self.ny, self.nz))
+                # lines.append(ThreeDLine(line, self.nx, self.ny, self.nz))
                 ax, ay, az, bx, by, bz, n = decode_line(line)
 
                 # Write result
                 fp.write(f"{ax},{ay},{az},{bx},{by},{bz},{n}\n")
-                
+
                 # Select points
                 f = (znum - az) / bz
                 xr = ax + f * bx
                 yr = ay + f * by
-                r = np.sqrt((x - xr)**2 + (y - yr)**2)
+                r = np.sqrt((x - xr) ** 2 + (y - yr) ** 2)
                 c = r < trkrmin
 
                 # Number of selected points and unique times
                 nsel = np.sum(c)
                 nt = len(np.unique(t[c]))
-                
+
                 if (nsel > 0) & (nt > 1):
-                    tracks.append(Track(t[c], x[c], y[c], zmax[c], ra[c], dec[c], rx[c], ry[c]))
-            
+                    tracks.append(
+                        Track(t[c], x[c], y[c], zmax[c], ra[c], dec[c], rx[c], ry[c])
+                    )
+
         return tracks
+
+    def diagnostic_plot(self, predictions, track, obs, cfg):
+        # Get info
+        if track is not None:
+            iod_line = obs.to_iod_line()
+            satno = obs.satno
+            catalogname = obs.catalogname
+            outfname = f"{self.froot}_{satno:05d}_{catalogname}.png"
+        else:
+            iod_line = ""
+            outfname = f"{self.fname}.png"
+
+        # Configuration parameters
+        color_detected = cfg.get("LineDetection", "color")
+        cmap = cfg.get("DiagnosticPlot", "colormap")
+        colors, abbrevs, tlefiles, catalognames = [], [], [], []
+        for key, value in cfg.items("Elements"):
+            if "tlefile" in key:
+                tlefiles.append(value)
+            elif "color" in key:
+                colors.append(value)
+            elif "name" in key:
+                catalognames.append(value)
+            elif "abbrev" in key:
+                abbrevs.append(value)
+
+        # Create plot
+        fig, ax = plt.subplots(figsize=(12, 10), dpi=75)
+
+        ax.set_title(
+            f'UT Date: {self.nfd} COSPAR ID: {self.site_id}\nR.A.: {self.crval[0]:10.6f} ({3600 * self.crres[0]:.1f}") Decl.: {self.crval[1]:10.6f} ({3600 * self.crres[1]:.1f}")\nFOV: {self.wx:.2f}$^\circ$x{self.wy:.2f}$^\circ$ Scale: {3600 * self.sx:.2f}"x{3600 * self.sy:.2f}" pix$^{{-1}}$\n\n{iod_line}',
+            fontdict={"fontsize": 14, "horizontalalignment": "left"},
+            loc="left",
+        )
+
+        ax.imshow(
+            self.zmax,
+            origin="lower",
+            interpolation="none",
+            vmin=self.zmaxmin,
+            vmax=self.zmaxmax,
+            cmap=cmap,
+        )
+
+        for p in predictions:
+            self.plot_prediction(p, ax, tlefiles, colors, dt=0)
+
+        if track is not None:
+            ax.plot(track.xp, track.yp, color=color_detected, linestyle="-")
+            ax.plot(
+                track.x0,
+                track.y0,
+                color=color_detected,
+                marker="o",
+                markerfacecolor="none",
+            )
+            ax.text(
+                track.x0,
+                track.y0,
+                f" {track.satno:05d}",
+                color=color_detected,
+                ha="center",
+                in_layout=False,
+            )
+
+        ax.set_xlim(0, self.nx)
+        ax.set_ylim(0, self.ny)
+        ax.set_xlabel("x (pixel)")
+        ax.set_ylabel("y (pixel)")
+        #        ax.xaxis.set_ticklabels([])
+        #        ax.yaxis.set_ticklabels([])
+
+        # Create legend handles
+        handles = []
+        for catalogname, color in zip(catalognames, colors):
+            handles.append(
+                mlines.Line2D([], [], color=color, marker="", label=catalogname)
+            )
+        handles.append(
+            mlines.Line2D(
+                [],
+                [],
+                color=color_detected,
+                marker="o",
+                markerfacecolor="none",
+                label="Detected",
+            )
+        )
+        for state, linestyle in zip(
+            ["Sunlit", "Penumbra", "Eclipsed"], ["solid", "dashed", "dotted"]
+        ):
+            handles.append(
+                mlines.Line2D(
+                    [], [], color="k", linestyle=linestyle, marker="", label=state
+                )
+            )
+        ax.legend(
+            handles=handles,
+            ncol=7,
+            bbox_to_anchor=(0.5, -0.1),
+            loc="center",
+            frameon=True,
+        )
+
+        plt.tight_layout()
+        #        plt.show()
+        plt.savefig(outfname, bbox_inches="tight", pad_inches=0.5)
+        plt.close()
+
+    def plot_prediction(self, p, ax, tlefiles, colors, dt=2.0, w=10.0):
+        color = "k"
+        for tlefile, temp_color in zip(tlefiles, colors):
+            if tlefile in p.tlefile:
+                color = temp_color
+        marker = "."
+
+        # Get direction of motion
+        dx, dy = p.x[-1] - p.x[0], p.y[-1] - p.y[0]
+        theta = np.arctan2(dy, dx)
+        sa, ca = np.sin(theta), np.cos(theta)
+
+        # Start of trail
+        dx = np.zeros(2)
+        dy = np.array([w, -w])
+        xs = ca * dx - sa * dy + p.x[0]
+        ys = sa * dx + ca * dy + p.y[0]
+
+        # Trail
+        dx, dy = p.x - p.x[0], p.y - p.y[0]
+        r = np.sqrt(dx**2 + dy**2)
+        dx, dy = r, -w * np.ones_like(r)
+        xt = ca * dx - sa * dy + p.x[0]
+        yt = sa * dx + ca * dy + p.y[0]
+
+        ax.plot(xs, ys, color=color)
+        ax.plot(xs, ys, color=color, marker=marker)
+        if theta < 0:
+            ha = "left"
+        else:
+            ha = "right"
+
+        if self.in_frame(xs[0], ys[0]):
+            ax.text(
+                xs[0], ys[0], f" {p.satno:05d} ", color=color, ha=ha, in_layout=False
+            )
+
+        for state, linestyle in zip(
+            ["sunlit", "umbra", "eclipsed"], ["solid", "dashed", "dotted"]
+        ):
+            c = correct_bool_state(p.state == state)
+            ax.plot(
+                np.ma.masked_where(~c, xt),
+                np.ma.masked_where(~c, yt),
+                color=color,
+                linestyle=linestyle,
+            )
+
+        return
 
 
 def decode_line(line):
@@ -509,8 +715,8 @@ def format_position(ra, de):
     else:
         sign = "+"
 
-    return ("%02d%06.3f%c%02d%05.2f" % (rah, ram, sign, ded, dem)).replace(
-        ".", "")
+    return ("%02d%06.3f%c%02d%05.2f" % (rah, ram, sign, ded, dem)).replace(".", "")
+
 
 # Inside selection
 def inside_selection_area(tmin, tmax, x0, y0, dxdt, dydt, x, y, dt=2.0, w=10.0):
@@ -520,7 +726,7 @@ def inside_selection_area(tmin, tmax, x0, y0, dxdt, dydt, x, y, dt=2.0, w=10.0):
     drdt = r / (tmax - tmin)
     sa, ca = np.sin(ang), np.cos(ang)
     tmid = 0.5 * (tmin + tmax)
-    
+
     xmid = x0 + dxdt * tmid
     ymid = y0 + dydt * tmid
 
@@ -530,33 +736,28 @@ def inside_selection_area(tmin, tmax, x0, y0, dxdt, dydt, x, y, dt=2.0, w=10.0):
     dtm = rm / drdt
 
     print(">> ", wm, dtm)
-    
+
     if (np.abs(wm) < w) & (np.abs(dtm) < dt):
         return True
     else:
         return False
-    
-# Angular offsets from spherical angles                
+
+
+# Angular offsets from spherical angles
 def deproject(l0, b0, l, b):
     lt = l * np.pi / 180
     bt = b * np.pi / 180
     l0t = l0 * np.pi / 180
     b0t = b0 * np.pi / 180
-    
+
     # To vector
-    r = np.array([np.cos(lt) * np.cos(bt),
-                  np.sin(lt) * np.cos(bt),
-                  np.sin(bt)])
+    r = np.array([np.cos(lt) * np.cos(bt), np.sin(lt) * np.cos(bt), np.sin(bt)])
 
     # Rotation matrices
     cl, sl = np.cos(l0t), np.sin(l0t)
-    Rl = np.array([[cl, sl, 0],
-                    [-sl, cl, 0],
-                    [0, 0, 1]])
+    Rl = np.array([[cl, sl, 0], [-sl, cl, 0], [0, 0, 1]])
     cb, sb = np.cos(b0t), np.sin(b0t)
-    Rb = np.array([[cb, 0, sb],
-                     [0, 1, 0],
-                     [-sb, 0, cb]])    
+    Rb = np.array([[cb, 0, sb], [0, 1, 0], [-sb, 0, cb]])
 
     # Apply rotations
     r = Rl.dot(r)
@@ -564,7 +765,7 @@ def deproject(l0, b0, l, b):
 
     # Back to angles
     radius = np.arccos(r[0])
-    position_angle = np.arctan2(r[1], r[2]) 
+    position_angle = np.arctan2(r[1], r[2])
 
     # To offsets
     dl, db = radius * np.sin(position_angle), radius * np.cos(position_angle)
@@ -577,3 +778,22 @@ def angle_difference(ang1, ang2):
     x2, y2 = np.cos(ang2), np.sin(ang2)
 
     return np.arccos(x1 * x2 + y1 * y2)
+
+
+def correct_bool_state(c):
+    # Return on no changes
+    if np.all(c):
+        return c
+    if np.all(~c):
+        return c
+
+    # Find indices of first false to true flip
+    idx = np.argwhere(c)[0].squeeze()
+
+    # Decrement index and keep in range
+    idx = max(0, idx - 1)
+
+    # Flip bool at that index
+    c[idx] = True
+
+    return c
