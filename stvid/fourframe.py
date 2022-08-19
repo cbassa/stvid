@@ -398,7 +398,7 @@ class FourFrame:
 
             # Format command
             command = f"satpredict -t {nfd} -l {texp} -n {nmjd} -L {lon} -B {lat} -H {height}"
-            command = command + " -o {outfname} -R {ra0} -D {de0} -r {radius}"
+            command = command + f" -o {outfname} -R {ra0} -D {de0} -r {radius}"
             for key, value in cfg.items("Elements"):
                 if "tlefile" in key:
                     command += f" -c {value}"
