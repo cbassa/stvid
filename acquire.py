@@ -380,6 +380,10 @@ def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id, cfg
         except PermissionError:
             logger.error("Can not create control path directory: %s" % controlpath)
             raise
+    if not os.path.exists(os.path.join(controlpath, "position.txt")):
+        with open(os.path.join(controlpath, "position.txt"), "w") as fp:
+            fp.write("\n")
+                          
     with open(os.path.join(controlpath, "state.txt"), "w") as fp:
         fp.write("restart\n")
 
