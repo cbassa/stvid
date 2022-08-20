@@ -258,7 +258,7 @@ class Observation:
         self.cospar = cospar
         self.catalogname = catalogname
 
-        p = SkyCoord.from_pixel(self.x, self.y, ff.w, 0)
+        p = SkyCoord.from_pixel(self.x, self.y, ff.w, 1)
         self.ra = p.ra.degree
         self.dec = p.dec.degree
 
@@ -402,7 +402,6 @@ class FourFrame:
             for key, value in cfg.items("Elements"):
                 if "tlefile" in key:
                     command += f" -c {value}"
-
             # Run command
             output = subprocess.check_output(
                 command, shell=True, stderr=subprocess.STDOUT
