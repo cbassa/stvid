@@ -10,7 +10,7 @@ This repository is currently used for development, and relies, for the moment, o
 ## Installation
 **stvid** handles requirements using pip. You can install requirements by running :
 
-`pip install -r requirements.txt`
+`pip install -e .`
 
 Consider using a VirtualEnv to run stvid on a separate python virtual environment.
 
@@ -55,7 +55,7 @@ Features to be implemented.
 
 * Add user to video group (`sudo adduser <username> video`).
 * Add video device to udev rules (add `SUBSYSTEM=="video1", GROUP="video", MODE="0660"` in `/etc/udev/rules.d/10-webcam.rules`).
-* Create start up script in `/etc/init.d`. Call capture script as user with `su <username> -c "acquire.py"`.
+* Create start up script in `/etc/init.d`. Call capture script as user with `su <username> -c "stvid_acquire"`.
 
 ## License
 &copy; 2018-2022 Cees Bassa
