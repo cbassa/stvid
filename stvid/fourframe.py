@@ -307,9 +307,16 @@ class FourFrame:
             self.ra0 = None
             self.dec0 = None
             self.tracked = False
+            self.lat = None
+            self.lon = None
+            self.height = None
+            self.has_location = False
         else:
             # Read FITS file
             hdu = fits.open(fname)
+
+            # Read header
+            header = hdu[0].header
 
             # Read image planes
             self.zavg, self.zstd, self.zmax, self.znum = hdu[0].data
@@ -319,38 +326,51 @@ class FourFrame:
 
             # Frame properties
             self.ny, self.nx = self.zavg.shape
-            self.nz = hdu[0].header["NFRAMES"]
+            self.nz = header["NFRAMES"]
 
             # Read frame time oselfsets
-            self.dt = np.array([hdu[0].header["DT%04d" % i] for i in range(self.nz)])
+            self.dt = np.array([header["DT%04d" % i] for i in range(self.nz)])
 
             # Read header
-            self.mjd = hdu[0].header["MJD-OBS"]
-            self.nfd = hdu[0].header["DATE-OBS"]
-            self.site_id = hdu[0].header["COSPAR"]
-            self.observer = hdu[0].header["OBSERVER"]
-            self.texp = hdu[0].header["EXPTIME"]
+            self.mjd = header["MJD-OBS"]
+            self.nfd = header["DATE-OBS"]
+            self.site_id = header["COSPAR"]
+            self.observer = header["OBSERVER"]
+            self.texp = header["EXPTIME"]
             self.fname = fname
             self.froot = os.path.splitext(fname)[0]
 
+            # Location info
+            keys = ["SITELONG", "SITELAT", "ELEVATIO"]
+            if np.all([key in header for key in keys]):
+                self.lon = header["SITELONG"]
+                self.lat = header["SITELAT"]
+                self.height = header["ELEVATIO"]
+                self.has_location = True
+            else:
+                self.lon = None
+                self.lat = None
+                self.height = None
+                self.has_location = False
+            
             # Astrometry keywords
-            self.crpix = np.array([hdu[0].header["CRPIX1"], hdu[0].header["CRPIX2"]])
-            self.crval = np.array([hdu[0].header["CRVAL1"], hdu[0].header["CRVAL2"]])
+            self.crpix = np.array([header["CRPIX1"], header["CRPIX2"]])
+            self.crval = np.array([header["CRVAL1"], header["CRVAL2"]])
             self.cd = np.array(
                 [
-                    [hdu[0].header["CD1_1"], hdu[0].header["CD1_2"]],
-                    [hdu[0].header["CD2_1"], hdu[0].header["CD2_2"]],
+                    [header["CD1_1"], header["CD1_2"]],
+                    [header["CD2_1"], header["CD2_2"]],
                 ]
             )
-            self.ctype = [hdu[0].header["CTYPE1"], hdu[0].header["CTYPE2"]]
-            self.cunit = [hdu[0].header["CUNIT1"], hdu[0].header["CUNIT2"]]
-            self.crres = np.array([hdu[0].header["CRRES1"], hdu[0].header["CRRES2"]])
+            self.ctype = [header["CTYPE1"], header["CTYPE2"]]
+            self.cunit = [header["CUNIT1"], header["CUNIT2"]]
+            self.crres = np.array([header["CRRES1"], header["CRRES2"]])
             self.ra0 = self.crval[0]
             self.dec0 = self.crval[1]
 
             # Check for sidereal tracking
             try:
-                self.tracked = bool(hdu[0].header["TRACKED"])
+                self.tracked = bool(header["TRACKED"])
             except KeyError:
                 self.tracked = False
 
@@ -392,9 +412,16 @@ class FourFrame:
             nmjd = int(np.ceil(texp))
             ra0, de0 = self.crval[0], self.crval[1]
             radius = np.sqrt(self.wx * self.wx + self.wy * self.wy)
-            lat = cfg.getfloat("Observer", "latitude")
-            lon = cfg.getfloat("Observer", "longitude")
-            height = cfg.getfloat("Observer", "height")
+
+            # Use FITS location if available, config otherwise
+            if self.has_location:
+                lat = self.lat
+                lon = self.lon
+                height = self.height
+            else:
+                lat = cfg.getfloat("Observer", "latitude")
+                lon = cfg.getfloat("Observer", "longitude")
+                height = cfg.getfloat("Observer", "height")
 
             # Format command
             command = f"satpredict -t {nfd} -l {texp} -n {nmjd} -L {lon} -B {lat} -H {height}"

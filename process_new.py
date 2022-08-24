@@ -57,8 +57,6 @@ if __name__ == "__main__":
 
     
     # Observer settings
-    site_id = cfg.getint("Observer", "cospar")
-
     nstarsmin = cfg.getint("Processing", "nstarsmin")
 
     
@@ -157,7 +155,7 @@ if __name__ == "__main__":
             obs = []
             for t in tracks:
                 # Add to observation
-                obs.append(Observation(ff, t.tmid, t.x0, t.y0, site_id,
+                obs.append(Observation(ff, t.tmid, t.x0, t.y0, ff.site_id,
                                        t.satno, t.cospar, t.catalogname))
 
             # Write observations
