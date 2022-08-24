@@ -122,7 +122,7 @@ def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, c
 
 
 # Capture images from cv2
-def capture_cv2(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live):
+def capture_cv2(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, cfg):
     # Intialization
     first = True
     slow_CPU = False
@@ -130,10 +130,16 @@ def capture_cv2(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live):
     # Initialize cv2 device
     device = cv2.VideoCapture(device_id)
 
+    # Test for software binning
+    try:
+        software_bin = cfg.getint(camera_type, 'software_bin')
+    except configparser.Error:
+        software_bin = 1
+    
     # Set properties
-    device.set(3, nx)
-    device.set(4, ny)
-
+    device.set(3, nx * software_bin)
+    device.set(4, ny * software_bin)
+   
     try:
         # Loop until reaching end time
         while float(time.time()) < tend:
@@ -165,6 +171,11 @@ def capture_cv2(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live):
                     z = np.asarray(cv2.cvtColor(
                         frame, cv2.COLOR_BGR2GRAY)).astype(np.uint8)
 
+                    # Apply software binning
+                    if software_bin > 1:
+                        my, mx = z.shape
+                        z = cv2.resize(z, (mx // software_bin, my // software_bin))
+                    
                     # Display Frame
                     if live is True:
                         cv2.imshow("Capture", z)
@@ -676,7 +687,7 @@ if __name__ == '__main__':
     elif camera_type == "CV2":
         pcapture = multiprocessing.Process(target=capture_cv2,
                                            args=(image_queue, z1, t1, z2, t2,
-                                                 nx, ny, nz, tend.unix, device_id, live))
+                                                 nx, ny, nz, tend.unix, device_id, live, cfg))
     elif camera_type == "ASI":
         pcapture = multiprocessing.Process(target=capture_asi,
                                            args=(image_queue, z1, t1, z2, t2,
