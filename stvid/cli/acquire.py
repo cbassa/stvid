@@ -15,6 +15,8 @@ import logging
 import configparser
 import argparse
 
+logger = logging.getLogger(__name__)
+
 
 # Capture images from pi
 def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, cfg):
@@ -555,7 +557,6 @@ def main():
     # Setup logging
     logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] " +
                                      "[%(levelname)-5.5s]  %(message)s")
-    logger = logging.getLogger()
 
     # Generate directory
     path = os.path.abspath(cfg.get('Common', 'observations_path'))
