@@ -14,13 +14,13 @@ from stvid.utils import get_sunset_and_sunrise
 import logging
 import configparser
 import argparse
-import zwoasi as asi
-from picamerax.array import PiRGBArray
-from picamerax import PiCamera
 
 
 # Capture images from pi
 def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, cfg):
+    from picamerax.array import PiRGBArray
+    from picamerax import PiCamera
+
     # Intialization
     first = True
     slow_CPU = False
@@ -202,6 +202,8 @@ def capture_cv2(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live):
 
 # Capture images
 def capture_asi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, cfg):
+    import zwoasi as asi
+
     first    = True  # Array flag
     slow_CPU = False # Performance issue flag
 
