@@ -105,7 +105,8 @@ def process_loop(fname):
 
     return (screenoutput, imgstat_output, screenoutput_idents)
 
-if __name__ == "__main__":
+
+def main():
     # Read commandline options
     conf_parser = argparse.ArgumentParser(description='Process captured' +
                                           ' video frames.')
@@ -255,3 +256,7 @@ if __name__ == "__main__":
 
     # Close files
     fstat.close()
+
+
+if __name__ == "__main__":
+    main()

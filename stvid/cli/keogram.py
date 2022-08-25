@@ -39,7 +39,7 @@ def generate_keogram(path):
     np.save(os.path.join(path, "keogram"), keogram)
 
 
-if __name__ == "__main__":
+def main():
     # Read commandline options
     conf_parser = argparse.ArgumentParser(description='Process captured' +
                                           ' video frames.')
@@ -93,3 +93,7 @@ if __name__ == "__main__":
 
     plt.tight_layout()
     plt.savefig(os.path.join(args.file_dir, "keogram.png"))
+
+
+if __name__ == "__main__":
+    main()

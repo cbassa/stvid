@@ -11,7 +11,8 @@ from urllib.request import urlopen
 import re
 import os
 
-if __name__ == '__main__':
+
+def main():
     # Read commandline options
     conf_parser = argparse.ArgumentParser(description='Update TLEs from' +
                                                       ' online sources')
@@ -97,3 +98,7 @@ if __name__ == '__main__':
         for fname in catalogs:
             with open(fname) as infile:
                 outfile.write(infile.read())
+
+
+if __name__ == '__main__':
+    main()

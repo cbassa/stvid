@@ -521,9 +521,7 @@ def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id, cfg
         logger.info("Exiting compress")
 
 
-# Main function
-if __name__ == '__main__':
-
+def main():
     # Read commandline options
     conf_parser = argparse.ArgumentParser(description='Capture and compress' +
                                                       ' live video frames.')
@@ -697,3 +695,7 @@ if __name__ == '__main__':
     # Release device
     if live is True:
         cv2.destroyAllWindows()
+
+
+if __name__ == '__main__':
+    main()

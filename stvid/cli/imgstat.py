@@ -10,7 +10,8 @@ import configparser
 import argparse
 import os
 
-if __name__ == "__main__":
+
+def main():
     # Read commandline options
     conf_parser = argparse.ArgumentParser(description='Plot image statistics')
     conf_parser.add_argument("-c",
@@ -99,3 +100,7 @@ if __name__ == "__main__":
 
     plt.tight_layout()
     plt.savefig(args.output)
+
+
+if __name__ == "__main__":
+    main()
