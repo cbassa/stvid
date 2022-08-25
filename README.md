@@ -9,10 +9,21 @@ This repository is currently used for development, and relies, for the moment, o
 
 ## Installation
 **stvid** handles requirements using pip. You can install requirements by running :
-
-`pip install -e .`
+```
+pip install -e .
+```
 
 Consider using a VirtualEnv to run stvid on a separate python virtual environment.
+
+To allow acquisition using a ZWO Camera use instead:
+```
+pip install -e .[asi]
+```
+
+To allow acquisition using a Raspberry Pi camera use instead:
+```
+pip install -e .[picamera]
+```
 
 ### Additional requirements
 * [Hough3dLines](https://gitlab.com/pierros/hough3d-code)
