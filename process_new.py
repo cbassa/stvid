@@ -20,7 +20,6 @@ from stvid.stars import pixel_catalog
 from stvid.stars import store_calibration
 from stvid.stars import generate_star_catalog
 from stvid.astrometry import calibrate_from_reference
-from stvid.astrometry import is_calibrated
 from stvid.astrometry import generate_reference_with_anet
 
 from astropy.utils.exceptions import AstropyWarning
@@ -129,7 +128,7 @@ if __name__ == "__main__":
                 3600.0 * ff.crres[0], 3600.0 * ff.crres[1], np.mean(
                     ff.zavg), np.std(ff.zavg))
 
-            if is_calibrated(ff):
+            if ff.is_calibrated():
                 color = "green"
             else:
                 color = "red"
@@ -139,7 +138,7 @@ if __name__ == "__main__":
             predictions = ff.generate_satellite_predictions(cfg)
 
             # Find tracks
-            if is_calibrated(ff):
+            if ff.is_calibrated():
                 tracks = ff.find_tracks_by_hough3d(cfg)
             else:
                 tracks = []

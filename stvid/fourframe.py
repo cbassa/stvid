@@ -553,6 +553,16 @@ class FourFrame:
 
         return tracks
 
+    def is_calibrated(self):
+        if (3600.0 * self.crres[0] < 1e-3) | \
+           (3600.0 * self.crres[1] < 1e-3) | \
+           (self.crres[0] / self.sx > 2.0) | \
+           (self.crres[1] / self.sy > 2.0):
+            return False
+        else:
+            return True
+
+    
     def diagnostic_plot(self, predictions, track, obs, cfg):
         # Get info
         if track is not None:
@@ -581,10 +591,16 @@ class FourFrame:
         # Create plot
         fig, ax = plt.subplots(figsize=(12, 10), dpi=75)
 
+        # Set color indicating accurate astrometry
+        if self.is_calibrated():
+            color = "k"
+        else:
+            color = "r"
+        
         ax.set_title(
             f'UT Date: {self.nfd} COSPAR ID: {self.site_id}\nR.A.: {self.crval[0]:10.6f} ({3600 * self.crres[0]:.1f}") Decl.: {self.crval[1]:10.6f} ({3600 * self.crres[1]:.1f}")\nFOV: {self.wx:.2f}$^\circ$x{self.wy:.2f}$^\circ$ Scale: {3600 * self.sx:.2f}"x{3600 * self.sy:.2f}" pix$^{{-1}}$\n\n{iod_line}',
             fontdict={"fontsize": 14, "horizontalalignment": "left"},
-            loc="left",
+            loc="left", color=color,
         )
 
         ax.imshow(
