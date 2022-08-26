@@ -7,11 +7,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 
+import astropy.units as u
 from astropy import wcs
 from astropy.time import Time
 from astropy.io import fits
 from astropy.io import ascii
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import SkyCoord, FK5
 
 
 class Prediction:
@@ -258,7 +259,15 @@ class Observation:
         self.cospar = cospar
         self.catalogname = catalogname
 
+        # Compute coordinates
         p = SkyCoord.from_pixel(self.x, self.y, ff.w, 1)
+
+        # Correct for motion of stationary camera
+        if ff.tracked == False:
+            t = Time(self.mjd, format="mjd")
+            tmid = Time(ff.mjd, format="mjd") + 0.5 * ff.texp * u.s
+            p = correct_stationary_coordinates(tmid, t, p, direction=-1)
+        
         self.ra = p.ra.degree
         self.dec = p.dec.degree
 
@@ -437,8 +446,14 @@ class FourFrame:
         # Read results
         d = ascii.read(outfname, format="csv")
 
-        # Compute frame coordinates
-        p = SkyCoord(ra=d["ra"], dec=d["dec"], unit="deg", frame="icrs")
+        # Coordinates (correct for image drift)
+        p = SkyCoord(ra=d["ra"], dec=d["dec"], unit="deg", frame=FK5(equinox="J2000"))
+        if self.tracked == False:
+            t = Time(d["mjd"], format="mjd")
+            tmid = Time(self.mjd, format="mjd") + 0.5 * self.texp * u.s
+            p = correct_stationary_coordinates(tmid, t, p, direction=1)
+
+        # Compute poxiel positions
         x, y = p.to_pixel(self.w, 0)
 
         # Compute angular offsets
@@ -673,7 +688,6 @@ class FourFrame:
         )
 
         plt.tight_layout()
-        #        plt.show()
         plt.savefig(outfname, bbox_inches="tight", pad_inches=0.5)
         plt.close()
 
@@ -839,3 +853,25 @@ def correct_bool_state(c):
     c[idx] = True
 
     return c
+
+
+def correct_stationary_coordinates(tmid, t, p, direction=1):
+    # Compute LST
+    t.delta_ut1_utc = 0
+    tmid.delta_ut1_utc = 0
+    h = t.sidereal_time("mean", longitude=0.0).degree
+    hmid = tmid.sidereal_time("mean", longitude=0.0).degree
+
+    dra = direction * (hmid - h)
+    
+    # Transform to epoch of date
+    pt = p.transform_to(FK5(equinox=tmid))
+
+    # Apply correction
+    ra = pt.ra.degree + dra
+    dec = pt.dec.degree
+
+    # Transform to J2000
+    pt = SkyCoord(ra=ra, dec=dec, unit="deg", frame="fk5", equinox=tmid).transform_to(FK5(equinox="J2000"))
+    
+    return pt
