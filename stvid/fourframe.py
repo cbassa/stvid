@@ -14,6 +14,31 @@ from astropy.io import fits
 from astropy.io import ascii
 from astropy.coordinates import SkyCoord, FK5
 
+class StarCatalog:
+    """StarCatalog class"""
+
+    def __init__(self, fname):
+        # Load catalog
+        d = np.loadtxt(fname)
+        if len(d.shape) == 2:
+            self.x = d[:, 0]
+            self.y = d[:, 1]
+            self.mag = d[:, 2]
+            self.ra = np.empty_like(self.x)
+            self.dec = np.empty_like(self.x)
+            self.imag = np.empty_like(self.x)
+            self.flag = np.zeros_like(self.x)
+            self.nstars = len(self.mag)
+        else:
+            self.x = None
+            self.y = None
+            self.mag = None
+            self.ra = None
+            self.dec = None
+            self.imag = None
+            self.flag = None
+            self.nstars = 0
+
 
 class Prediction:
     """Prediction class"""
@@ -453,7 +478,7 @@ class FourFrame:
             tmid = Time(self.mjd, format="mjd") + 0.5 * self.texp * u.s
             p = correct_stationary_coordinates(tmid, t, p, direction=1)
 
-        # Compute poxiel positions
+        # Compute pixel positions
         x, y = p.to_pixel(self.w, 0)
 
         # Compute angular offsets
@@ -568,6 +593,63 @@ class FourFrame:
 
         return tracks
 
+    def generate_star_catalog(self):
+        # Source-extractor configuration file
+        conffname = os.path.normpath(os.path.join(os.path.dirname(__file__),
+                                                  "..",
+                                                  "source-extractor/default.sex"))
+
+        # Output catalog name
+        outfname = f"{self.froot}.cat"
+
+        # Skip if file already exists
+        if not os.path.exists(outfname):
+            # Format command
+            command = f"sextractor {self.fname} -c {conffname} -CATALOG_NAME {outfname}"
+
+            # Run sextractor
+            output = subprocess.check_output(command, shell=True,
+                                             stderr=subprocess.STDOUT)
+            
+        return StarCatalog(outfname)
+
+    def find_calibration(self, cfg):
+        # Arguments for solve-field
+        if cfg.has_option("Astrometry", "solve-field_args"):
+            cmd_args = cfg.get("Astrometry", "solve-field_args")
+        else:
+            cmd_args = ""
+
+        # Generate command
+        command = f"solve-field {cmd_args} {self.fname}"
+
+        # Run command
+        try:
+            subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
+
+            # Did the astrometry succeed?
+            solved = os.path.exists(f"{self.froot}.solved")
+
+            # Read header
+            hdu = fits.open(f"{self.froot}.wcs")
+            hdu[0].header["NAXIS"] = 2
+            w = wcs.WCS(hdu[0].header)
+            hdu.close()
+        except OSError:
+            solved = False
+            w = None
+
+        # Remove temporary files
+        extensions = [".new", ".axy", "-objs.png", ".wcs", ".rdls", ".solved", "-indx.xyls", ".match", ".corr"]
+        for extension in extensions:
+            try:
+                os.remove(f"{self.froot}{extension}")
+            except OSError:
+                pass
+
+        return w
+        
+    
     def is_calibrated(self):
         if (3600.0 * self.crres[0] < 1e-3) | \
            (3600.0 * self.crres[1] < 1e-3) | \
