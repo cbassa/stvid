@@ -486,32 +486,35 @@ class FourFrame:
 
         # Loop over satnos
         satnos = np.unique(d["satno"])
+        tlefiles = np.unique(d["tlefile"])
         predictions = []
-        for satno in satnos:
-            c = d["satno"] == satno
-            tlefile = np.unique(d["tlefile"][c])[0]
-            age = np.unique(np.asarray(d["age"])[c])[0]
-            cospar = str(np.unique(np.asarray(d["cospar"])[c])[0])
+        for tlefile in tlefiles:
+            for satno in satnos:
+                c = (d["satno"] == satno) & (d["tlefile"] == tlefile)
+                if np.sum(c) == 0:
+                    continue
+                age = np.unique(np.asarray(d["age"])[c])[0]
+                cospar = str(np.unique(np.asarray(d["cospar"])[c])[0])
 
-            # Fix COSPAR designation for IOD format
-            if len(cospar) > 1:
-                if cospar[2] != " ":
-                    cospar = f"{cospar[0:2]} {cospar[2:]}"
-            p = Prediction(
-                satno,
-                cospar,
-                np.asarray(d["mjd"])[c],
-                np.asarray(d["ra"])[c],
-                np.asarray(d["dec"])[c],
-                x[c],
-                y[c],
-                rx[c],
-                ry[c],
-                np.array(d["state"])[c],
-                tlefile,
-                age,
-            )
-            predictions.append(p)
+                # Fix COSPAR designation for IOD format
+                if len(cospar) > 1:
+                    if cospar[2] != " ":
+                        cospar = f"{cospar[0:2]} {cospar[2:]}"
+                p = Prediction(
+                    satno,
+                    cospar,
+                    np.asarray(d["mjd"])[c],
+                    np.asarray(d["ra"])[c],
+                    np.asarray(d["dec"])[c],
+                    x[c],
+                    y[c],
+                    rx[c],
+                    ry[c],
+                    np.array(d["state"])[c],
+                    tlefile,
+                    age,
+                )
+                predictions.append(p)
 
         return predictions
 
@@ -677,7 +680,7 @@ class FourFrame:
         colors, abbrevs, tlefiles, catalognames = [], [], [], []
         for key, value in cfg.items("Elements"):
             if "tlefile" in key:
-                tlefiles.append(value)
+                tlefiles.append(os.path.basename(value))
             elif "color" in key:
                 colors.append(value)
             elif "name" in key:
