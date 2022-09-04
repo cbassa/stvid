@@ -119,10 +119,10 @@ if __name__ == "__main__":
             ff = FourFrame(fname)
 
             # Find stars
-            starcatalog = ff.generate_star_catalog()
+#            starcatalog = ff.generate_star_catalog()
 
             # Calibrate
-            wref = ff.find_calibration(cfg)
+#            wref = ff.find_calibration(cfg)
             
             # Stars available and used
             nused = np.sum(pix_catalog.flag == 1)
