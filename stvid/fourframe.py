@@ -511,7 +511,7 @@ class FourFrame:
                     rx[c],
                     ry[c],
                     np.array(d["state"])[c],
-                    tlefile,
+                    os.path.basename(tlefile),
                     age,
                 )
                 predictions.append(p)

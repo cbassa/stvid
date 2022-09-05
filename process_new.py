@@ -63,7 +63,7 @@ if __name__ == "__main__":
     abbrevs, tlefiles = [], []
     for key, value in cfg.items("Elements"):
         if "tlefile" in key:
-            tlefiles.append(value)
+            tlefiles.append(os.path.basename(value))
         elif "abbrev" in key:
             abbrevs.append(value)
 
