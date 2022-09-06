@@ -40,6 +40,10 @@ if __name__ == "__main__":
                              metavar="DIR",
                              dest="file_dir",
                              default=".")
+    conf_parser.add_argument("-r",
+                             "--reprocess",
+                             help="Remove processed files and start from scratch.",
+                             action="store_true")
     args = conf_parser.parse_args()
     
     # Read configuration file
@@ -66,6 +70,12 @@ if __name__ == "__main__":
             tlefiles.append(value)
         elif "abbrev" in key:
             abbrevs.append(value)
+
+    # Remove processed files
+    if args.reprocess:
+        for f_pattern in ["test.fits","*.png","*.cat","*.cal","*.csv","*.dat"]:
+            for files in glob.glob(os.path.join(args.file_dir, f_pattern)):
+                os.remove(files)
 
     # Start processing loop
     while True:
