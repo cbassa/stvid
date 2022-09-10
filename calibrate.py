@@ -1,59 +1,120 @@
 #!/usr/bin/env python3
-from __future__ import print_function
 import os
-import configparser
-import argparse
-import subprocess
+import sys
+import glob
+import time
 
-if __name__ == '__main__':
+import argparse
+import configparser
+
+import numpy as np
+
+import warnings
+
+from termcolor import colored
+
+from stvid import calibration
+
+#from stvid.fourframe import FourFrame
+#from stvid.fourframe import Observation
+#from stvid.fourframe import AstrometricCatalog
+
+#from stvid.stars import pixel_catalog
+#from stvid.stars import store_calibration
+#from stvid.stars import generate_star_catalog
+#from stvid.astrometry import calibrate_from_reference
+#from stvid.astrometry import generate_reference_with_anet
+
+from astropy.utils.exceptions import AstropyWarning
+
+if __name__ == "__main__":
     # Read commandline options
-    conf_parser = argparse.ArgumentParser(description='Plate solve FITS file' +
-                                                      ' and add WCS on header')
-    conf_parser.add_argument("-c", "--conf_file",
+    conf_parser = argparse.ArgumentParser(description="Process captured" +
+                                          " video frames.")
+    conf_parser.add_argument("-c",
+                             "--conf_file",
                              help="Specify configuration file. If no file" +
                              " is specified 'configuration.ini' is used.",
                              metavar="FILE")
-    conf_parser.add_argument("-d", "--directory",
+    conf_parser.add_argument("-d",
+                             "--directory",
                              help="Specify directory of observations. If no" +
                              " directory is specified parent will be used.",
-                             metavar='DIR', dest='file_dir', default=".")
-
+                             metavar="DIR",
+                             dest="file_dir",
+                             default=".")
     args = conf_parser.parse_args()
-
-    # Process commandline options and parse configuration
-    cfg = configparser.ConfigParser(inline_comment_prefixes=('#', ';'))
+    
+    # Read configuration file
+    cfg = configparser.ConfigParser(inline_comment_prefixes=("#", ":"))
     conf_file = args.conf_file if args.conf_file else "configuration.ini"
     result = cfg.read([conf_file])
-
     if not result:
         print("Could not read config file: %s\nExiting..." % conf_file)
         sys.exit()
 
-    path = args.file_dir
-    extension = 'fits'
-    files = sorted((f for f in os.listdir(path) if f.endswith('.' + extension)),
-                   key=lambda x: os.path.getctime(os.path.join(path, x)))
+    # Set warnings
+    warnings.filterwarnings("ignore", category=UserWarning, append=True)
+    warnings.simplefilter("ignore", AstropyWarning)
 
-    if files:
-        file_for_astrometry = os.path.join(path, files[0])
-        print("Found " + file_for_astrometry + " for astrometric solving.")
+    
+    # Observer settings
+    nstarsmin = cfg.getint("Processing", "nstarsmin")
 
-        sex_config = cfg.get('Astrometry', 'sex_config')
-        no_sex     = cfg.get('Astrometry', 'no_sex')
-        low_app    = cfg.get('Astrometry', 'low_app')
-        high_app   = cfg.get('Astrometry', 'high_app')
+    
+    # Extract abbrevs for TLE files
+    abbrevs, tlefiles = [], []
+    for key, value in cfg.items("Elements"):
+        if "tlefile" in key:
+            tlefiles.append(os.path.basename(value))
+        elif "abbrev" in key:
+            abbrevs.append(value)
 
-        # Format solve-field command
-        command = "solve-field -O -y -u app -L %s -H %s --downsample 2 " % (low_app, high_app)
-        if (not no_sex):
-            command = command + \
-                "--use-sextractor --sextractor-config %s --x-column X_IMAGE " % sex_config + \
-                "--y-column Y_IMAGE  --sort-column MAG_AUTO --sort-ascending "
-        command = command + \
-            "--no-plots -T -N %s/test.fits %s" % (path, file_for_astrometry)
+    # Read astrometric catalog
+    acat = calibration.AstrometricCatalog(cfg.getfloat("Astrometry", "maximum_magnitude"))
+            
+    # Start processing loop
+    solved = False
+    while True:
+        # Get files
+        fitsfnames = sorted(glob.glob(os.path.join(args.file_dir, "2*.fits")))
+        procfnames = sorted(glob.glob(os.path.join(args.file_dir, "2*.fits.png")))
+        fnames = [fname for fname in fitsfnames if f"{fname}.png" not in procfnames]
 
-        # Run solve-field
-        subprocess.run(command, shell=True, stderr=subprocess.STDOUT)
+        # Loop over files
+        for fname in fnames:
+            # Find stars
+            scat = calibration.generate_star_catalog(fname)
 
-    else:
-        print("No fits file found for astrometric solving.")
+            # Plate solve
+            wref, tref = calibration.plate_solve(fname, cfg)
+            
+            # Calibrate
+            w, rmsx, rmsy, nused = calibration.calibrate(fname, cfg, acat, scat, wref, tref)
+
+            print(fname, tref.isot, rmsx, rmsy, nused)
+
+            # Stars available and used
+            #nused = np.sum(pix_catalog.flag == 1)
+            #nstars = pix_catalog.nstars
+#            nstars = starcatalog.nstars
+            
+            # Write output
+#            screenoutput = "%s %10.6f %10.6f %4d/%4d %5.1f %5.1f %6.2f +- %6.2f" % (
+#                os.path.basename(ff.fname), ff.crval[0], ff.crval[1], nused, nstars,
+#                3600.0 * ff.crres[0], 3600.0 * ff.crres[1], np.mean(
+#                    ff.zavg), np.std(ff.zavg))
+#
+#            if ff.is_calibrated():
+#                color = "green"
+#            else:
+#                color = "red"
+#            print(colored(screenoutput, color))
+            
+        # Sleep
+        try:
+            sys.exit()
+            print("File queue empty, waiting for new files...\r", end = "")
+            time.sleep(10)
+        except KeyboardInterrupt:
+            sys.exit()

@@ -15,6 +15,7 @@ from termcolor import colored
 
 from stvid.fourframe import FourFrame
 from stvid.fourframe import Observation
+from stvid.fourframe import AstrometricCatalog
 
 from stvid.stars import pixel_catalog
 from stvid.stars import store_calibration
@@ -67,6 +68,9 @@ if __name__ == "__main__":
         elif "abbrev" in key:
             abbrevs.append(value)
 
+    # Read astrometric catalog
+    astcat = AstrometricCatalog(cfg.getfloat("Astrometry", "maximum_magnitude"))
+            
     # Start processing loop
     while True:
         # Get files
@@ -104,29 +108,33 @@ if __name__ == "__main__":
                 break
 
             # Generate star catalog
-            if not os.path.exists(f"{fname}.cat"):
-                pix_catalog = generate_star_catalog(fname)
-            else:
-                pix_catalog = pixel_catalog(f"{fname}.cat")
+#            if not os.path.exists(f"{fname}.cat"):
+#                pix_catalog = generate_star_catalog(fname)
+#            else:
+#                pix_catalog = pixel_catalog(f"{fname}.cat")
 
             # Calibrate from reference
-            calibrate_from_reference(fname, calfname, pix_catalog)
+#            calibrate_from_reference(fname, calfname, pix_catalog)
 
             # Store calibration
-            store_calibration(pix_catalog, f"{fname}.cal")
+#            store_calibration(pix_catalog, f"{fname}.cal")
 
             # Read Fourframe
             ff = FourFrame(fname)
 
             # Find stars
-#            starcatalog = ff.generate_star_catalog()
+            starcatalog = ff.generate_star_catalog()
 
             # Calibrate
-#            wref = ff.find_calibration(cfg)
-            
+            wref = ff.find_calibration(cfg)
+
+            # Calibrate
+            w, rmsx, rmsy, nused = ff.calibrate(cfg, astcat, starcatalog, wref)
+
             # Stars available and used
-            nused = np.sum(pix_catalog.flag == 1)
-            nstars = pix_catalog.nstars
+            #nused = np.sum(pix_catalog.flag == 1)
+            #nstars = pix_catalog.nstars
+            nstars = starcatalog.nstars
             
             # Write output
             screenoutput = "%s %10.6f %10.6f %4d/%4d %5.1f %5.1f %6.2f +- %6.2f" % (
@@ -187,6 +195,7 @@ if __name__ == "__main__":
 
         # Sleep
         try:
+            sys.exit()
             print("File queue empty, waiting for new files...\r", end = "")
             time.sleep(10)
         except KeyboardInterrupt:
