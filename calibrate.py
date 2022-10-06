@@ -87,12 +87,21 @@ if __name__ == "__main__":
             scat = calibration.generate_star_catalog(fname)
 
             # Plate solve
-            wref, tref = calibration.plate_solve(fname, cfg)
+            if not solved and scat.nstars > nstarsmin:
+                print(colored(f"Computing astrometric calibration for {fname}", "yellow"))
+                wref, tref = calibration.plate_solve(fname, cfg)
+
+                # Mark as solved
+                if wref is not None:
+                    solved = True
             
             # Calibrate
             w, rmsx, rmsy, nused = calibration.calibrate(fname, cfg, acat, scat, wref, tref)
+            output = f"{os.path.basename(fname)},{w.wcs.crval[0]:.6f},{w.wcs.crval[1]:.6f},{rmsx:.3f},{rmsy:.3f},{nused}/{scat.nstars}"
 
-            print(fname, tref.isot, rmsx, rmsy, nused)
+            print(scat.flag)
+            
+            print(colored(output, "green"))
 
             # Stars available and used
             #nused = np.sum(pix_catalog.flag == 1)
