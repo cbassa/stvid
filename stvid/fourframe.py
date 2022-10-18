@@ -744,10 +744,10 @@ class FourFrame:
         return w
 
     def is_calibrated(self):
-        if (3600.0 * self.crres[0] < 1e-3) | \
-           (3600.0 * self.crres[1] < 1e-3) | \
-           (self.crres[0] / self.sx > 2.0) | \
-           (self.crres[1] / self.sy > 2.0):
+        if (3600 * self.crres[0] < 1e-3) | \
+           (3600 * self.crres[1] < 1e-3) | \
+           (self.crres[0] / self.sx > 2) | \
+           (self.crres[1] / self.sy > 2):
             return False
         else:
             return True

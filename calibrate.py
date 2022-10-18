@@ -77,52 +77,72 @@ if __name__ == "__main__":
     solved = False
     while True:
         # Get files
-        fitsfnames = sorted(glob.glob(os.path.join(args.file_dir, "2*.fits")))
-        procfnames = sorted(glob.glob(os.path.join(args.file_dir, "2*.fits.png")))
-        fnames = [fname for fname in fitsfnames if f"{fname}.png" not in procfnames]
+        fnames = sorted(glob.glob(os.path.join(args.file_dir, "2*.fits")))
+
+        # Create reference calibration file
+        calfname = os.path.join(args.file_dir, "test.fits")
+        if not os.path.exists(calfname):
+            solved = False
+
+            # Loop over files to find a suitable calibration file
+            for fname in fnames:
+                # Was this file already tried?
+                if not os.path.exists(os.path.join(args.file_dir, f"{fname}.cat")):
+                    # Generate star catalog
+                    scat = calibration.generate_star_catalog(fname)
+
+                    # Solve
+                    if scat.nstars > nstarsmin:
+                        print(colored(f"Computing astrometric calibration for {fname}", "yellow"))
+                        wref, tref = calibration.plate_solve(fname, cfg, calfname)
+                        if wref is not None:
+                            solved = True
+
+                    # Break when solved
+                    if solved:
+                        break
+        else:
+            # test.fits exists, so calibration has been solved
+            solved = True
+
+            # Read calibration
+            wref, tref = calibration.read_calibration(calfname)
 
         # Loop over files
         for fname in fnames:
+            # File root
+            froot = os.path.splitext(fname)[0]
+            
             # Find stars
-            scat = calibration.generate_star_catalog(fname)
+            if not os.path.exists(f"{froot}.cat"):
+                scat = calibration.generate_star_catalog(fname)
+            else:
+                scat = calibration.read_star_catalog(fname)
 
-            # Plate solve
-            if not solved and scat.nstars > nstarsmin:
-                print(colored(f"Computing astrometric calibration for {fname}", "yellow"))
-                wref, tref = calibration.plate_solve(fname, cfg)
-
-                # Mark as solved
-                if wref is not None:
-                    solved = True
-            
             # Calibrate
-            w, rmsx, rmsy, nused = calibration.calibrate(fname, cfg, acat, scat, wref, tref)
-            output = f"{os.path.basename(fname)},{w.wcs.crval[0]:.6f},{w.wcs.crval[1]:.6f},{rmsx:.3f},{rmsy:.3f},{nused}/{scat.nstars}"
+            if not os.path.exists(f"{froot}.wcs"):
+                w, rmsx, rmsy, nused, is_calibrated = calibration.calibrate(fname, cfg, acat, scat, wref, tref)
 
-            print(scat.flag)
-            
-            print(colored(output, "green"))
+                # Attempt plate solve
+                if not is_calibrated and scat.nstars > nstarsmin:
+                    print(colored(f"Computing astrometric calibration for {fname}", "yellow"))
+                    wtmp, ttmp = calibration.plate_solve(fname, cfg, calfname)
+                    
+                    # Retry calibration
+                    if wtmp is not None:
+                        wref, tref = wtmp, ttmp
+                        w, rmsx, rmsy, nused, is_calibrated = calibration.calibrate(fname, cfg, acat, scat, wref, tref)
 
-            # Stars available and used
-            #nused = np.sum(pix_catalog.flag == 1)
-            #nstars = pix_catalog.nstars
-#            nstars = starcatalog.nstars
-            
-            # Write output
-#            screenoutput = "%s %10.6f %10.6f %4d/%4d %5.1f %5.1f %6.2f +- %6.2f" % (
-#                os.path.basename(ff.fname), ff.crval[0], ff.crval[1], nused, nstars,
-#                3600.0 * ff.crres[0], 3600.0 * ff.crres[1], np.mean(
-#                    ff.zavg), np.std(ff.zavg))
-#
-#            if ff.is_calibrated():
-#                color = "green"
-#            else:
-#                color = "red"
-#            print(colored(screenoutput, color))
-            
+                output = f"{os.path.basename(fname)},{w.wcs.crval[0]:.6f},{w.wcs.crval[1]:.6f},{rmsx:.3f},{rmsy:.3f},{nused}/{scat.nstars}"
+
+                if is_calibrated:
+                    color = "green"
+                else:
+                    color = "red"
+                print(colored(output, color))
+
         # Sleep
         try:
-            sys.exit()
             print("File queue empty, waiting for new files...\r", end = "")
             time.sleep(10)
         except KeyboardInterrupt:
