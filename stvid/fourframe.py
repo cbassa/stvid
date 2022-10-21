@@ -12,6 +12,7 @@ from astropy import wcs
 from astropy.time import Time
 from astropy.io import fits
 from astropy.io import ascii
+from astropy.table import Table
 from astropy.coordinates import SkyCoord, FK5
 
 class AstrometricCatalog:
@@ -211,6 +212,12 @@ class Track:
         self.ymax = self.y0 + self.dydt * (self.tmax - self.tmid)
         self.r = np.sqrt((self.xmax - self.xmin) ** 2 + (self.ymax - self.ymin) ** 2)
 
+    def save(self, fname, ff):
+        mjd = ff.mjd + self.t / 86400
+        tab = Table([mjd, self.t, self.x, self.y, self.z, self.ra, self.dec, self.rx, self.ry], names=("mjd", "dt", "x", "y", "z", "ra", "dec", "rx", "ry"))
+        ascii.write(tab, fname, overwrite=True)
+
+        
     def identify(self, predictions, satno, cospar, tlefile, cfg, abbrevs, tlefiles):
         # Identification settings
         rm_max = cfg.getfloat("Identification", "max_off_track_offset_deg")
@@ -762,7 +769,7 @@ class FourFrame:
             outfname = f"{self.froot}_{satno:05d}_{catalogname}.png"
         else:
             iod_line = ""
-            outfname = f"{self.fname}.png"
+            outfname = f"{self.froot}_0.png"
 
         # Configuration parameters
         color_detected = cfg.get("LineDetection", "color")

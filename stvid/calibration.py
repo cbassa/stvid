@@ -70,7 +70,7 @@ def generate_star_catalog(fname):
 
     # Output catalog name
     froot = os.path.splitext(fname)[0]
-    outfname = f"{froot}.cat"
+    outfname = f"{froot}_stars.cat"
 
     # Skip if file already exists
     if not os.path.exists(outfname):
@@ -87,7 +87,7 @@ def generate_star_catalog(fname):
 def read_star_catalog(fname):
     # Output catalog name
     froot = os.path.splitext(fname)[0]
-    outfname = f"{froot}.cat"
+    outfname = f"{froot}_stars.cat"
 
     return StarCatalog(outfname)
 
@@ -127,7 +127,7 @@ def plate_solve(fname, cfg, store_as_fname=None):
         solved = False
         
     # Remove temporary files
-    extensions = [".new", ".axy", "-objs.png", ".rdls", ".solved", "-indx.xyls", ".match", ".corr"]
+    extensions = [".new", ".axy", "-objs.png", ".rdls", ".solved", "-indx.xyls", ".match", ".corr", ".wcs"]
     for extension in extensions:
         try:
             os.remove(f"{froot}{extension}")
@@ -271,7 +271,7 @@ def calibrate(fname, cfg, astcat, pixcat, wref, tref):
 
     # Log calibration
     froot = os.path.splitext(fname)[0]
-    outfname = f"{froot}.wcs"
+    outfname = f"{froot}_calib.wcs"
     with open(outfname, "w") as fp:
         pass
         
