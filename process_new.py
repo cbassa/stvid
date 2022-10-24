@@ -136,7 +136,7 @@ if __name__ == "__main__":
                 continue
                 
             # Read Fourframe
-            ff = FourFrame(fname)
+            ff = FourFrame(fname, cfg)
                 
             # Generate predictions
             predictions = ff.generate_satellite_predictions(cfg)
@@ -159,14 +159,20 @@ if __name__ == "__main__":
             for t in tracks:
                 # Save
                 t.save(f"{ff.froot}_{t.satno:05d}_{t.catalogname}.csv", ff)
+
+                t.to_observation(ff)
+                t.to_split_observations(ff)
                 
+                # Split
+                #t.split(1.0)
+
                 # Add to observation
-                obs.append(Observation(ff, t.tmid, t.x0, t.y0, ff.site_id,
-                                       t.satno, t.cospar, t.catalogname))
+                #obs.append(Observation(ff, t))
 
             # Write observations
             for o in obs:
                 iod_line = o.to_iod_line()
+#                iod_lines = o.to_iod_lines()
 
                 # Open file
                 outfname = f"{ff.froot}_{o.satno:05d}_{o.catalogname}.dat"
@@ -180,6 +186,12 @@ if __name__ == "__main__":
                     color = "magenta"
                 print(colored(iod_line, color))
 
+                # Write JSON
+                outfname = f"{ff.froot}_{o.satno:05d}_{o.catalogname}.json"
+                with open(outfname, "w") as fp:
+                    fp.write(o.to_json())
+
+                
             # Generate plots
             ff.diagnostic_plot(predictions, None, None, cfg)
             for track, o in zip(tracks, obs):

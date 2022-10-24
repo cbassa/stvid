@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import json
 
 import subprocess
 
@@ -178,44 +179,79 @@ class Track:
         self.cospar = None
         self.tlefile = None
 
-        # Compute mean position
+        # Extrema in time
         self.tmin, self.tmax = np.min(self.t), np.max(self.t)
-        self.tmid = 0.5 * (self.tmax + self.tmin)
-
+        
         # Position and velocity on the sky
-        px = np.polyfit(self.t - self.tmid, self.rx, 1)
-        py = np.polyfit(self.t - self.tmid, self.ry, 1)
-        self.rx0 = px[-1]
-        self.ry0 = py[-1]
-        self.drxdt = px[-2]
-        self.drydt = py[-2]
-        self.rxmin = self.rx0 + self.drxdt * (self.tmin - self.tmid)
-        self.rxmax = self.rx0 + self.drxdt * (self.tmax - self.tmid)
-        self.rymin = self.ry0 + self.drydt * (self.tmin - self.tmid)
-        self.rymax = self.ry0 + self.drydt * (self.tmax - self.tmid)
+        self.tmid, self.rx0, self.ry0, self.drxdt, self.drydt = position_and_velocity(self.t, self.rx, self.ry)
+       
+        # Direction and rate
         self.drdt = np.sqrt(self.drxdt**2 + self.drydt**2)
         self.pa = np.mod(np.arctan2(-self.drxdt, self.drydt), 2 * np.pi)
         self.dr = self.drdt * (self.tmax - self.tmin)
 
         # Position and velocity on the image
-        self.px = np.polyfit(self.t - self.tmid, self.x, 1)
-        self.py = np.polyfit(self.t - self.tmid, self.y, 1)
-        self.x0 = self.px[-1]
-        self.y0 = self.py[-1]
-        self.dxdt = self.px[-2]
-        self.dydt = self.py[-2]
-        self.xp = np.polyval(self.px, self.t - self.tmid)
-        self.yp = np.polyval(self.py, self.t - self.tmid)
+        _, self.x0, self.y0, self.dxdt, self.dydt = position_and_velocity(self.t, self.x, self.y)
+        self.xp = self.x0 + (self.t - self.tmid) * self.dxdt
+        self.yp = self.y0 + (self.t - self.tmid) * self.dydt
         self.xmin = self.x0 + self.dxdt * (self.tmin - self.tmid)
         self.xmax = self.x0 + self.dxdt * (self.tmax - self.tmid)
         self.ymin = self.y0 + self.dydt * (self.tmin - self.tmid)
         self.ymax = self.y0 + self.dydt * (self.tmax - self.tmid)
         self.r = np.sqrt((self.xmax - self.xmin) ** 2 + (self.ymax - self.ymin) ** 2)
 
+    def to_observation(self, ff):
+        mjd = ff.mjd + self.tmid / 86400
+        nfd = Time(mjd, format="mjd", scale="utc").isot
+        p = SkyCoord.from_pixel(self.x0, self.y0, ff.w, 1)
+
+        # Correct for motion of stationary camera
+        if ff.tracked == False:
+            tobs = Time(mjd, format="mjd")
+            tmid = Time(ff.mjd, format="mjd") + 0.5 * ff.texp * u.s
+            p = correct_stationary_coordinates(tmid, tobs, p, direction=-1)
+
+        ra, dec = p.ra.degree, p.dec.degree
+        pstr = format_position(ra, dec)
+        tstr = nfd.replace("-", "").replace("T", "").replace(":", "").replace(".", "")
+        iod_line = f"{self.satno:05d} {self.cospar:9s} {ff.site_id:04d} G {tstr} 17 25 {pstr} 37 S"
+        print(f">> {iod_line}")
+        
+    def to_split_observations(self, ff, tsplit=1.0):
+        dt = self.tmax - self.tmin
+        nsplit = int(np.round(dt / tsplit))
+
+        for i in range(nsplit):
+            tmin = self.tmin + i * dt / nsplit
+            tmax = self.tmin + (i + 1) * dt / nsplit            
+
+            c = (self.t >= tmin) & (self.t <= tmax)
+            if (np.sum(c) < 5) | (np.std(self.t[c]) == 0):
+                continue
+            t0, x0, y0, _, _ = position_and_velocity(self.t[c], self.x[c], self.y[c])
+            _, _, _, drxdt, drydt = position_and_velocity(self.t[c], self.rx[c], self.ry[c])
+
+            mjd = ff.mjd + t0 / 86400
+            nfd = Time(mjd, format="mjd", scale="utc").isot
+            p = SkyCoord.from_pixel(x0, y0, ff.w, 1)
+
+            # Correct for motion of stationary camera
+            if ff.tracked == False:
+                tobs = Time(mjd, format="mjd")
+                tmid = Time(ff.mjd, format="mjd") + 0.5 * ff.texp * u.s
+                p = correct_stationary_coordinates(tmid, tobs, p, direction=-1)
+
+            ra, dec = p.ra.degree, p.dec.degree
+            pstr = format_position(ra, dec)
+            tstr = nfd.replace("-", "").replace("T", "").replace(":", "").replace(".", "")
+            iod_line = f"{self.satno:05d} {self.cospar:9s} {ff.site_id:04d} G {tstr} 17 25 {pstr} 37 S"
+            print(f"<< {iod_line}")
+
+            
     def save(self, fname, ff):
         mjd = ff.mjd + self.t / 86400
         tab = Table([mjd, self.t, self.x, self.y, self.z, self.ra, self.dec, self.rx, self.ry], names=("mjd", "dt", "x", "y", "z", "ra", "dec", "rx", "ry"))
-        ascii.write(tab, fname, overwrite=True)
+        ascii.write(tab, fname, overwrite=True, format="csv")
 
         
     def identify(self, predictions, satno, cospar, tlefile, cfg, abbrevs, tlefiles):
@@ -241,7 +277,7 @@ class Track:
                 & (np.abs(dpa) < dpa_max)
                 & (np.abs(fdr) < fdr_max)
             ):
-                satno = p.satno
+                satno = int(p.satno) # Comes as int64 from ascii.io?
                 cospar = p.cospar
                 tlefile = p.tlefile
                 is_identified = True
@@ -304,28 +340,57 @@ class Track:
 class Observation:
     """Satellite observation"""
 
-    def __init__(self, ff, t, x, y, site_id, satno, cospar, catalogname):
-        self.t = t
+    def __init__(self, ff, t):
+        self.t = t.tmid
         self.mjd = ff.mjd + self.t / 86400
         self.nfd = Time(self.mjd, format="mjd", scale="utc").isot
-        self.x = x
-        self.y = y
-        self.site_id = site_id
-        self.satno = satno
-        self.cospar = cospar
-        self.catalogname = catalogname
+        self.x = t.x0
+        self.y = t.y0
+        self.drxdt = t.drxdt
+        self.drydt = t.drydt
+        self.drdt = np.sqrt(self.drxdt**2 + self.drydt**2)
+        self.pa = np.mod(np.arctan2(self.drxdt, self.drydt) * 180 / np.pi, 360)
+        self.satno = t.satno
+        self.cospar = t.cospar
+        self.catalogname = t.catalogname
+        self.lat = ff.lat
+        self.lon = ff.lon
+        self.height = ff.height
+        self.observer = ff.observer
+        self.site_id = ff.site_id
 
         # Compute coordinates
         p = SkyCoord.from_pixel(self.x, self.y, ff.w, 1)
 
         # Correct for motion of stationary camera
         if ff.tracked == False:
-            t = Time(self.mjd, format="mjd")
+            tt = Time(self.mjd, format="mjd")
             tmid = Time(ff.mjd, format="mjd") + 0.5 * ff.texp * u.s
-            p = correct_stationary_coordinates(tmid, t, p, direction=-1)
+            p = correct_stationary_coordinates(tmid, tt, p, direction=-1)
         
         self.ra = p.ra.degree
         self.dec = p.dec.degree
+
+        # Split positions
+        self.ts = t.ts
+        self.mjds = ff.mjd + self.ts / 86400
+        self.nfds = Time(self.mjds, format="mjd", scale="utc").isot
+        self.xs = t.xs
+        self.ys = t.ys
+        self.drxdts = t.drxdts
+        self.drydts = t.drydts
+
+        # Compute coordinates
+        ps = SkyCoord.from_pixel(self.xs, self.ys, ff.w, 1)
+
+        # Correct for motion of stationary camera
+        if ff.tracked == False:
+            tt = Time(self.mjds, format="mjd")
+            tmid = Time(ff.mjd, format="mjd") + 0.5 * ff.texp * u.s
+            ps = correct_stationary_coordinates(tmid, tt, ps, direction=-1)
+        
+        self.ras = ps.ra.degree
+        self.decs = ps.dec.degree
 
     def to_iod_line(self):
         pstr = format_position(self.ra, self.dec)
@@ -341,11 +406,45 @@ class Observation:
         )
         return iod_line
 
+    def to_iod_lines(self):
+        iod_lines = []
+        for nfd, ra, dec in zip(self.nfds, self.ras, self.decs):
+            pstr = format_position(ra, dec)
+            tstr = (
+                nfd.replace("-", "").replace("T", "").replace(":", "").replace(".", "")
+            )
+            iod_line = "%05d %-9s %04d G %s 17 25 %s 37 S" % (
+                self.satno,
+                self.cospar,
+                self.site_id,
+                tstr,
+                pstr,
+            )
+            iod_lines.append(iod_line)
+        return iod_lines    
+
+    def to_json(self):
+        d = {"satno": self.satno,
+             "cospar": self.cospar,
+             "time": self.nfd,
+             "ra": self.ra,
+             "dec": self.dec,
+             "vang": self.drdt,
+             "pa": self.pa,
+             "site": self.site_id,
+             "latitude": self.lat,
+             "longitude": self.lon,
+             "height": self.height,
+             "observer": self.observer,
+             "catalog": self.catalogname}
+
+        return json.dumps(d)
+
 
 class FourFrame:
     """Four Frame class"""
 
-    def __init__(self, fname=None):
+    def __init__(self, fname, cfg):
         if fname is None:
             # Initialize empty fourframe
             self.nx = 0
@@ -413,10 +512,10 @@ class FourFrame:
                 self.height = header["ELEVATIO"]
                 self.has_location = True
             else:
-                self.lon = None
-                self.lat = None
-                self.height = None
-                self.has_location = False
+                self.lon = cfg.getfloat("Observer", "longitude")
+                self.lat = cfg.getfloat("Observer", "latitude")
+                self.height = cfg.getfloat("Observer", "height")
+                self.has_location = True
             
             # Astrometry keywords
             self.crpix = np.array([header["CRPIX1"], header["CRPIX2"]])
@@ -973,8 +1072,6 @@ def inside_selection_area(tmin, tmax, x0, y0, dxdt, dydt, x, y, dt=2.0, w=10.0):
     wm = sa * dx + ca * dy
     dtm = rm / drdt
 
-    print(">> ", wm, dtm)
-
     if (np.abs(wm) < w) & (np.abs(dtm) < dt):
         return True
     else:
@@ -1120,3 +1217,19 @@ def residuals(xcen, ycen, ra, dec, w):
     rx, ry = r * np.sin(pa), r * np.cos(pa)
 
     return rx.to(u.arcsec).value, ry.to(u.arcsec).value
+
+
+def position_and_velocity(t, x, y):
+    # Compute mean time
+    tmin, tmax = np.min(t), np.max(t)
+    tmid = 0.5 * (tmax + tmin)
+
+    # Position and velocity
+    px = np.polyfit(t - tmid, x, 1)
+    py = np.polyfit(t - tmid, y, 1)
+    x0 = px[-1]
+    y0 = py[-1]
+    dxdt = px[-2]
+    dydt = py[-2]
+
+    return tmid, x0, y0, dxdt, dydt
