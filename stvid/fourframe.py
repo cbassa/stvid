@@ -162,6 +162,42 @@ class Prediction:
         return dtm, wm
 
 
+class Measurement:
+    """Measurement class"""
+
+    def __init__(self, t, ra, dec, drxdt, drydt, mag):
+        self.t = t
+        self.ra = ra
+        self.dec = dec
+        self.drxdt = drxdt
+        self.drydt = drydt
+        self.mag = mag
+
+    def to_iod_line(self, ff, ident):
+        pstr = format_position(self.ra, self.dec)
+        nfd = self.t.isot
+        tstr = (
+            nfd.replace("-", "").replace("T", "").replace(":", "").replace(".", "")
+        )
+        iod_line = "%05d %-9s %04d G %s 17 25 %s 37 S" % (
+            ident.satno,
+            ident.cospar,
+            ff.site_id,
+            tstr,
+            pstr,
+        )
+        return iod_line
+
+        
+class Identification:
+    """Identification class"""
+
+    def __init__(self, satno, cospar, tlefile, catalogname):
+        self.satno = satno
+        self.cospar = cospar
+        self.tlefile = tlefile
+        self.catalogname = catalogname
+        
 class Track:
     """Track class"""
 
@@ -200,27 +236,23 @@ class Track:
         self.ymax = self.y0 + self.dydt * (self.tmax - self.tmid)
         self.r = np.sqrt((self.xmax - self.xmin) ** 2 + (self.ymax - self.ymin) ** 2)
 
-    def to_observation(self, ff):
+    def measure_single_position(self, ff):
         mjd = ff.mjd + self.tmid / 86400
-        nfd = Time(mjd, format="mjd", scale="utc").isot
+        tobs = Time(mjd, format="mjd", scale="utc")
         p = SkyCoord.from_pixel(self.x0, self.y0, ff.w, 1)
 
         # Correct for motion of stationary camera
         if ff.tracked == False:
-            tobs = Time(mjd, format="mjd")
             tmid = Time(ff.mjd, format="mjd") + 0.5 * ff.texp * u.s
             p = correct_stationary_coordinates(tmid, tobs, p, direction=-1)
 
-        ra, dec = p.ra.degree, p.dec.degree
-        pstr = format_position(ra, dec)
-        tstr = nfd.replace("-", "").replace("T", "").replace(":", "").replace(".", "")
-        iod_line = f"{self.satno:05d} {self.cospar:9s} {ff.site_id:04d} G {tstr} 17 25 {pstr} 37 S"
-        print(f">> {iod_line}")
-        
-    def to_split_observations(self, ff, tsplit=1.0):
+        return Measurement(tobs, p.ra.degree, p.dec.degree, self.drxdt, self.drydt, None)
+            
+    def measure_multiple_positions(self, ff, tsplit=1.0):
         dt = self.tmax - self.tmin
         nsplit = int(np.round(dt / tsplit))
 
+        m = []
         for i in range(nsplit):
             tmin = self.tmin + i * dt / nsplit
             tmax = self.tmin + (i + 1) * dt / nsplit            
@@ -232,21 +264,18 @@ class Track:
             _, _, _, drxdt, drydt = position_and_velocity(self.t[c], self.rx[c], self.ry[c])
 
             mjd = ff.mjd + t0 / 86400
-            nfd = Time(mjd, format="mjd", scale="utc").isot
+            tobs = Time(mjd, format="mjd", scale="utc")
             p = SkyCoord.from_pixel(x0, y0, ff.w, 1)
 
             # Correct for motion of stationary camera
             if ff.tracked == False:
-                tobs = Time(mjd, format="mjd")
                 tmid = Time(ff.mjd, format="mjd") + 0.5 * ff.texp * u.s
                 p = correct_stationary_coordinates(tmid, tobs, p, direction=-1)
 
-            ra, dec = p.ra.degree, p.dec.degree
-            pstr = format_position(ra, dec)
-            tstr = nfd.replace("-", "").replace("T", "").replace(":", "").replace(".", "")
-            iod_line = f"{self.satno:05d} {self.cospar:9s} {ff.site_id:04d} G {tstr} 17 25 {pstr} 37 S"
-            print(f"<< {iod_line}")
+            m.append(Measurement(tobs, p.ra.degree, p.dec.degree, drxdt, drydt, None))
 
+        return m
+                     
             
     def save(self, fname, ff):
         mjd = ff.mjd + self.t / 86400
@@ -282,16 +311,13 @@ class Track:
                 tlefile = p.tlefile
                 is_identified = True
 
-        self.satno = satno
-        self.cospar = cospar
-        self.catalogname = "unid"
-
         # Get catalog abbreviation
+        catalogname = "unid"
         for abbrev, tfile in zip(abbrevs, tlefiles):
             if tfile == tlefile:
-                self.catalogname = abbrev
+                catalogname = abbrev
 
-        return is_identified
+        return Identification(satno, cospar, tlefile, catalogname), is_identified
 
     def match_to_prediction(self, p, dt, w):
         # Return if predicted track is too short to fit a 3rd order polynomial
@@ -340,106 +366,11 @@ class Track:
 class Observation:
     """Satellite observation"""
 
-    def __init__(self, ff, t):
-        self.t = t.tmid
-        self.mjd = ff.mjd + self.t / 86400
-        self.nfd = Time(self.mjd, format="mjd", scale="utc").isot
-        self.x = t.x0
-        self.y = t.y0
-        self.drxdt = t.drxdt
-        self.drydt = t.drydt
-        self.drdt = np.sqrt(self.drxdt**2 + self.drydt**2)
-        self.pa = np.mod(np.arctan2(self.drxdt, self.drydt) * 180 / np.pi, 360)
-        self.satno = t.satno
-        self.cospar = t.cospar
-        self.catalogname = t.catalogname
-        self.lat = ff.lat
-        self.lon = ff.lon
-        self.height = ff.height
-        self.observer = ff.observer
-        self.site_id = ff.site_id
-
-        # Compute coordinates
-        p = SkyCoord.from_pixel(self.x, self.y, ff.w, 1)
-
-        # Correct for motion of stationary camera
-        if ff.tracked == False:
-            tt = Time(self.mjd, format="mjd")
-            tmid = Time(ff.mjd, format="mjd") + 0.5 * ff.texp * u.s
-            p = correct_stationary_coordinates(tmid, tt, p, direction=-1)
-        
-        self.ra = p.ra.degree
-        self.dec = p.dec.degree
-
-        # Split positions
-        self.ts = t.ts
-        self.mjds = ff.mjd + self.ts / 86400
-        self.nfds = Time(self.mjds, format="mjd", scale="utc").isot
-        self.xs = t.xs
-        self.ys = t.ys
-        self.drxdts = t.drxdts
-        self.drydts = t.drydts
-
-        # Compute coordinates
-        ps = SkyCoord.from_pixel(self.xs, self.ys, ff.w, 1)
-
-        # Correct for motion of stationary camera
-        if ff.tracked == False:
-            tt = Time(self.mjds, format="mjd")
-            tmid = Time(ff.mjd, format="mjd") + 0.5 * ff.texp * u.s
-            ps = correct_stationary_coordinates(tmid, tt, ps, direction=-1)
-        
-        self.ras = ps.ra.degree
-        self.decs = ps.dec.degree
-
-    def to_iod_line(self):
-        pstr = format_position(self.ra, self.dec)
-        tstr = (
-            self.nfd.replace("-", "").replace("T", "").replace(":", "").replace(".", "")
-        )
-        iod_line = "%05d %-9s %04d G %s 17 25 %s 37 S" % (
-            self.satno,
-            self.cospar,
-            self.site_id,
-            tstr,
-            pstr,
-        )
-        return iod_line
-
-    def to_iod_lines(self):
-        iod_lines = []
-        for nfd, ra, dec in zip(self.nfds, self.ras, self.decs):
-            pstr = format_position(ra, dec)
-            tstr = (
-                nfd.replace("-", "").replace("T", "").replace(":", "").replace(".", "")
-            )
-            iod_line = "%05d %-9s %04d G %s 17 25 %s 37 S" % (
-                self.satno,
-                self.cospar,
-                self.site_id,
-                tstr,
-                pstr,
-            )
-            iod_lines.append(iod_line)
-        return iod_lines    
-
-    def to_json(self):
-        d = {"satno": self.satno,
-             "cospar": self.cospar,
-             "time": self.nfd,
-             "ra": self.ra,
-             "dec": self.dec,
-             "vang": self.drdt,
-             "pa": self.pa,
-             "site": self.site_id,
-             "latitude": self.lat,
-             "longitude": self.lon,
-             "height": self.height,
-             "observer": self.observer,
-             "catalog": self.catalogname}
-
-        return json.dumps(d)
-
+    def __init__(self, satno, catalogname, iod_line, iod_lines):
+        self.satno = satno
+        self.catalogname = catalogname
+        self.iod_line = iod_line
+        self.iod_lines = iod_lines
 
 class FourFrame:
     """Four Frame class"""
@@ -862,7 +793,7 @@ class FourFrame:
     def diagnostic_plot(self, predictions, track, obs, cfg):
         # Get info
         if track is not None:
-            iod_line = obs.to_iod_line()
+            iod_line = obs.iod_line
             satno = obs.satno
             catalogname = obs.catalogname
             outfname = f"{self.froot}_{satno:05d}_{catalogname}.png"
@@ -923,7 +854,7 @@ class FourFrame:
             ax.text(
                 track.x0,
                 track.y0,
-                f" {track.satno:05d}",
+                f" {satno:05d}",
                 color=color_detected,
                 ha="center",
                 in_layout=False,

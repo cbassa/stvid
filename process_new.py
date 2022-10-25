@@ -3,6 +3,7 @@ import os
 import sys
 import glob
 import time
+import yaml
 
 import argparse
 import configparser
@@ -147,51 +148,86 @@ if __name__ == "__main__":
             else:
                 tracks = []
 
-            # Identify tracks
+            # Output dictionary
+            output_dict = {"site_id": ff.site_id,
+                           "latitude": ff.lat,
+                           "longitude": ff.lon,
+                           "height": ff.height,
+                           "observer": ff.observer}
+            
+            # Loop over tracks
+            ident_dicts = []
+            obs = []
             satno = 90000
             for t in tracks:
-                is_identified = t.identify(predictions, satno, "22 500A", None, cfg, abbrevs, tlefiles)
+                # Identify
+                ident, is_identified = t.identify(predictions, satno, "22 500A", None, cfg, abbrevs, tlefiles)
                 if not is_identified:
                     satno += 1
 
-            # Format observations
-            obs = []
-            for t in tracks:
-                # Save
-                t.save(f"{ff.froot}_{t.satno:05d}_{t.catalogname}.csv", ff)
+                # Identification dictionary
+                ident_dict = {"satno": ident.satno,
+                              "cospar": ident.cospar,
+                              "tlefile": ident.tlefile,
+                              "catalogname": ident.catalogname}
 
-                t.to_observation(ff)
-                t.to_split_observations(ff)
+                # Save track
+                t.save(f"{ff.froot}_{ident.satno:05d}_{ident.catalogname}.csv", ff)
+
+                # Measure single position
+                m = t.measure_single_position(ff)
+                iod_line = m.to_iod_line(ff, ident)
+
+                # Measure multiple position
+                ms = t.measure_multiple_positions(ff)
+                iod_lines = [mt.to_iod_line(ff, ident) for mt in ms]
+
+                # Add to dictionary
+                single_measurement = {"time": m.t.isot,
+                                      "ra": float(m.ra),
+                                      "dec": float(m.dec),
+                                      "drxdt": float(m.drxdt),
+                                      "drydt": float(m.drydt)}
+                multiple_measurements = [{"time": mt.t.isot,
+                                          "ra": float(mt.ra),
+                                          "dec": float(mt.dec),
+                                          "drxdt": float(mt.drxdt),
+                                          "drydt": float(mt.drydt)} for mt in ms]
+                ident_dict["measurement"] = single_measurement
+                ident_dict["iod_line"] = iod_line
+                ident_dict["measurements"] = multiple_measurements
+                ident_dict["iod_lines"] = [line for line in iod_lines]
+                ident_dicts.append(ident_dict)
+
+                # Store observation
+                obs.append(Observation(ident.satno, ident.catalogname, iod_line, iod_lines))
+
                 
-                # Split
-                #t.split(1.0)
+            # Store output
+            if ident_dicts is not []:
+                output_dict["satellites"] = ident_dicts
 
-                # Add to observation
-                #obs.append(Observation(ff, t))
-
+                with open(f"{ff.froot}_data.yaml", "w") as fp:
+                    yaml.dump(output_dict, fp, sort_keys=False)
+                
             # Write observations
             for o in obs:
-                iod_line = o.to_iod_line()
-#                iod_lines = o.to_iod_lines()
-
                 # Open file
                 outfname = f"{ff.froot}_{o.satno:05d}_{o.catalogname}.dat"
                 with open(outfname, "w") as fp:
-                    fp.write(f"{iod_line}\n")
+                    fp.write(f"{o.iod_line}\n")
+                outfname = f"{ff.froot}_{o.satno:05d}_{o.catalogname}_m.dat"
+                with open(outfname, "w") as fp:
+                    for iod_line in o.iod_lines:
+                        fp.write(f"{iod_line}\n")
                 if o.catalogname == "catalog":
                     color = "grey"
                 elif o.catalogname == "classfd":
                     color = "blue"
                 elif o.catalogname == "unid":
                     color = "magenta"
-                print(colored(iod_line, color))
+                print(colored(o.iod_line, color))
 
-                # Write JSON
-                outfname = f"{ff.froot}_{o.satno:05d}_{o.catalogname}.json"
-                with open(outfname, "w") as fp:
-                    fp.write(o.to_json())
-
-                
             # Generate plots
             ff.diagnostic_plot(predictions, None, None, cfg)
             for track, o in zip(tracks, obs):
