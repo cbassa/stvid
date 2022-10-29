@@ -284,7 +284,8 @@ def solve_linear_equation(a, b):
     return x
 
 def fit_wcs(x, y, ra, dec, x0, y0, order):
-    ra0, dec0 = np.mean(ra), np.mean(dec)
+    #ra0, dec0 = np.mean(ra), np.mean(dec) # Change with mean angle
+    ra0, dec0 = ra[0], dec[0]
     dx, dy = x - x0, y - y0
 
     ixs, iys = np.meshgrid(np.arange(order+1), np.arange(order+1))
