@@ -257,8 +257,11 @@ class Track:
             tmin = self.tmin + i * dt / nsplit
             tmax = self.tmin + (i + 1) * dt / nsplit            
 
+            # Skip of not enough points or no time difference
             c = (self.t >= tmin) & (self.t <= tmax)
-            if (np.sum(c) < 5) | (np.std(self.t[c]) == 0):
+            if np.sum(c) < 5:
+                continue
+            if np.std(self.t[c]) == 0:
                 continue
             t0, x0, y0, _, _ = position_and_velocity(self.t[c], self.x[c], self.y[c])
             _, _, _, drxdt, drydt = position_and_velocity(self.t[c], self.rx[c], self.ry[c])
