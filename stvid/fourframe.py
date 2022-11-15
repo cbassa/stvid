@@ -532,6 +532,10 @@ class FourFrame:
         # Read results
         d = ascii.read(outfname, format="csv")
 
+        # Return empty prediction list
+        if len(d) == 0:
+            return []
+        
         # Coordinates (correct for image drift)
         p = SkyCoord(ra=d["ra"], dec=d["dec"], unit="deg", frame=FK5(equinox="J2000"))
         if self.tracked == False:
@@ -659,9 +663,10 @@ class FourFrame:
 
     def generate_star_catalog(self):
         # Source-extractor configuration file
-        conffname = os.path.normpath(os.path.join(os.path.dirname(__file__),
-                                                  "..",
-                                                  "source-extractor/default.sex"))
+        path = os.path.normpath(os.path.join(os.path.dirname(__file__),
+                                             "..",
+                                             "source-extractor"))
+        conffname = os.path.join(path, "default.sex")
 
         # Output catalog name
         outfname = f"{self.froot}.cat"
@@ -671,8 +676,12 @@ class FourFrame:
             # Format command
             command = f"sextractor {self.fname} -c {conffname} -CATALOG_NAME {outfname}"
 
+	    # Add sextractor config path to environment
+            env = dict(os.environ)
+            env["SEXTRACTOR_CFG"] = path
+            
             # Run sextractor
-            output = subprocess.check_output(command, shell=True,
+            output = subprocess.check_output(command, shell=True, env=env,
                                              stderr=subprocess.STDOUT)
             
         return StarCatalog(outfname)

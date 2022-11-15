@@ -64,9 +64,10 @@ class StarCatalog:
 
 def generate_star_catalog(fname):
     # Source-extractor configuration file
-    conffname = os.path.normpath(os.path.join(os.path.dirname(__file__),
-                                              "..",
-                                              "source-extractor/default.sex"))
+    path = os.path.normpath(os.path.join(os.path.dirname(__file__),
+                                         "..",
+                                         "source-extractor"))
+    conffname = os.path.join(path, "default.sex")
 
     # Output catalog name
     froot = os.path.splitext(fname)[0]
@@ -77,8 +78,12 @@ def generate_star_catalog(fname):
         # Format command
         command = f"sextractor {fname} -c {conffname} -CATALOG_NAME {outfname}"
 
+        # Add sextractor config path to environment
+        env = dict(os.environ)
+        env["SEXTRACTOR_CFG"] = path
+        
         # Run sextractor
-        output = subprocess.check_output(command, shell=True,
+        output = subprocess.check_output(command, shell=True, env=env,
                                          stderr=subprocess.STDOUT)
             
     return StarCatalog(outfname)
@@ -127,7 +132,8 @@ def plate_solve(fname, cfg, store_as_fname=None):
         solved = False
         
     # Remove temporary files
-    extensions = [".new", ".axy", "-objs.png", ".rdls", ".solved", "-indx.xyls", ".match", ".corr", ".wcs"]
+    extensions = [".new", ".axy", "-objs.png", ".rdls", ".solved", "-indx.xyls",
+                  ".match", ".corr", ".wcs", "-indx.png", "-ngc.png"]
     for extension in extensions:
         try:
             os.remove(f"{froot}{extension}")
