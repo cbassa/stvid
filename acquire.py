@@ -15,8 +15,8 @@ import logging
 import configparser
 import argparse
 import zwoasi as asi
-from picamerax.array import PiRGBArray
-from picamerax import PiCamera
+#from picamerax.array import PiRGBArray
+#from picamerax import PiCamera
 
 
 # Capture images from pi
@@ -268,8 +268,8 @@ def capture_asi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, 
     except:
         pass
     camera.set_roi(bins=binning)
+    camera.set_image_type(asi.ASI_IMG_RAW16)
     camera.start_video_capture()
-    camera.set_image_type(asi.ASI_IMG_RAW8)
 
     try:
         # Fix autogain
@@ -326,7 +326,7 @@ def capture_asi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, 
 
                 # Display Frame
                 if live is True:
-                    cv2.imshow("Capture", z)
+                    cv2.imshow("Capture", z // 256)
                     cv2.waitKey(1)
 
                 # Store results
@@ -444,6 +444,9 @@ def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id, cfg
             t0 = Time(nfd, format='isot')
             dt = t - t[0]
 
+            np.save(f"/data4/satobs/raw/{nfd}_z.npy", z)
+            np.save(f"/data4/satobs/raw/{nfd}_t.npy", t)
+            
             # Cast to 32 bit float
             z = z.astype("float32")
             
@@ -454,6 +457,7 @@ def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id, cfg
             zs2 = np.sum(z * z, axis=0) - zmax * zmax 
             zavg = zs1 / float(nz - 1)
             zstd = np.sqrt((zs2 - zs1 * zavg) / float(nz - 2))
+            zavg = np.median(z, axis=0)
 
             # Convert to float and flip
             zmax = np.flipud(zmax.astype("float32"))
@@ -650,11 +654,11 @@ if __name__ == '__main__':
     nz = cfg.getint(camera_type, 'nframes')
 
     # Initialize arrays
-    z1base = multiprocessing.Array(ctypes.c_uint8, nx*ny*nz)
+    z1base = multiprocessing.Array(ctypes.c_uint16, nx*ny*nz)
     z1 = np.ctypeslib.as_array(z1base.get_obj()).reshape(nz, ny, nx)
     t1base = multiprocessing.Array(ctypes.c_double, nz)
     t1 = np.ctypeslib.as_array(t1base.get_obj())
-    z2base = multiprocessing.Array(ctypes.c_uint8, nx*ny*nz)
+    z2base = multiprocessing.Array(ctypes.c_uint16, nx*ny*nz)
     z2 = np.ctypeslib.as_array(z2base.get_obj()).reshape(nz, ny, nx)
     t2base = multiprocessing.Array(ctypes.c_double, nz)
     t2 = np.ctypeslib.as_array(t2base.get_obj())
