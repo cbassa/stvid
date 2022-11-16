@@ -326,7 +326,7 @@ def capture_asi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, 
 
                 # Display Frame
                 if live is True:
-                    cv2.imshow("Capture", z // 256)
+                    cv2.imshow("Capture", z)
                     cv2.waitKey(1)
 
                 # Store results
