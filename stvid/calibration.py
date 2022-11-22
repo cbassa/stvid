@@ -165,9 +165,6 @@ def calibrate(fname, cfg, astcat, pixcat, wref, tref):
     hdu.close()
     t = Time(header["MJD-OBS"], format="mjd", scale="utc")
 
-    # Minimum number of stars
-    nstarsmin = cfg.getint("Processing", "nstarsmin")
-    
     # Check for sidereal tracking
     try:
         tracked = bool(hdu[0].header['TRACKED'])

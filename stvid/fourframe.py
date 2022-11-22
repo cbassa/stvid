@@ -594,9 +594,9 @@ class FourFrame:
 
     def find_tracks_by_hough3d(self, cfg):
         # Config settings
-        sigma = cfg.getfloat("LineDetection", "trksig")
-        trkrmin = cfg.getfloat("LineDetection", "trkrmin")
-        ntrkmin = cfg.getfloat("LineDetection", "ntrkmin")
+        sigma = cfg.getfloat("LineDetection", "min_sigma")
+        trkrmin = cfg.getfloat("LineDetection", "min_track_width")
+        ntrkmin = cfg.getfloat("LineDetection", "min_track_points")
 
         # Find significant pixels
         c = self.zsig > sigma
