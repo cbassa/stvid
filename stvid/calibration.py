@@ -220,7 +220,7 @@ def calibrate(fname, cfg, astcat, pixcat, wref, tref):
         nstars_used = np.sum(c)
         
         # Refit
-        if nstars_used > nstarsmin:
+        if nstars_used > 4:
             w = fit_wcs(x[c], y[c], p[idx[c]].ra.degree,
                         p[idx[c]].dec.degree, nx // 2, ny // 2, order)
 

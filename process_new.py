@@ -115,14 +115,14 @@ if __name__ == "__main__":
                 w, rmsx, rmsy, nused, is_calibrated = calibration.calibrate(fname, cfg, acat, scat, wref, tref)
 
                 # Attempt plate solve
-                if not is_calibrated and scat.nstars > nstarsmin:
-                    print(colored(f"Computing astrometric calibration for {fname}", "yellow"))
-                    wtmp, ttmp = calibration.plate_solve(fname, cfg, calfname)
+#                if not is_calibrated and scat.nstars > nstarsmin:
+#                    print(colored(f"Computing astrometric calibration for {fname}", "yellow"))
+#                    wtmp, ttmp = calibration.plate_solve(fname, cfg, calfname)
                     
-                    # Retry calibration
-                    if wtmp is not None:
-                        wref, tref = wtmp, ttmp
-                        w, rmsx, rmsy, nused, is_calibrated = calibration.calibrate(fname, cfg, acat, scat, wref, tref)
+#                    # Retry calibration
+#                    if wtmp is not None:
+#                        wref, tref = wtmp, ttmp
+#                        w, rmsx, rmsy, nused, is_calibrated = calibration.calibrate(fname, cfg, acat, scat, wref, tref)
 
                 # Log output
                 output = f"{os.path.basename(fname)},{w.wcs.crval[0]:.6f},{w.wcs.crval[1]:.6f},{rmsx:.3f},{rmsy:.3f},{nused}/{scat.nstars}"
