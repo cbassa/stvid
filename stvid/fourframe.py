@@ -245,22 +245,20 @@ class Track:
         if ff.tracked == False:
             tmid = Time(ff.mjd, format="mjd") + 0.5 * ff.texp * u.s
             p = correct_stationary_coordinates(tmid, tobs, p, direction=-1)
-
+        
         return Measurement(tobs, p.ra.degree, p.dec.degree, self.drxdt, self.drydt, None)
             
     def measure_multiple_positions(self, ff, tsplit=1.0):
         dt = self.tmax - self.tmin
-        nsplit = int(np.round(dt / tsplit))
+        nsplit = int(np.ceil(dt / tsplit))
 
         m = []
         for i in range(nsplit):
             tmin = self.tmin + i * dt / nsplit
             tmax = self.tmin + (i + 1) * dt / nsplit            
-
+            
             # Skip of not enough points or no time difference
             c = (self.t >= tmin) & (self.t <= tmax)
-            if np.sum(c) < 5:
-                continue
             if np.std(self.t[c]) == 0:
                 continue
             t0, x0, y0, _, _ = position_and_velocity(self.t[c], self.x[c], self.y[c])
