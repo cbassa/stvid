@@ -2,15 +2,7 @@ astropy
 numpy
 opencv-python
 scipy
-cycler==0.10.0
-kiwisolver==1.0.1
-matplotlib==2.2.2
-pyparsing==2.2.0
-python-dateutil==2.7.2
-pytz==2018.4
-six
-spacetrack~=0.13.7
+matplotlib
 termcolor
 zwoasi
-# Has problems finding arrayobject.h, but works with a manual build, or by calling pip -r requirements.txt twice
-git+https://github.com/haavee/ppgplot.git@master
+pyyaml
