@@ -261,7 +261,7 @@ class Track:
             c = (self.t >= tmin) & (self.t <= tmax)
             if np.sum(c) == 0:
                 continue
-            if np.std(self.t[c]) == 0:
+            if np.std(self.t[c]) < 1e-9:
                 continue
             t0, x0, y0, _, _ = position_and_velocity(self.t[c], self.x[c], self.y[c])
             _, _, _, drxdt, drydt = position_and_velocity(self.t[c], self.rx[c], self.ry[c])
