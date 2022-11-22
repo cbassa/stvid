@@ -29,16 +29,16 @@ def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, c
     camera = PiCamera(sensor_mode=2)
     camera.resolution = (nx, ny)    
     # Turn off any thing automatic.
-    camera.exposure_mode = 'off'        
-    camera.awb_mode = 'off'
+    camera.exposure_mode = "off"        
+    camera.awb_mode = "off"
     # ISO needs to be 0 otherwise analog and digital gain won't work.
     camera.iso = 0
     # set the camea settings
-    camera.framerate = cfg.getfloat(camera_type, 'framerate')
-    camera.awb_gains = (cfg.getfloat(camera_type, 'awb_gain_red'), cfg.getfloat(camera_type, 'awb_gain_blue'))    
-    camera.analog_gain = cfg.getfloat(camera_type, 'analog_gain')
-    camera.digital_gain = cfg.getfloat(camera_type, 'digital_gain')
-    camera.shutter_speed = cfg.getint(camera_type, 'exposure')
+    camera.framerate = cfg.getfloat(camera_type, "framerate")
+    camera.awb_gains = (cfg.getfloat(camera_type, "awb_gain_red"), cfg.getfloat(camera_type, "awb_gain_blue"))    
+    camera.analog_gain = cfg.getfloat(camera_type, "analog_gain")
+    camera.digital_gain = cfg.getfloat(camera_type, "digital_gain")
+    camera.shutter_speed = cfg.getint(camera_type, "exposure")
 
     rawCapture = PiRGBArray(camera, size=(nx, ny))
     # allow the camera to warmup
@@ -68,7 +68,7 @@ def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, c
                 frame = frameA.array
                                     
                 # Compute mid time
-                t = (float(time.time())+t0)/2.0
+                t = (float(time.time()) + t0) / 2
                 
                 # Skip lost frames
                 if frame is not None:
@@ -132,7 +132,7 @@ def capture_cv2(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, 
 
     # Test for software binning
     try:
-        software_bin = cfg.getint(camera_type, 'software_bin')
+        software_bin = cfg.getint(camera_type, "software_bin")
     except configparser.Error:
         software_bin = 1
     
@@ -163,7 +163,7 @@ def capture_cv2(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, 
                 res, frame = device.read()
 
                 # Compute mid time
-                t = (float(time.time())+t0)/2.0
+                t = (float(time.time()) + t0) / 2
 
                 # Skip lost frames
                 if res is True:
@@ -220,18 +220,18 @@ def capture_asi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, 
 
     
     camera_type  = "ASI"
-    gain         = cfg.getint(camera_type, 'gain')
-    maxgain      = cfg.getint(camera_type, 'maxgain')
-    autogain     = cfg.getboolean(camera_type, 'autogain')
-    exposure     = cfg.getint(camera_type, 'exposure')
-    binning      = cfg.getint(camera_type, 'bin')
-    brightness   = cfg.getint(camera_type, 'brightness')
-    bandwidth    = cfg.getint(camera_type, 'bandwidth')
-    high_speed   = cfg.getint(camera_type, 'high_speed')
-    hardware_bin = cfg.getint(camera_type, 'hardware_bin')
-    sdk          = cfg.get(camera_type, 'sdk')
+    gain         = cfg.getint(camera_type, "gain")
+    maxgain      = cfg.getint(camera_type, "maxgain")
+    autogain     = cfg.getboolean(camera_type, "autogain")
+    exposure     = cfg.getint(camera_type, "exposure")
+    binning      = cfg.getint(camera_type, "bin")
+    brightness   = cfg.getint(camera_type, "brightness")
+    bandwidth    = cfg.getint(camera_type, "bandwidth")
+    high_speed   = cfg.getint(camera_type, "high_speed")
+    hardware_bin = cfg.getint(camera_type, "hardware_bin")
+    sdk          = cfg.get(camera_type, "sdk")
     try:
-        software_bin = cfg.getint(camera_type, 'software_bin')
+        software_bin = cfg.getint(camera_type, "software_bin")
     except configparser.Error:
         software_bin = 0
 
@@ -314,7 +314,7 @@ def capture_asi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, 
             # Get settings
             settings = camera.get_control_values()
             gain = settings["Gain"]
-            temp = settings["Temperature"]/10.0
+            temp = settings["Temperature"] / 10
             logger.info("Capturing frame with gain %d, temperature %.1f" % (gain, temp))
 
             # Set gain
@@ -335,7 +335,7 @@ def capture_asi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, 
                     z = cv2.resize(z, (mx // software_bin, my // software_bin))
                 
                 # Compute mid time
-                t = (float(time.time())+t0)/2.0
+                t = (float(time.time()) + t0) / 2
 
                 # Display Frame
                 if live is True:
@@ -458,7 +458,7 @@ def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id, cfg
             # Format time
             nfd = "%s.%03d" % (time.strftime("%Y-%m-%dT%T",
                             time.gmtime(t[0])), int((t[0] - np.floor(t[0])) * 1000))
-            t0 = Time(nfd, format='isot')
+            t0 = Time(nfd, format="isot")
             dt = t - t[0]
 
             # Cast to 32 bit float
@@ -483,39 +483,39 @@ def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id, cfg
 
             # Format header
             hdr = fits.Header()
-            hdr['DATE-OBS'] = "%s" % nfd
-            hdr['MJD-OBS']  = t0.mjd
-            hdr['EXPTIME']  = dt[-1]-dt[0]
-            hdr['NFRAMES']  = nz
-            hdr['CRPIX1']   = float(nx)/2.0
-            hdr['CRPIX2']   = float(ny)/2.0
-            hdr['CRVAL1']   = 0.0
-            hdr['CRVAL2']   = 0.0
-            hdr['CD1_1']    = 1.0/3600.0
-            hdr['CD1_2']    = 0.0
-            hdr['CD2_1']    = 0.0
-            hdr['CD2_2']    = 1.0/3600.0
-            hdr['CTYPE1']   = "RA---TAN"
-            hdr['CTYPE2']   = "DEC--TAN"
-            hdr['CUNIT1']   = "deg"
-            hdr['CUNIT2']   = "deg"
-            hdr['CRRES1']   = 0.0
-            hdr['CRRES2']   = 0.0
-            hdr['EQUINOX']  = 2000.0
-            hdr['RADECSYS'] = "ICRS"
-            hdr['COSPAR']   = cfg.getint('Common', 'observer_cospar')
-            hdr['OBSERVER'] = cfg.get('Common', 'observer_name')
-            hdr['SITELONG'] = cfg.getfloat('Common', 'observer_lon')
-            hdr['SITELAT'] = cfg.getfloat('Common', 'observer_lat')
-            hdr['ELEVATIO'] = cfg.getfloat('Common', 'observer_height')
-            if cfg.getboolean('Astrometry', 'tracking_mount'):
-                hdr['TRACKED'] = 1
+            hdr["DATE-OBS"] = "%s" % nfd
+            hdr["MJD-OBS"]  = t0.mjd
+            hdr["EXPTIME"]  = dt[-1] - dt[0]
+            hdr["NFRAMES"]  = nz
+            hdr["CRPIX1"]   = float(nx) / 2
+            hdr["CRPIX2"]   = float(ny) / 2
+            hdr["CRVAL1"]   = 0.0
+            hdr["CRVAL2"]   = 0.0
+            hdr["CD1_1"]    = 1 / 3600
+            hdr["CD1_2"]    = 0.0
+            hdr["CD2_1"]    = 0.0
+            hdr["CD2_2"]    = 1 / 3600
+            hdr["CTYPE1"]   = "RA---TAN"
+            hdr["CTYPE2"]   = "DEC--TAN"
+            hdr["CUNIT1"]   = "deg"
+            hdr["CUNIT2"]   = "deg"
+            hdr["CRRES1"]   = 0.0
+            hdr["CRRES2"]   = 0.0
+            hdr["EQUINOX"]  = 2000.0
+            hdr["RADECSYS"] = "ICRS"
+            hdr["COSPAR"]   = cfg.getint("Observer", "cospar")
+            hdr["OBSERVER"] = cfg.get("Observer", "name")
+            hdr["SITELONG"] = cfg.getfloat("Observer", "longitude")
+            hdr["SITELAT"] = cfg.getfloat("Observer", "latitude")
+            hdr["ELEVATIO"] = cfg.getfloat("Observer", "height")
+            if cfg.getboolean("Setup", "tracking_mount"):
+                hdr["TRACKED"] = 1
             else:
-                hdr['TRACKED'] = 0
+                hdr["TRACKED"] = 0
             for i in range(nz):
-                hdr['DT%04d' % i] = dt[i]
+                hdr["DT%04d" % i] = dt[i]
             for i in range(10):
-                hdr['DUMY%03d' % i] = 0.0
+                hdr["DUMY%03d" % i] = 0.0
 
             # Write fits file
             hdu = fits.PrimaryHDU(data=np.array([zavg, zstd, zmax, znum]),
@@ -542,25 +542,25 @@ def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id, cfg
 if __name__ == '__main__':
 
     # Read commandline options
-    conf_parser = argparse.ArgumentParser(description='Capture and compress' +
-                                                      ' live video frames.')
-    conf_parser.add_argument('-c', '--conf_file',
+    conf_parser = argparse.ArgumentParser(description="Capture and compress" +
+                                                      " live video frames.")
+    conf_parser.add_argument("-c", "--conf_file",
                              help="Specify configuration file. If no file" +
                              " is specified 'configuration.ini' is used.",
                              metavar="FILE")
-    conf_parser.add_argument('-t', '--test', 
-                             nargs='?',
-                             action='store', 
+    conf_parser.add_argument("-t", "--test", 
+                             nargs="?",
+                             action="store", 
                              default=False,
-                             help='Testing mode - Start capturing immediately for (optional) seconds',
+                             help="Testing mode - Start capturing immediately for (optional) seconds",
                              metavar="s")
-    conf_parser.add_argument('-l', '--live', action='store_true',
-                             help='Display live image while capturing')
+    conf_parser.add_argument("-l", "--live", action="store_true",
+                             help="Display live image while capturing")
 
     args = conf_parser.parse_args()
 
     # Process commandline options and parse configuration
-    cfg = configparser.ConfigParser(inline_comment_prefixes=('#', ';'))
+    cfg = configparser.ConfigParser(inline_comment_prefixes=("#", ";"))
     
     conf_file = args.conf_file if args.conf_file else "configuration.ini"
     result = cfg.read([conf_file])
@@ -575,7 +575,7 @@ if __name__ == '__main__':
     logger = logging.getLogger()
 
     # Generate directory
-    path = os.path.abspath(cfg.get('Common', 'observations_path'))
+    path = os.path.abspath(cfg.get("Setup", "observations_path"))
     if not os.path.exists(path):
         try:
             os.makedirs(path)
@@ -612,23 +612,23 @@ if __name__ == '__main__':
     logger.info("Live mode: %s" % live)
 
     # Get camera type
-    camera_type = cfg.get('Camera', 'camera_type')
+    camera_type = cfg.get("Setup", "camera_type")
 
     # Get device id
-    device_id = cfg.getint(camera_type, 'device_id')
+    device_id = cfg.getint(camera_type, "device_id")
 
     # Current time
     tnow = Time.now()
 
     # Set location
-    loc = EarthLocation(lat=cfg.getfloat('Common', 'observer_lat')*u.deg,
-                        lon=cfg.getfloat('Common', 'observer_lon')*u.deg,
-                        height=cfg.getfloat('Common', 'observer_height')*u.m)
+    loc = EarthLocation(lat=cfg.getfloat("Observer", "latitude") * u.deg,
+                        lon=cfg.getfloat("Observer", "longitude") * u.deg,
+                        height=cfg.getfloat("Observer", "height") * u.m)
 
     if not testing:
         # Reference altitudes
-        refalt_set  = cfg.getfloat('Control', 'alt_sunset')*u.deg
-        refalt_rise = cfg.getfloat('Control', 'alt_sunrise')*u.deg
+        refalt_set  = cfg.getfloat("Setup", "alt_sunset") * u.deg
+        refalt_rise = cfg.getfloat("Setup", "alt_sunrise") * u.deg
 
         # FIXME: The following will fail without internet access
         #        due to failure to download finals2000A.all
@@ -641,12 +641,12 @@ if __name__ == '__main__':
             sys.exit()
         elif state == "sun never sets":
             logger.info("The sun never sets.")
-            tend = tnow+24*u.h
+            tend = tnow + 24 * u.h
         elif (trise < tset):
             logger.info("The sun is below the horizon.")
             tend = trise
         elif (trise >= tset):
-            dt = np.floor((tset-tnow).to(u.s).value)
+            dt = np.floor((tset - tnow).to(u.s).value)
             logger.info("The sun is above the horizon. Sunset at %s."
                         % tset.isot)
             logger.info("Waiting %.0f seconds." % dt)
@@ -656,22 +656,22 @@ if __name__ == '__main__':
             except KeyboardInterrupt:
                 sys.exit()
     else:
-        tend = tnow + test_duration*u.s
+        tend = tnow + test_duration * u.s
 
     logger.info("Starting data acquisition")
     logger.info("Acquisition will end after "+tend.isot)
 
     # Get settings
-    nx = cfg.getint(camera_type, 'nx')
-    ny = cfg.getint(camera_type, 'ny')
-    nz = cfg.getint(camera_type, 'nframes')
+    nx = cfg.getint(camera_type, "nx")
+    ny = cfg.getint(camera_type, "ny")
+    nz = cfg.getint(camera_type, "nframes")
 
     # Initialize arrays
-    z1base = multiprocessing.Array(ctypes.c_uint8, nx*ny*nz)
+    z1base = multiprocessing.Array(ctypes.c_uint8, nx * ny * nz)
     z1 = np.ctypeslib.as_array(z1base.get_obj()).reshape(nz, ny, nx)
     t1base = multiprocessing.Array(ctypes.c_double, nz)
     t1 = np.ctypeslib.as_array(t1base.get_obj())
-    z2base = multiprocessing.Array(ctypes.c_uint8, nx*ny*nz)
+    z2base = multiprocessing.Array(ctypes.c_uint8, nx * ny * nz)
     z2 = np.ctypeslib.as_array(z2base.get_obj()).reshape(nz, ny, nx)
     t2base = multiprocessing.Array(ctypes.c_double, nz)
     t2 = np.ctypeslib.as_array(t2base.get_obj())
