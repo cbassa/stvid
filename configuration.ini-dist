@@ -12,6 +12,10 @@ alt_sunset = -6.0                 # Solar altitude at sunset
 alt_sunrise = -6.0                # Solar altitude at sunrise
 observations_path = /path/to/obs  # Path for raw acquisitions
 
+[Credentials]
+st-username = username        # Space-track.org username
+st-password = password        # Space-track.org password
+
 [ASI]
 device_id = 0           # Device ID
 nx = 968                # Camera horizontal pixel count
@@ -46,17 +50,19 @@ device_id = 0           # Device ID
 nx = 720                # Camera horizontal pixel count
 ny = 576                # Camera vertical pixel count
 nframes = 250           # Number of frames for each image
+software_bin = 1        # STVID software binning factor (1: 1x1, 2: 2x2 etc)
 
 [Elements]
-tlefile1 = /path/to/catalog.tle  # TLE File
+tlepath = /path/to
+tlefile1 = catalog.tle  # TLE File
 name1 = Catalog	            	 # Catalog name
 abbrev1 = catalog		 # Catalog abbreviation
 color1 = C0			 # Color code
-tlefile2 = /path/to/classfd.tle
+tlefile2 = classfd.tle
 name2 = Classified
 abbrev2 = classfd
 color2 = C1
-tlefile3 = /path/to/inttles.tle
+tlefile3 = inttles.tle
 name3 = Integrated
 abbrev3 = inttles
 color3 = C2

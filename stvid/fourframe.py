@@ -501,7 +501,8 @@ class FourFrame:
     def generate_satellite_predictions(self, cfg):
         # Output file name
         outfname = f"{self.froot}_predict.csv"
-
+        tlepath = cfg.get("Elements", "tlepath")
+    
         # Run predictions
         if not os.path.exists(outfname):
             # Extract parameters
@@ -526,7 +527,8 @@ class FourFrame:
             command = command + f" -o {outfname} -R {ra0} -D {de0} -r {radius}"
             for key, value in cfg.items("Elements"):
                 if "tlefile" in key:
-                    command += f" -c {value}"
+                    tlefile = os.path.join(tlepath, value)
+                    command += f" -c {tlefile}"
             # Run command
             output = subprocess.check_output(
                 command, shell=True, stderr=subprocess.STDOUT
