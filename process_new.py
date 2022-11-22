@@ -52,7 +52,7 @@ if __name__ == "__main__":
     warnings.simplefilter("ignore", AstropyWarning)
     
     # Observer settings
-    nstarsmin = cfg.getint("Processing", "nstarsmin")
+    nstarsmin = cfg.getint("Astrometry", "min_stars")
 
     # Extract abbrevs for TLE files
     abbrevs, tlefiles = [], []
@@ -63,7 +63,7 @@ if __name__ == "__main__":
             abbrevs.append(value)
 
     # Read astrometric catalog
-    acat = AstrometricCatalog(cfg.getfloat("Astrometry", "maximum_magnitude"))
+    acat = AstrometricCatalog(cfg.getfloat("Astrometry", "max_magnitude"))
             
     # Start processing loop
     while True:
@@ -74,6 +74,7 @@ if __name__ == "__main__":
         calfname = os.path.join(args.file_dir, "test.fits")
         if not os.path.exists(calfname):
             solved = False
+            wref = None
 
             # Loop over files to find a suitable calibration file
             for fname in fnames:
@@ -99,6 +100,11 @@ if __name__ == "__main__":
             # Read calibration
             wref, tref = calibration.read_calibration(calfname)
 
+        # Exit if plate solving failed
+        if not solved:
+            print("Plate solving failed, exiting...")
+            sys.exit()
+            
         # Loop over files
         for fname in fnames:
             # File root
@@ -240,7 +246,6 @@ if __name__ == "__main__":
 
         # Sleep
         try:
-            sys.exit()
             print("File queue empty, waiting for new files...\r", end = "")
             time.sleep(10)
         except KeyboardInterrupt:

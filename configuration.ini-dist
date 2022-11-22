@@ -1,74 +1,82 @@
-# Configuration file
+[Observer]
+cospar = 0001             # COSPAR number of observer's site
+name = John Doe           # Name of observer
+latitude = 45.6789        # Latitude of location (decimal degrees)
+longitude = 12.3456       # Longitude of location (decimal degrees)
+height = 123              # Height of location (meters)
 
-[Common]
-observer_cospar = 9999        # COSPAR number of observer's site
-observer_name = Sample Name   # Name of observer
-observer_lat = 19.8956        # Latitude of location in decimal degrees
-observer_lon = -155.2342      # Longitude of location in decimal degrees
-observer_height = 100         # Elevation of location in meters
-
-observations_path = /path/to/obs/ # Path for raw acquisitions
-tle_path = /path/to/tle/          # Path where TLEs are stored (and updated)
-results_path = /path/to/results   # Path for results of processed obs
-
-[Credentials]
-st-username = username        # Space-track.org username
-st-password = password        # Space-track.org password
-
-[Control]
-alt_sunset = -6.0             # Solar altitude at sunset
-alt_sunrise = -6.0            # Solar altitude at sunrise
-
-[Camera]
-camera_type = CV2             # CV2 or ASI or PI
-
-[PI]
-device_id = 0
-nx =  800               # Camera horizontal pixel count
-ny =  600               # Camera vertical pixel count
-nframes = 100           # Number of frames for each image
-framerate = 5			# Take 5 frames per second
-exposure = 200000		# exposure time in us
-awb_gain_red = 2		# gain for red.
-awb_gain_blue = 2.3		# gain for blue
-analog_gain = 16		# analog gain
-digital_gain = 64		# digital gain
-
-[CV2]
-device_id = 0
-nx = 720                # Camera horizontal pixel count
-ny = 576                # Camera vertical pixel count
-nframes = 250           # Number of frames for each image
+[Setup]
+camera_type = ASI                 # CV2 or ASI or PI
+tracking_mount = False
+alt_sunset = -6.0                 # Solar altitude at sunset
+alt_sunrise = -6.0                # Solar altitude at sunrise
+observations_path = /path/to/obs  # Path for raw acquisitions
 
 [ASI]
-device_id = 0
-nx = 1544               # Camera horizontal pixel count
-ny = 1040               # Camera vertical pixel count
+device_id = 0           # Device ID
+nx = 968                # Camera horizontal pixel count
+ny = 608                # Camera vertical pixel count
 nframes = 100           # Number of frames for each image
 gain = 300              # Camera gain
 maxgain = 300           # Maximum gain (for autogain; starts at gain)
 autogain = True         # Use autogain
 exposure = 100000       # Exposure time in microseconds
-bin = 2                 # Binning factor (1: 1x2, 2: 2x2 etc)
 brightness = 10         # Target brightness of pixels
 bandwidth = 90          # Bandwidth usage (percent)
 high_speed = 0          # High speed mode (0 for False, 1 for True)
 hardware_bin = 0        # Hardware binning (0 for False, 1 for True)
+bin = 1                 # ASI software binning factor (1: 1x2, 2: 2x2 etc)
+software_bin = 2        # STVID software binning factor (1: 1x1, 2: 2x2 etc)
 sdk = /path/to/libASICamera2.so # path to the SDK library
 
-[Astrometry]
-sex_config = /path/to/solve.sex
-tracking_mount = False  # Set to True for sidereal tracking mounts
-no_sex = False          # Set to True to use only astrometry.net
-low_app = 18            # Arcsec per pixel low scale - Resolution of camera
-high_app = 20           # Arcsec per pixel high scale - Resolution of camera
+[PI]
+device_id = 0           # Device ID
+nx =  800               # Camera horizontal pixel count
+ny =  600               # Camera vertical pixel count
+nframes = 100           # Number of frames for each image
+framerate = 5		# Take 5 frames per second
+exposure = 200000	# Exposure time in us
+awb_gain_red = 2	# Gain for red.
+awb_gain_blue = 2.3	# Gain for blue
+analog_gain = 16	# Analog gain
+digital_gain = 64	# Digital gain
 
-[Processing]
-drdtmin = 0.1           # Minimum predicted satellite velocity (deg/s)
-drdtmax = 5.0           # Maximum predicted satellite velocity (deg/s)
-trkrmin = 10.0          # Track selection region around prediction (pixels)
-ntrkmin = 10            # Minimum number of points making up a track
-trksig = 5.0            # Track selection sigma
-nstarsmin = 10          # Minimum number of stars to attempt astrometric calibration
-houghrmin = 10.0        # Hough3dLines: Track selection region around prediction (pixels)
-nhoughmin = 10          # Hough3dLines: Minimum track points
+[CV2]
+device_id = 0           # Device ID
+nx = 720                # Camera horizontal pixel count
+ny = 576                # Camera vertical pixel count
+nframes = 250           # Number of frames for each image
+
+[Elements]
+tlefile1 = /path/to/catalog.tle  # TLE File
+name1 = Catalog	            	 # Catalog name
+abbrev1 = catalog		 # Catalog abbreviation
+color1 = C0			 # Color code
+tlefile2 = /path/to/classfd.tle
+name2 = Classified
+abbrev2 = classfd
+color2 = C1
+tlefile3 = /path/to/inttles.tle
+name3 = Integrated
+abbrev3 = inttles
+color3 = C2
+
+[DiagnosticPlot]
+colormap = gray_r
+
+[LineDetection]
+min_sigma = 5.0               # Minimum track selection significance
+min_track_points = 20         # Minimum number of points making up a track
+min_track_width = 20.0        # Minimum track selection width (pixels)
+color = C3                    # Detected track color code
+
+[Identification]
+max_off_track_offset_deg = 0.1            # Maximum off-track offset [angle; deg]
+max_along_track_offset_s = 2.0            # Maximum off-track offset [time; sec]
+max_direction_difference_deg = 2.0        # Maximum difference between direction of motion [angle; deg]
+max_velocity_difference_percent = 5.0     # Maximum velocity difference [percent]
+
+[Astrometry]
+min_stars = 20            # Minimum number of stars to attempt plate solve
+max_magnitude = 10.0      # Maximum magnitude of standard stars to use
+solve-field_args = -O -l 10 -z 2 -t 1 --crpix-center # Solve-field arguments
