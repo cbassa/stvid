@@ -165,6 +165,10 @@ def calibrate(fname, cfg, astcat, pixcat, wref, tref):
     hdu.close()
     t = Time(header["MJD-OBS"], format="mjd", scale="utc")
 
+    # Output file
+    froot = os.path.splitext(fname)[0]
+    outfname = f"{froot}_calib.wcs"
+
     # Check for sidereal tracking
     try:
         tracked = bool(hdu[0].header['TRACKED'])
@@ -191,6 +195,10 @@ def calibrate(fname, cfg, astcat, pixcat, wref, tref):
 
     # Exit on empty star catalog
     if pixcat.nstars == 0:
+        # Log calibration
+        with open(outfname, "w") as fp:
+            pass
+        
         return w, 0, 0, 0, False
         
     # Image size
@@ -277,8 +285,6 @@ def calibrate(fname, cfg, astcat, pixcat, wref, tref):
         is_calibrated = True
 
     # Log calibration
-    froot = os.path.splitext(fname)[0]
-    outfname = f"{froot}_calib.wcs"
     with open(outfname, "w") as fp:
         pass
         
