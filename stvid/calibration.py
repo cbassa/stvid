@@ -192,12 +192,16 @@ def calibrate(fname, cfg, astcat, pixcat, wref, tref):
         p = FK5(ra=pref.ra + dra, dec=pref.dec, equinox=t).transform_to(ICRS)
         w.wcs.crval = np.array([p.ra.degree, p.dec.degree])
 
+    # Exit on empty star catalog
+    if pixcat.nstars == 0:
+        return w, 0, 0, 0, False
+        
     # Image size
     nx, ny = header["NAXIS1"], header["NAXIS2"]
-    
+
     # Sky coordinates for astrometric standards
     p = SkyCoord(ra=astcat.ra, dec=astcat.dec, unit="deg", frame="fk5")
-
+    
     # Pixel coordinates
     x, y = pixcat.x, pixcat.y
 
