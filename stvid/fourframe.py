@@ -5,6 +5,7 @@ import json
 import subprocess
 
 import numpy as np
+from scipy import ndimage
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 
@@ -600,8 +601,26 @@ class FourFrame:
         trkrmin = cfg.getfloat("LineDetection", "min_track_width")
         ntrkmin = cfg.getfloat("LineDetection", "min_track_points")
 
+        # Create selection mask
+        c1 = ndimage.uniform_filter(self.znum, 3, mode="constant")
+        c2 = ndimage.uniform_filter(self.znum * self.znum, 3, mode="constant")
+        
+        # Add epsilon to keep square root positive
+        z = np.sqrt(c2 - c1 * c1 + 1e-9)
+
+        # Standard deviation mask
+        c = z < 40
+        m1 = np.zeros_like(self.zavg)
+        m1[c] = 1.0
+
+        # Sigma mask
+        c = self.zsig < sigma
+        m2 = np.zeros_like(self.zavg)
+        m2[~c] = 1.0
+        self.zsel = m1 * m2
+        
         # Find significant pixels
-        c = self.zsig > sigma
+        c = self.zsel == 1
         xm, ym = np.meshgrid(np.arange(self.nx), np.arange(self.ny))
         x, y = np.ravel(xm[c]), np.ravel(ym[c])
         znum = np.ravel(self.znum[c]).astype("int")

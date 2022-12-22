@@ -73,7 +73,7 @@ colormap = gray_r
 [LineDetection]
 min_sigma = 5.0               # Minimum track selection significance
 min_track_points = 20         # Minimum number of points making up a track
-min_track_width = 20.0        # Minimum track selection width (pixels)
+min_track_width = 8           # Minimum track selection width (pixels)
 color = C3                    # Detected track color code
 
 [Identification]
