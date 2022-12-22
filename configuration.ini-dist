@@ -75,6 +75,7 @@ min_sigma = 5.0               # Minimum track selection significance
 min_track_points = 20         # Minimum number of points making up a track
 min_track_width = 8           # Minimum track selection width (pixels)
 color = C3                    # Detected track color code
+cpu_count = 2                 # CPU threads to use
 
 [Identification]
 max_off_track_offset_deg = 0.1            # Maximum off-track offset [angle; deg]
