@@ -64,9 +64,10 @@ class StarCatalog:
 
 def generate_star_catalog(fname):
     # Source-extractor configuration file
-    conffname = os.path.normpath(os.path.join(os.path.dirname(__file__),
-                                              "..",
-                                              "source-extractor/default.sex"))
+    path = os.path.normpath(os.path.join(os.path.dirname(__file__),
+                                         "..",
+                                         "source-extractor"))
+    conffname = os.path.join(path, "default.sex")
 
     # Output catalog name
     froot = os.path.splitext(fname)[0]
@@ -77,8 +78,12 @@ def generate_star_catalog(fname):
         # Format command
         command = f"sextractor {fname} -c {conffname} -CATALOG_NAME {outfname}"
 
+        # Add sextractor config path to environment
+        env = dict(os.environ)
+        env["SEXTRACTOR_CFG"] = path
+        
         # Run sextractor
-        output = subprocess.check_output(command, shell=True,
+        output = subprocess.check_output(command, shell=True, env=env,
                                          stderr=subprocess.STDOUT)
             
     return StarCatalog(outfname)
@@ -127,7 +132,8 @@ def plate_solve(fname, cfg, store_as_fname=None):
         solved = False
         
     # Remove temporary files
-    extensions = [".new", ".axy", "-objs.png", ".rdls", ".solved", "-indx.xyls", ".match", ".corr", ".wcs"]
+    extensions = [".new", ".axy", "-objs.png", ".rdls", ".solved", "-indx.xyls",
+                  ".match", ".corr", ".wcs", "-indx.png", "-ngc.png"]
     for extension in extensions:
         try:
             os.remove(f"{froot}{extension}")
@@ -159,9 +165,10 @@ def calibrate(fname, cfg, astcat, pixcat, wref, tref):
     hdu.close()
     t = Time(header["MJD-OBS"], format="mjd", scale="utc")
 
-    # Minimum number of stars
-    nstarsmin = cfg.getint("Processing", "nstarsmin")
-    
+    # Output file
+    froot = os.path.splitext(fname)[0]
+    outfname = f"{froot}_calib.wcs"
+
     # Check for sidereal tracking
     try:
         tracked = bool(hdu[0].header['TRACKED'])
@@ -186,12 +193,20 @@ def calibrate(fname, cfg, astcat, pixcat, wref, tref):
         p = FK5(ra=pref.ra + dra, dec=pref.dec, equinox=t).transform_to(ICRS)
         w.wcs.crval = np.array([p.ra.degree, p.dec.degree])
 
+    # Exit on empty star catalog
+    if pixcat.nstars == 0:
+        # Log calibration
+        with open(outfname, "w") as fp:
+            pass
+        
+        return w, 0, 0, 0, False
+        
     # Image size
     nx, ny = header["NAXIS1"], header["NAXIS2"]
-    
+
     # Sky coordinates for astrometric standards
     p = SkyCoord(ra=astcat.ra, dec=astcat.dec, unit="deg", frame="fk5")
-
+    
     # Pixel coordinates
     x, y = pixcat.x, pixcat.y
 
@@ -210,7 +225,7 @@ def calibrate(fname, cfg, astcat, pixcat, wref, tref):
         nstars_used = np.sum(c)
         
         # Refit
-        if nstars_used > nstarsmin:
+        if nstars_used > 4:
             w = fit_wcs(x[c], y[c], p[idx[c]].ra.degree,
                         p[idx[c]].dec.degree, nx // 2, ny // 2, order)
 
@@ -270,8 +285,6 @@ def calibrate(fname, cfg, astcat, pixcat, wref, tref):
         is_calibrated = True
 
     # Log calibration
-    froot = os.path.splitext(fname)[0]
-    outfname = f"{froot}_calib.wcs"
     with open(outfname, "w") as fp:
         pass
         

@@ -245,20 +245,23 @@ class Track:
         if ff.tracked == False:
             tmid = Time(ff.mjd, format="mjd") + 0.5 * ff.texp * u.s
             p = correct_stationary_coordinates(tmid, tobs, p, direction=-1)
-
+        
         return Measurement(tobs, p.ra.degree, p.dec.degree, self.drxdt, self.drydt, None)
             
     def measure_multiple_positions(self, ff, tsplit=1.0):
         dt = self.tmax - self.tmin
-        nsplit = int(np.round(dt / tsplit))
+        nsplit = int(np.ceil(dt / tsplit))
 
         m = []
         for i in range(nsplit):
             tmin = self.tmin + i * dt / nsplit
             tmax = self.tmin + (i + 1) * dt / nsplit            
-
+            
+            # Skip of not enough points or no time difference
             c = (self.t >= tmin) & (self.t <= tmax)
-            if (np.sum(c) < 5) | (np.std(self.t[c]) == 0):
+            if np.sum(c) == 0:
+                continue
+            if np.std(self.t[c]) < 1e-9:
                 continue
             t0, x0, y0, _, _ = position_and_velocity(self.t[c], self.x[c], self.y[c])
             _, _, _, drxdt, drydt = position_and_velocity(self.t[c], self.rx[c], self.ry[c])
@@ -498,7 +501,8 @@ class FourFrame:
     def generate_satellite_predictions(self, cfg):
         # Output file name
         outfname = f"{self.froot}_predict.csv"
-
+        tlepath = cfg.get("Elements", "tlepath")
+    
         # Run predictions
         if not os.path.exists(outfname):
             # Extract parameters
@@ -523,7 +527,8 @@ class FourFrame:
             command = command + f" -o {outfname} -R {ra0} -D {de0} -r {radius}"
             for key, value in cfg.items("Elements"):
                 if "tlefile" in key:
-                    command += f" -c {value}"
+                    tlefile = os.path.join(tlepath, value)
+                    command += f" -c {tlefile}"
             # Run command
             output = subprocess.check_output(
                 command, shell=True, stderr=subprocess.STDOUT
@@ -532,6 +537,10 @@ class FourFrame:
         # Read results
         d = ascii.read(outfname, format="csv")
 
+        # Return empty prediction list
+        if len(d) == 0:
+            return []
+        
         # Coordinates (correct for image drift)
         p = SkyCoord(ra=d["ra"], dec=d["dec"], unit="deg", frame=FK5(equinox="J2000"))
         if self.tracked == False:
@@ -587,9 +596,9 @@ class FourFrame:
 
     def find_tracks_by_hough3d(self, cfg):
         # Config settings
-        sigma = cfg.getfloat("LineDetection", "trksig")
-        trkrmin = cfg.getfloat("LineDetection", "trkrmin")
-        ntrkmin = cfg.getfloat("LineDetection", "ntrkmin")
+        sigma = cfg.getfloat("LineDetection", "min_sigma")
+        trkrmin = cfg.getfloat("LineDetection", "min_track_width")
+        ntrkmin = cfg.getfloat("LineDetection", "min_track_points")
 
         # Find significant pixels
         c = self.zsig > sigma
@@ -659,9 +668,10 @@ class FourFrame:
 
     def generate_star_catalog(self):
         # Source-extractor configuration file
-        conffname = os.path.normpath(os.path.join(os.path.dirname(__file__),
-                                                  "..",
-                                                  "source-extractor/default.sex"))
+        path = os.path.normpath(os.path.join(os.path.dirname(__file__),
+                                             "..",
+                                             "source-extractor"))
+        conffname = os.path.join(path, "default.sex")
 
         # Output catalog name
         outfname = f"{self.froot}.cat"
@@ -671,8 +681,12 @@ class FourFrame:
             # Format command
             command = f"sextractor {self.fname} -c {conffname} -CATALOG_NAME {outfname}"
 
+	    # Add sextractor config path to environment
+            env = dict(os.environ)
+            env["SEXTRACTOR_CFG"] = path
+            
             # Run sextractor
-            output = subprocess.check_output(command, shell=True,
+            output = subprocess.check_output(command, shell=True, env=env,
                                              stderr=subprocess.STDOUT)
             
         return StarCatalog(outfname)
