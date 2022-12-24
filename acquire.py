@@ -85,10 +85,10 @@ def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, c
                     
                     # Store results
                     if first:
-                        z1[i] = z
+                        z1[:, :, i] = z
                         t1[i] = t
                     else:
-                        z2[i] = z
+                        z2[:, :, i] = z
                         t2[i] = t
                         
                 # clear the stream in preparation for the next frame
@@ -103,7 +103,7 @@ def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, c
             else:
                 buf = 2
             image_queue.put(buf)
-            logger.debug("Captured z%d" % buf)
+            logger.debug("Captured buffer %d" % buf)
 
             # Swap flag
             first = not first
@@ -183,10 +183,10 @@ def capture_cv2(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, 
 
                     # Store results
                     if first:
-                        z1[i] = z
+                        z1[:, :, i] = z
                         t1[i] = t
                     else:
-                        z2[i] = z
+                        z2[:, :, i] = z
                         t2[i] = t
 
             if first: 
@@ -344,10 +344,10 @@ def capture_asi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, 
 
                 # Store results
                 if first:
-                    z1[i] = z
+                    z1[:, :, i] = z
                     t1[i] = t
                 else:
-                    z2[i] = z
+                    z2[:, :, i] = z
                     t2[i] = t
 
             if first: 
@@ -465,10 +465,10 @@ def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id, cfg
             z = z.astype("float32")
             
             # Compute statistics
-            zmax = np.max(z, axis=0)
-            znum = np.argmax(z, axis=0)
-            zs1 = np.sum(z, axis=0) - zmax
-            zs2 = np.sum(z * z, axis=0) - zmax * zmax 
+            zmax = np.max(z, axis=2)
+            znum = np.argmax(z, axis=2)
+            zs1 = np.sum(z, axis=2) - zmax
+            zs2 = np.sum(z * z, axis=2) - zmax * zmax 
             zavg = zs1 / float(nz - 1)
             zstd = np.sqrt((zs2 - zs1 * zavg) / float(nz - 2))
 
@@ -670,11 +670,11 @@ if __name__ == '__main__':
 
     # Initialize arrays
     z1base = multiprocessing.Array(ctypes.c_uint8, nx * ny * nz)
-    z1 = np.ctypeslib.as_array(z1base.get_obj()).reshape(nz, ny, nx)
+    z1 = np.ctypeslib.as_array(z1base.get_obj()).reshape(ny, nx, nz)
     t1base = multiprocessing.Array(ctypes.c_double, nz)
     t1 = np.ctypeslib.as_array(t1base.get_obj())
     z2base = multiprocessing.Array(ctypes.c_uint8, nx * ny * nz)
-    z2 = np.ctypeslib.as_array(z2base.get_obj()).reshape(nz, ny, nx)
+    z2 = np.ctypeslib.as_array(z2base.get_obj()).reshape(ny, nx, nz)
     t2base = multiprocessing.Array(ctypes.c_double, nz)
     t2 = np.ctypeslib.as_array(t2base.get_obj())
 
