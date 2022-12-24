@@ -178,6 +178,8 @@ if __name__ == "__main__":
                              "--conf_file",
                              help="Specify configuration file. If no file" +
                              " is specified 'configuration.ini' is used.",
+                             action="append",
+                             nargs="?",
                              metavar="FILE")
     conf_parser.add_argument("-d",
                              "--directory",
@@ -191,7 +193,7 @@ if __name__ == "__main__":
     # Read configuration file
     cfg = configparser.ConfigParser(inline_comment_prefixes=("#", ":"))
     conf_file = args.conf_file if args.conf_file else "configuration.ini"
-    result = cfg.read([conf_file])
+    result = cfg.read(conf_file)
     if not result:
         print("Could not read config file: %s\nExiting..." % conf_file)
         sys.exit()
