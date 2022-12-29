@@ -85,82 +85,30 @@ class Prediction:
         self.ry = ry
         self.state = state
         self.tlefile = tlefile
+        self.is_identified = False
 
-    def position_and_velocity(self, t, dt):
-        # Skip if predicted track is too short to fit a 3rd order polynomial
-        if len(self.t) < 3:
-            return np.nan, np.nan, np.nan, np.nan, np.nan
+        if len(self.t) == 1:
+            self.px = self.rx
+            self.py = self.ry
+        elif len(self.t) == 2:
+            self.px = np.polyfit(self.t, self.rx, 1)
+            self.py = np.polyfit(self.t, self.ry, 1)
+        else:
+            self.px = np.polyfit(self.t, self.rx, 2)
+            self.py = np.polyfit(self.t, self.ry, 2)
 
-        # Create polynomials
-        px = np.polyfit(self.t, self.rx, 2)
-        py = np.polyfit(self.t, self.ry, 2)
-
+    def position_and_velocity(self, t):
         # Derivatives
-        dpx = np.polyder(px)
-        dpy = np.polyder(py)
+        dpx = np.polyder(self.px)
+        dpy = np.polyder(self.py)
 
         # Evaluate
-        rx0, ry0 = np.polyval(px, t), np.polyval(py, t)
+        rx, ry = np.polyval(self.px, t), np.polyval(self.py, t)
         drxdt, drydt = np.polyval(dpx, t), np.polyval(dpy, t)
         drdt = np.sqrt(drxdt**2 + drydt**2)
         pa = np.mod(np.arctan2(-drxdt, drydt), 2 * np.pi)
-        dr = drdt * dt
 
-        return rx0, ry0, drdt, pa, dr
-
-    def predicted_track(self, tmin, tmid, tmax, ax, color):
-        # Skip if predicted track is too short to fit a 3rd order polynomial
-        if len(self.t) < 3:
-            return np.nan, np.nan, np.nan, np.nan
-
-        # Create polynomials
-        px = np.polyfit(self.t, self.x, 2)
-        py = np.polyfit(self.t, self.y, 2)
-
-        # Derivatives
-        dpx = np.polyder(px)
-        dpy = np.polyder(py)
-
-        # Evaluate
-        x0, y0 = np.polyval(px, tmid), np.polyval(py, tmid)
-        dxdt, dydt = np.polyval(dpx, tmid), np.polyval(dpy, tmid)
-
-        # Extrema
-        xmin = x0 + dxdt * (tmin - tmid)
-        xmax = x0 + dxdt * (tmax - tmid)
-        ymin = y0 + dydt * (tmin - tmid)
-        ymax = y0 + dydt * (tmax - tmid)
-
-        ax.plot([xmin, xmax], [ymin, ymax], color=color, linestyle="-")
-        ax.plot(x0, y0, color=color, marker="o", markerfacecolor="none")
-
-    def residual(self, t0, rx0, ry0):
-        # Skip if predicted track is too short to fit a 3rd order polynomial
-        if len(self.t) < 3:
-            return np.nan, np.nan
-
-        # Create polynomials
-        px = np.polyfit(self.t, self.rx, 2)
-        py = np.polyfit(self.t, self.ry, 2)
-
-        # Derivatives
-        dpx = np.polyder(px)
-        dpy = np.polyder(py)
-
-        # Evaluate
-        rx, ry = np.polyval(px, t0), np.polyval(py, t0)
-        drxdt, drydt = np.polyval(dpx, t0), np.polyval(dpy, t0)
-        drdt = np.sqrt(drxdt**2 + drydt**2)
-        pa = np.arctan2(-drxdt, drydt)
-
-        # Compute cross-track, in-track residual
-        drx, dry = rx0 - rx, ry0 - ry
-        ca, sa = np.cos(pa), np.sin(pa)
-        rm = ca * drx - sa * dry
-        wm = sa * drx + ca * dry
-        dtm = rm / drdt
-
-        return dtm, wm
+        return rx, ry, drxdt, drydt, drdt, pa
 
 
 class Measurement:
@@ -240,7 +188,7 @@ class Track:
     def measure_single_position(self, ff):
         mjd = ff.mjd + self.tmid / 86400
         tobs = Time(mjd, format="mjd", scale="utc")
-        p = SkyCoord.from_pixel(self.x0, self.y0, ff.w, 1)
+        p = SkyCoord.from_pixel(self.x0, self.y0, ff.w, 0)
 
         # Correct for motion of stationary camera
         if ff.tracked == False:
@@ -269,7 +217,7 @@ class Track:
 
             mjd = ff.mjd + t0 / 86400
             tobs = Time(mjd, format="mjd", scale="utc")
-            p = SkyCoord.from_pixel(x0, y0, ff.w, 1)
+            p = SkyCoord.from_pixel(x0, y0, ff.w, 0)
 
             # Correct for motion of stationary camera
             if ff.tracked == False:
@@ -298,22 +246,20 @@ class Track:
         is_identified = False
         for p in predictions:
             # Compute identification constraints
-            rx0, ry0, drdt, pa, dr = p.position_and_velocity(
-                self.tmid, self.tmax - self.tmin
-            )
-            dtm, rm = p.residual(self.tmid, self.rx0, self.ry0)
+            rx, ry, drxdt, drydt, drdt, pa = p.position_and_velocity(self.tmid)
+            dtm, rm = cross_along_track_residual(self.rx0, self.ry0, drxdt, drydt, rx, ry)
             dpa = angle_difference(self.pa, pa) * 180 / np.pi
-            fdr = (dr / self.dr - 1) * 100
-            if (
-                (np.abs(dtm) < dtm_max)
+            fdr = (drdt / self.drdt - 1) * 100
+            if ((np.abs(dtm) < dtm_max)
                 & (np.abs(rm) < rm_max)
                 & (np.abs(dpa) < dpa_max)
                 & (np.abs(fdr) < fdr_max)
-            ):
+                & (p.is_identified == False)):
                 satno = int(p.satno) # Comes as int64 from ascii.io?
                 cospar = p.cospar
                 tlefile = p.tlefile
                 is_identified = True
+                p.is_identified = True
 
         # Get catalog abbreviation
         catalogname = "unid"
@@ -322,49 +268,6 @@ class Track:
                 catalogname = abbrev
 
         return Identification(satno, cospar, tlefile, catalogname), is_identified
-
-    def match_to_prediction(self, p, dt, w):
-        # Return if predicted track is too short to fit a 3rd order polynomial
-        if len(p.t) < 3:
-            return False
-
-        # Create polynomials
-        px = np.polyfit(p.t, p.x, 2)
-        py = np.polyfit(p.t, p.y, 2)
-
-        # Compute extrema
-        xmin = np.polyval(px, self.tmin)
-        xmax = np.polyval(px, self.tmax)
-        ymin = np.polyval(py, self.tmin)
-        ymax = np.polyval(py, self.tmax)
-
-        # Check if observed track endpoints match with prediction
-        pmin = inside_selection_area(
-            self.tmin,
-            self.tmax,
-            self.x0,
-            self.y0,
-            self.dxdt,
-            self.dydt,
-            xmin,
-            ymin,
-            dt,
-            w,
-        )
-        pmax = inside_selection_area(
-            self.tmin,
-            self.tmax,
-            self.x0,
-            self.y0,
-            self.dxdt,
-            self.dydt,
-            xmax,
-            ymax,
-            dt,
-            w,
-        )
-
-        return pmin & pmax
 
 
 class Observation:
@@ -562,7 +465,8 @@ class FourFrame:
         for tlefile in tlefiles:
             for satno in satnos:
                 c = (d["satno"] == satno) & (d["tlefile"] == tlefile)
-                if np.sum(c) == 0:
+                # Skip objects with less than 2 points
+                if np.sum(c) < 2:
                     continue
                 age = np.unique(np.asarray(d["age"])[c])[0]
                 cospar = str(np.unique(np.asarray(d["cospar"])[c])[0])
@@ -1174,7 +1078,7 @@ def fit_wcs(x, y, ra, dec, x0, y0, order):
 def residuals(xcen, ycen, ra, dec, w):
     pas = SkyCoord(ra=ra, dec=dec, unit="deg", frame="icrs")
 
-    pstars = SkyCoord.from_pixel(xcen, ycen, w, 1)
+    pstars = SkyCoord.from_pixel(xcen, ycen, w, 0)
 
     r = pas.separation(pstars)
     pa = pas.position_angle(pstars)
@@ -1197,3 +1101,10 @@ def position_and_velocity(t, x, y):
     dydt = py[-2]
 
     return tmid, x0, y0, dxdt, dydt
+
+def cross_along_track_residual(rx, ry, drxdt, drydt, rx0, ry0):
+    drdt = np.sqrt(drxdt**2 + drydt**2)
+    tmin = (drxdt * (rx0 - rx) + drydt * (ry0 - ry)) / drdt**2
+    rmin = (drxdt * (ry - ry0) - drydt * (rx - rx0)) / drdt
+
+    return tmin, rmin
