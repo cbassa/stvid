@@ -4,6 +4,7 @@ import sys
 import glob
 import time
 import yaml
+import datetime
 
 import argparse
 import configparser
@@ -22,6 +23,24 @@ from stvid.fourframe import Observation
 from stvid.fourframe import AstrometricCatalog
 
 from astropy.utils.exceptions import AstropyWarning
+
+def number_to_letter(n):
+    # 
+    if n == 0:
+        return ""
+    x = (n - 1) % 24
+    letters = "ABCDEFGHJKLMNPQRSTUVWXYZ"
+    rest = (n - 1) // 24
+    if rest == 0:
+        return letters[x]
+    return number_to_letter(rest) + letters[x]
+
+def cospar(nfd, number):
+    t = datetime.datetime.strptime(nfd[:19], "%Y-%m-%dT%H:%M:%S")
+    year = int(t.strftime("%y"))
+    doy = int(t.strftime("%j")) + 500
+    letter = number_to_letter(number)
+    return f"{year:02d} {doy:03d}{letter:3s}"
 
 def chunk_list(l, n):
     o = []
@@ -93,11 +112,13 @@ def process_loop(fname):
     ident_dicts = []
     obs = []
     satno = 90000
+    number = 1
     for t in tracks:
         # Identify
-        ident, is_identified = t.identify(predictions, satno, "22 500A", None, cfg, abbrevs, tlefiles)
+        ident, is_identified = t.identify(predictions, satno, cospar(ff.nfd, number), None, cfg, abbrevs, tlefiles)
         if not is_identified:
             satno += 1
+            number += 1
 
         # Identification dictionary
         ident_dict = {"satno": ident.satno,
