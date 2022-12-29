@@ -239,7 +239,7 @@ def calibrate(fname, cfg, astcat, pixcat, wref, tref):
 
     # Store flags
     pixcat.flag = c
-            
+
     # CTYPE
     if order > 1:
         ctype1, ctype2 = "RA---TAN-SIP", "DEC--TAN-SIP"
