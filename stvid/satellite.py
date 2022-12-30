@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 from __future__ import print_function
 import subprocess
-from stvid.stio import fourframe
-from stvid.stio import satid
+from stvid.stio import FourFrame
+from stvid.stio import SatId
 import os
 import tempfile
 
@@ -20,7 +20,7 @@ def generate_satellite_predictions(fname):
 
 def find_hough3d_lines(fname, ntrkmin, trkrmin):
     # Read four frame
-    ff = fourframe(fname)
+    ff = FourFrame(fname)
 
     # Mask frame
     ff.mask(10, 10, 5, 5)
@@ -86,4 +86,4 @@ def find_hough3d_lines(fname, ntrkmin, trkrmin):
         for line in lines:
             fp.write(line)
 
-    return [satid(line) for line in lines]
+    return [SatId(line) for line in lines]

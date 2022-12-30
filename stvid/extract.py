@@ -2,7 +2,7 @@
 from __future__ import print_function
 import os
 import shutil
-from stvid.stio import fourframe, satid, observation
+from stvid.stio import FourFrame, SatId, Observation
 from stvid.astrometry import is_calibrated
 import numpy as np
 import ppgplot as ppg
@@ -286,7 +286,7 @@ def extract_tracks(fname, trkrmin, drdtmin, drdtmax, trksig, ntrkmin, path, resu
     screenoutput_idents = []
 
     # Read four frame
-    ff = fourframe(fname)
+    ff = FourFrame(fname)
 
     # Skip saturated frames
     if np.sum(ff.zavg > 240.0) / float(ff.nx * ff.ny) > 0.95:
@@ -302,7 +302,7 @@ def extract_tracks(fname, trkrmin, drdtmin, drdtmax, trksig, ntrkmin, path, resu
     tr = np.array([-0.5, 1.0, 0.0, -0.5, 0.0, 1.0])
 
     # Parse identifications
-    idents = [satid(line) for line in lines]
+    idents = [SatId(line) for line in lines]
 
     # Identify unknowns
     for ident0 in idents:
@@ -364,7 +364,7 @@ def extract_tracks(fname, trkrmin, drdtmin, drdtmax, trksig, ntrkmin, path, resu
             ymax = y0 + dydt * (tmax - tmid)
 
             cospar = get_cospar(ident.norad, ff.nfd, tle_dir)
-            obs = observation(ff, mjd, x0, y0)
+            obs = Observation(ff, mjd, x0, y0)
             iod_line = "%s" % format_iod_line(ident.norad, cospar, ff.site_id,
                                               obs.nfd, obs.ra, obs.de)
 
@@ -451,7 +451,7 @@ def extract_tracks(fname, trkrmin, drdtmin, drdtmax, trksig, ntrkmin, path, resu
 
             # Format IOD line
             cospar = get_cospar(ident.norad, ff.nfd, tle_dir)
-            obs = observation(ff, mjd, x0, y0)
+            obs = Observation(ff, mjd, x0, y0)
             iod_line = "%s" % format_iod_line(ident.norad, cospar, ff.site_id,
                                               obs.nfd, obs.ra, obs.de)
 
