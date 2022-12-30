@@ -88,29 +88,35 @@ class Prediction:
         self.is_identified = False
 
         if len(self.t) == 1:
-            self.px = self.rx
-            self.py = self.ry
+            self.prx = self.rx
+            self.pry = self.ry
         elif len(self.t) == 2:
-            self.px = np.polyfit(self.t, self.rx, 1)
-            self.py = np.polyfit(self.t, self.ry, 1)
+            self.prx = np.polyfit(self.t, self.rx, 1)
+            self.pry = np.polyfit(self.t, self.ry, 1)
         else:
-            self.px = np.polyfit(self.t, self.rx, 2)
-            self.py = np.polyfit(self.t, self.ry, 2)
+            self.prx = np.polyfit(self.t, self.rx, 2)
+            self.pry = np.polyfit(self.t, self.ry, 2)
 
     def position_and_velocity(self, t):
         # Derivatives
-        dpx = np.polyder(self.px)
-        dpy = np.polyder(self.py)
+        dprx = np.polyder(self.prx)
+        dpry = np.polyder(self.pry)
 
         # Evaluate
-        rx, ry = np.polyval(self.px, t), np.polyval(self.py, t)
-        drxdt, drydt = np.polyval(dpx, t), np.polyval(dpy, t)
+        rx, ry = np.polyval(self.prx, t), np.polyval(self.pry, t)
+        drxdt, drydt = np.polyval(dprx, t), np.polyval(dpry, t)
         drdt = np.sqrt(drxdt**2 + drydt**2)
         pa = np.mod(np.arctan2(-drxdt, drydt), 2 * np.pi)
 
         return rx, ry, drxdt, drydt, drdt, pa
 
+    def in_frame(self, ff):
+        in_frame = []
+        for x, y in zip(self.x, self.y):
+            in_frame.append(ff.in_frame(x, y))
 
+        return np.any(in_frame)
+        
 class Measurement:
     """Measurement class"""
 
@@ -525,6 +531,7 @@ class FourFrame:
         
         # Find significant pixels
         c = self.zsel == 1
+        print(np.sum(c), sigma)
         xm, ym = np.meshgrid(np.arange(self.nx), np.arange(self.ny))
         x, y = np.ravel(xm[c]), np.ravel(ym[c])
         znum = np.ravel(self.znum[c]).astype("int")
@@ -890,6 +897,61 @@ class FourFrame:
 
         return
 
+    def find_from_track_and_stack(self, p):
+        # Get pixel velocities
+        tmid, x0, y0, dxdt, dydt = position_and_velocity(p.t, p.x, p.y)
+
+        # Pixel offsets
+
+        # Fill frame
+        ztrk = np.zeros_like(self.zavg)
+        for i in range(self.nz):
+            dt = self.dt[i] - tmid
+            dx = int(np.round(dxdt * dt))
+            dy = int(np.round(dydt * dt))
+
+            # Skip if shift larger than image
+            if np.abs(dx) >= self.nx:
+                continue
+            if np.abs(dy) >= self.ny:
+                continue
+
+            # Extract range
+            if dx >= 0:
+                i1min, i1max = dx, self.nx - 1
+                i2min, i2max = 0, self.nx - dx - 1
+            else:
+                i1min, i1max = 0, self.nx + dx - 1
+                i2min, i2max = -dx, self.nx - 1
+            if dy >= 0:
+                j1min, j1max = dy, self.ny - 1
+                j2min, j2max = 0, self.ny - dy - 1
+            else:
+                j1min, j1max = 0, self.ny + dy - 1
+                j2min, j2max = -dy, self.ny - 1
+            zsel = np.where(self.znum == i, self.zmax, 0.0)
+            ztrk[j2min:j2max, i2min:i2max] += zsel[j1min:j1max, i1min:i1max]
+
+        # Select region
+        w = 100
+        xmin, xmax = max(0, int(x0 - w)), min(self.nx - 1, int(x0 + w))
+        ymin, ymax = max(0, int(y0 - w)), min(self.ny - 1, int(y0 + w))
+
+        # Find maximum
+        img = ztrk[ymin:ymax, xmin:xmax]
+        ny, nx = img.shape
+        idx = np.argmax(img)
+        y = int(idx / nx)
+        x = idx - y * nx
+        zmax, zmed, zstd = np.max(img), np.median(img), np.std(img)
+        sigma = (zmax - zmed) / zstd
+        print(x0, y0, sigma)
+        print(x + xmin, y + ymin)
+        fig, ax = plt.subplots()
+        ax.imshow(img, vmin=0, vmax=255)
+        ax.plot(x0 - xmin, y0 - ymin, "r+")
+        ax.plot(x, y, "rx")
+        plt.show()
 
 def decode_line(line):
     p = line.split(" ")
