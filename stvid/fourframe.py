@@ -531,7 +531,7 @@ class FourFrame:
         
         # Find significant pixels
         c = self.zsel == 1
-        print(np.sum(c), sigma)
+
         xm, ym = np.meshgrid(np.arange(self.nx), np.arange(self.ny))
         x, y = np.ravel(xm[c]), np.ravel(ym[c])
         znum = np.ravel(self.znum[c]).astype("int")
