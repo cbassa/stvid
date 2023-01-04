@@ -217,6 +217,13 @@ if __name__ == "__main__":
                              metavar="DIR",
                              dest="file_dir",
                              default=".")
+    conf_parser.add_argument("-b",
+                             "--batch",
+                             help="Batch process observations, exit when done.",
+    conf_parser.add_argument("-r",
+                             "--reprocess",
+                             help="Remove processed files and start from scratch.",
+                             action="store_true")
     args = conf_parser.parse_args()
     
     # Read configuration file
@@ -241,6 +248,12 @@ if __name__ == "__main__":
             tlefiles.append(os.path.basename(value))
         elif "abbrev" in key:
             abbrevs.append(value)
+
+    # Remove processed files
+    if args.reprocess:
+        for f_pattern in ["test.fits","*.png","*.cat","*.cal","*.csv","*.dat"]:
+            for files in glob.glob(os.path.join(args.file_dir, f_pattern)):
+                os.remove(files)
 
     # Read astrometric catalog
     acat = AstrometricCatalog(cfg.getfloat("Astrometry", "max_magnitude"))
@@ -327,6 +340,8 @@ if __name__ == "__main__":
 
         # Sleep
         try:
+            if(args.batch):
+                sys.exit()
             print("File queue empty, waiting for new files...\r", end = "")
             time.sleep(10)
         except KeyboardInterrupt:
