@@ -220,6 +220,7 @@ if __name__ == "__main__":
     conf_parser.add_argument("-b",
                              "--batch",
                              help="Batch process observations, exit when done.",
+                             action="store_true")
     conf_parser.add_argument("-r",
                              "--reprocess",
                              help="Remove processed files and start from scratch.",
@@ -251,7 +252,8 @@ if __name__ == "__main__":
 
     # Remove processed files
     if args.reprocess:
-        for f_pattern in ["test.fits","*.png","*.cat","*.cal","*.csv","*.dat"]:
+        for f_pattern in ["test.fits", "2*_*.png", "2*_stars.cat", "2*_calib.wcs",
+                          "2*_*.csv", "2*_*.dat", "2*_data.json"]:
             for files in glob.glob(os.path.join(args.file_dir, f_pattern)):
                 os.remove(files)
 
@@ -299,6 +301,8 @@ if __name__ == "__main__":
             break
             
         try:
+            if(args.batch):
+                sys.exit()
             print("File queue empty, waiting for new files...\r", end = "")
             time.sleep(10)
         except KeyboardInterrupt:
