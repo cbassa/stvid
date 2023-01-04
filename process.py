@@ -217,6 +217,10 @@ if __name__ == "__main__":
                              metavar="DIR",
                              dest="file_dir",
                              default=".")
+    conf_parser.add_argument("-r",
+                             "--reprocess",
+                             help="Remove processed files and start from scratch.",
+                             action="store_true")
     args = conf_parser.parse_args()
     
     # Read configuration file
@@ -251,6 +255,12 @@ if __name__ == "__main__":
     else:
         cpu_count = mp.cpu_count()
     print(f"Processing with {cpu_count} threads")
+
+    # Remove processed files
+    if args.reprocess:
+        for f_pattern in ["test.fits","*.png","*.cat","*.cal","*.csv","*.dat"]:
+            for files in glob.glob(os.path.join(args.file_dir, f_pattern)):
+                os.remove(files)
         
     # Start processing loop
     while True:
