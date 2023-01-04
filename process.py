@@ -217,6 +217,10 @@ if __name__ == "__main__":
                              metavar="DIR",
                              dest="file_dir",
                              default=".")
+    conf_parser.add_argument("-b",
+                             "--batch",
+                             help="Batch process observations, exit when done.",
+                             action="store_true")
     args = conf_parser.parse_args()
     
     # Read configuration file
@@ -316,6 +320,8 @@ if __name__ == "__main__":
 
         # Sleep
         try:
+            if(args.batch):
+                sys.exit()
             print("File queue empty, waiting for new files...\r", end = "")
             time.sleep(10)
         except KeyboardInterrupt:
