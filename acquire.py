@@ -479,8 +479,8 @@ def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id, cfg
             zstd = np.flipud(zstd.astype("float32"))
 
             # Generate fits
-            ftemp = "%s.temp" % nfd
-            fname = "%s.fits" % nfd
+            ftemp = "%s.temp" % nfd.replace(":", "-")
+            fname = "%s.fits" % nfd.replace(":", "-")
 
             # Format header
             hdr = fits.Header()
