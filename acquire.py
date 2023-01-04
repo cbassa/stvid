@@ -479,6 +479,7 @@ def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id, cfg
             zstd = np.flipud(zstd.astype("float32"))
 
             # Generate fits
+            ftemp = "%s.temp" % nfd
             fname = "%s.fits" % nfd
 
             # Format header
@@ -520,7 +521,9 @@ def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id, cfg
             # Write fits file
             hdu = fits.PrimaryHDU(data=np.array([zavg, zstd, zmax, znum]),
                                 header=hdr)
-            hdu.writeto(os.path.join(filepath, fname))
+            hdu.writeto(os.path.join(filepath, ftemp))
+            os.rename(os.path.join(filepath, ftemp), os.path.join(filepath, fname))
+
             logger.info("Compressed %s in %.2f sec" % (fname, time.time() - tstart))
 
             # Exit on end of capture
