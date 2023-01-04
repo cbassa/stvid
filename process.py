@@ -245,20 +245,13 @@ if __name__ == "__main__":
     # Read astrometric catalog
     acat = AstrometricCatalog(cfg.getfloat("Astrometry", "max_magnitude"))
 
-    # Get number of CPUs for multiprocessing
-    if cfg.has_option("LineDetection", "cpu_count"):
-        cpu_count = cfg.getint("LineDetection", "cpu_count")
-    else:
-        cpu_count = mp.cpu_count()
-    print(f"Processing with {cpu_count} threads")
-        
-    # Start processing loop
+    # Start calibration loop
     while True:
-        # Get unprocessed files
+        # Get files without star catalogs
         fitsfnames = sorted(glob.glob(os.path.join(args.file_dir, "2*.fits")))
         froots = [os.path.splitext(fitsname)[0] for fitsname in fitsfnames]
-        fnames = [f"{froot}.fits" for froot in froots if not os.path.exists(f"{froot}_0.png")]
-        
+        fnames = [f"{froot}.fits" for froot in froots if not os.path.exists(f"{froot}_stars.cat")]
+
         # Create reference calibration file
         calfname = os.path.join(args.file_dir, "test.fits")
         if not os.path.exists(calfname):
@@ -267,21 +260,19 @@ if __name__ == "__main__":
 
             # Loop over files to find a suitable calibration file
             for fname in fnames:
-                # Was this file already tried?
-                if not os.path.exists(os.path.join(args.file_dir, f"{fname}.cat")):
-                    # Generate star catalog
-                    scat = calibration.generate_star_catalog(fname)
+                # Generate star catalog
+                scat = calibration.generate_star_catalog(fname)
 
-                    # Solve
-                    if scat.nstars > nstarsmin:
-                        print(colored(f"Computing astrometric calibration for {fname}", "yellow"))
-                        wref, tref = calibration.plate_solve(fname, cfg, calfname)
-                        if wref is not None:
-                            solved = True
+                # Solve
+                if scat.nstars > nstarsmin:
+                    print(colored(f"Computing astrometric calibration for {fname}", "yellow"))
+                    wref, tref = calibration.plate_solve(fname, cfg, calfname)
+                    if wref is not None:
+                        solved = True
 
-                    # Break when solved
-                    if solved:
-                        break
+                # Break when solved
+                if solved:
+                    break
         else:
             # test.fits exists, so calibration has been solved
             solved = True
@@ -289,10 +280,30 @@ if __name__ == "__main__":
             # Read calibration
             wref, tref = calibration.read_calibration(calfname)
 
-        # Exit if plate solving failed
-        if not solved:
-            print("Plate solving failed, exiting...")
+        # Break when solved
+        if solved:
+            print("Calibration succeeded!")
+            break
+            
+        try:
+            print("File queue empty, waiting for new files...\r", end = "")
+            time.sleep(10)
+        except KeyboardInterrupt:
             sys.exit()
+
+    # Get number of CPUs for multiprocessing
+    if cfg.has_option("LineDetection", "cpu_count"):
+        cpu_count = cfg.getint("LineDetection", "cpu_count")
+    else:
+        cpu_count = mp.cpu_count()
+    print(f"Processing with {cpu_count} threads")
+        
+    # Processing loop
+    while True:
+        # Get unprocessed files
+        fitsfnames = sorted(glob.glob(os.path.join(args.file_dir, "2*.fits")))
+        froots = [os.path.splitext(fitsname)[0] for fitsname in fitsfnames]
+        fnames = [f"{froot}.fits" for froot in froots if not os.path.exists(f"{froot}_0.png")]
 
         # Process files
         p = mp.Pool(processes=cpu_count)
