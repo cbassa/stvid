@@ -217,6 +217,9 @@ if __name__ == "__main__":
                              metavar="DIR",
                              dest="file_dir",
                              default=".")
+    conf_parser.add_argument("-b",
+                             "--batch",
+                             help="Batch process observations, exit when done.",
     conf_parser.add_argument("-r",
                              "--reprocess",
                              help="Remove processed files and start from scratch.",
@@ -326,6 +329,8 @@ if __name__ == "__main__":
 
         # Sleep
         try:
+            if(args.batch):
+                sys.exit()
             print("File queue empty, waiting for new files...\r", end = "")
             time.sleep(10)
         except KeyboardInterrupt:
