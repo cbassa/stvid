@@ -3,7 +3,7 @@ import os
 import sys
 import glob
 import time
-import yaml
+import json
 import datetime
 
 import argparse
@@ -106,7 +106,15 @@ def process_loop(fname):
                    "latitude": ff.lat,
                    "longitude": ff.lon,
                    "height": ff.height,
-                   "observer": ff.observer}
+                   "observer": ff.observer,
+                   "start": ff.nfd,
+                   "exptime": ff.texp,
+                   "ra": ff.ra0,
+                   "dec": ff.dec0,
+                   "sx": ff.sx,
+                   "sy": ff.sy,
+                   "wx": ff.wx,
+                   "wy": ff.wy}
     
     # Loop over tracks
     ident_dicts = []
@@ -148,8 +156,8 @@ def process_loop(fname):
                                   "dec": float(mt.dec),
                                   "drxdt": float(mt.drxdt),
                                   "drydt": float(mt.drydt)} for mt in ms]
-        ident_dict["measurement"] = single_measurement
-        ident_dict["iod_line"] = iod_line
+#        ident_dict["measurement"] = single_measurement
+#        ident_dict["iod_line"] = iod_line
         ident_dict["measurements"] = multiple_measurements
         ident_dict["iod_lines"] = [line for line in iod_lines]
         ident_dicts.append(ident_dict)
@@ -162,8 +170,8 @@ def process_loop(fname):
     if ident_dicts is not []:
         output_dict["satellites"] = ident_dicts
 
-        with open(f"{ff.froot}_data.yaml", "w") as fp:
-            yaml.dump(output_dict, fp, sort_keys=False)
+        with open(f"{ff.froot}_data.json", "w") as fp:
+            json.dump(output_dict, fp)
         
     # Write observations
     screenoutput_idents = []

@@ -373,8 +373,8 @@ class FourFrame:
             self.ctype = [header["CTYPE1"], header["CTYPE2"]]
             self.cunit = [header["CUNIT1"], header["CUNIT2"]]
             self.crres = np.array([header["CRRES1"], header["CRRES2"]])
-            self.ra0 = self.crval[0]
-            self.dec0 = self.crval[1]
+            self.ra0 = float(self.crval[0])
+            self.dec0 = float(self.crval[1])
 
             # Check for sidereal tracking
             try:
@@ -385,10 +385,10 @@ class FourFrame:
             hdu.close()
 
         # Compute image properties
-        self.sx = np.sqrt(self.cd[0, 0] ** 2 + self.cd[1, 0] ** 2)
-        self.sy = np.sqrt(self.cd[0, 1] ** 2 + self.cd[1, 1] ** 2)
-        self.wx = self.nx * self.sx
-        self.wy = self.ny * self.sy
+        self.sx = float(np.sqrt(self.cd[0, 0] ** 2 + self.cd[1, 0] ** 2))
+        self.sy = float(np.sqrt(self.cd[0, 1] ** 2 + self.cd[1, 1] ** 2))
+        self.wx = float(self.nx * self.sx)
+        self.wy = float(self.ny * self.sy)
         self.zmaxmin = np.mean(self.zmax) - 2.0 * np.std(self.zmax)
         self.zmaxmax = np.mean(self.zmax) + 6.0 * np.std(self.zmax)
         self.zavgmin = np.mean(self.zavg) - 2.0 * np.std(self.zavg)
