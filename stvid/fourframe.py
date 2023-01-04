@@ -323,11 +323,20 @@ class FourFrame:
             # Read FITS file
             hdu = fits.open(fname)
 
-            # Read header
+            # Read header and data
             header = hdu[0].header
-
+            data = hdu[0].data
+            
+            # Mask specified rows/columns
+            if cfg.has_option("LineDetection", "rows_to_mask"):
+                idx = json.loads(cfg.get("LineDetection", "rows_to_mask"))
+                data[:, idx, :] = 0
+            if cfg.has_option("LineDetection", "columns_to_mask"):
+                idx = json.loads(cfg.get("LineDetection", "columns_to_mask"))
+                data[:, :, idx] = 0
+            
             # Read image planes
-            self.zavg, self.zstd, self.zmax, self.znum = hdu[0].data
+            self.zavg, self.zstd, self.zmax, self.znum = data
 
             # Generate sigma frame
             self.zsig = (self.zmax - self.zavg) / (self.zstd + 1e-9)
@@ -383,7 +392,7 @@ class FourFrame:
                 self.tracked = False
 
             hdu.close()
-
+            
         # Compute image properties
         self.sx = float(np.sqrt(self.cd[0, 0] ** 2 + self.cd[1, 0] ** 2))
         self.sy = float(np.sqrt(self.cd[0, 1] ** 2 + self.cd[1, 1] ** 2))
