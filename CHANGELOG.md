@@ -39,6 +39,8 @@
 - Fixed bug in processing, overhauled identification strategy (Commit 00fe0f4)
 - Added correct COSPAR for unknowns which was hard-coded to `` before (Commit 4f4eca8)
 - Improved process.py: Write FITS to temp first, then rename (Commit 6f8545a)
+- Added multithreaded processing (Commit 4254025); New configuration field:
+  `LineDetection.cpu_count`
 
 ## dev-20221122
 ### Breaking Changes / Porting Guide
