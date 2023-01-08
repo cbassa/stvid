@@ -139,11 +139,11 @@ def process_loop(fname):
 
         # Measure single position
         m = t.measure_single_position(ff)
-        iod_line = m.to_iod_line(ff, ident)
+        iod_line = m.to_iod_line(ff, ident.satno, ident.cospar)
 
         # Measure multiple position
         ms = t.measure_multiple_positions(ff)
-        iod_lines = [mt.to_iod_line(ff, ident) for mt in ms]
+        iod_lines = [mt.to_iod_line(ff, ident.satno, ident.cospar) for mt in ms]
 
         # Add to dictionary
         single_measurement = {"time": m.t.isot,
@@ -165,6 +165,12 @@ def process_loop(fname):
         # Store observation
         obs.append(Observation(ident.satno, ident.catalogname, iod_line, iod_lines))
 
+    # Check predictions in frame
+    for p in predictions:
+        if (p.in_frame(ff)) & (p.tlefile=="classfd.tle") & (p.is_identified==False):
+            print(p.satno, p.cospar, p.tlefile)
+            m = ff.find_from_track_and_stack(p, cfg)
+            print(m.to_iod_line(ff, p.satno, p.cospar))
         
     # Store output
     if ident_dicts is not []:

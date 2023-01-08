@@ -6,6 +6,8 @@ import subprocess
 
 import numpy as np
 from scipy import ndimage
+from scipy import optimize
+
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 
@@ -128,15 +130,15 @@ class Measurement:
         self.drydt = drydt
         self.mag = mag
 
-    def to_iod_line(self, ff, ident):
+    def to_iod_line(self, ff, satno, cospar):
         pstr = format_position(self.ra, self.dec)
         nfd = self.t.isot
         tstr = (
             nfd.replace("-", "").replace("T", "").replace(":", "").replace(".", "")
         )
         iod_line = "%05d %-9s %04d G %s 17 25 %s 37 S" % (
-            ident.satno,
-            ident.cospar,
+            satno,
+            cospar,
             ff.site_id,
             tstr,
             pstr,
@@ -605,6 +607,99 @@ class FourFrame:
 
         return tracks
 
+    def track_and_stack(self, dxdt, dydt, tref):
+        # Fill frame
+        ztrk = np.zeros_like(self.zavg)
+        for i in range(self.nz):
+            dt = self.dt[i] - tref
+            dx = int(np.round(dxdt * dt))
+            dy = int(np.round(dydt * dt))
+
+            # Skip if shift larger than image
+            if np.abs(dx) >= self.nx:
+                continue
+            if np.abs(dy) >= self.ny:
+                continue
+
+            # Extract range
+            if dx >= 0:
+                i1min, i1max = dx, self.nx - 1
+                i2min, i2max = 0, self.nx - dx - 1
+            else:
+                i1min, i1max = 0, self.nx + dx - 1
+                i2min, i2max = -dx, self.nx - 1
+            if dy >= 0:
+                j1min, j1max = dy, self.ny - 1
+                j2min, j2max = 0, self.ny - dy - 1
+            else:
+                j1min, j1max = 0, self.ny + dy - 1
+                j2min, j2max = -dy, self.ny - 1
+            zsel = np.where(self.znum == i, self.zmax, 0.0)
+            ztrk[j2min:j2max, i2min:i2max] += zsel[j1min:j1max, i1min:i1max]
+
+        return ztrk
+
+    
+    def find_from_track_and_stack(self, p, cfg):
+        # Get pixel velocities
+        t0, x0, y0, dxdt, dydt = position_and_velocity(p.t, p.x, p.y)
+
+        # Find mid time/point in field-of-view
+        t = np.linspace(0, self.texp, 256)
+        x, y = x0 + dxdt * (t - t0), y0 + dydt * (t - t0)
+        c = (x >= 0) & (x < self.nx) & (y >= 0) & (y < self.ny)
+
+        # Skip if no points selected
+        if np.sum(c) == 0:
+            return None
+
+        # Compute track
+        tmid = np.mean(t[c])
+        ztrk = ndimage.gaussian_filter(self.track_and_stack(dxdt, dydt, tmid), 1.0)
+
+        # Select region
+        w = 100
+        xmin, xmax = max(0, int(x0 - w)), min(self.nx - 1, int(x0 + w))
+        ymin, ymax = max(0, int(y0 - w)), min(self.ny - 1, int(y0 + w))
+
+        # Find peak
+        xo, yo, w, sigma = peakfind(ztrk[ymin:ymax, xmin:xmax])
+        xo += xmin
+        yo += ymin
+
+        # Return if not significant
+        if sigma < cfg.getfloat("LineDetection", "min_sigma"):
+            return None
+
+        # Predicted position
+        xp = x0 + dxdt * (tmid - t0)
+        yp = y0 + dydt * (tmid - t0)
+
+        # Pixel scale
+        scale = 0.5 * (self.sx + self.sy)
+        drdt = np.sqrt(dxdt**2 + dydt**2)
+        
+        # Limits
+        cmax = cfg.getfloat("Identification", "max_off_track_offset_deg") / scale
+        amax = cfg.getfloat("Identification", "max_along_track_offset_s") * drdt
+
+        # Return if not inside selection
+        if not inside_selection(xo - xp, yo - yp, dxdt, dydt, amax, cmax):
+            return None
+
+        # Format measurement
+        mjd = self.mjd + tmid / 86400
+        tobs = Time(mjd, format="mjd", scale="utc")
+        pobs = SkyCoord.from_pixel(xo, yo, self.w, 0)
+
+        # Correct for motion of stationary camera
+        if self.tracked == False:
+            tmid = Time(self.mjd, format="mjd") + 0.5 * self.texp * u.s
+            pobs = correct_stationary_coordinates(tmid, tobs, pobs, direction=-1)
+        
+        return Measurement(tobs, pobs.ra.degree, pobs.dec.degree, None, None, None)
+        
+
     def generate_star_catalog(self):
         # Source-extractor configuration file
         path = os.path.normpath(os.path.join(os.path.dirname(__file__),
@@ -906,61 +1001,6 @@ class FourFrame:
 
         return
 
-    def find_from_track_and_stack(self, p):
-        # Get pixel velocities
-        tmid, x0, y0, dxdt, dydt = position_and_velocity(p.t, p.x, p.y)
-
-        # Pixel offsets
-
-        # Fill frame
-        ztrk = np.zeros_like(self.zavg)
-        for i in range(self.nz):
-            dt = self.dt[i] - tmid
-            dx = int(np.round(dxdt * dt))
-            dy = int(np.round(dydt * dt))
-
-            # Skip if shift larger than image
-            if np.abs(dx) >= self.nx:
-                continue
-            if np.abs(dy) >= self.ny:
-                continue
-
-            # Extract range
-            if dx >= 0:
-                i1min, i1max = dx, self.nx - 1
-                i2min, i2max = 0, self.nx - dx - 1
-            else:
-                i1min, i1max = 0, self.nx + dx - 1
-                i2min, i2max = -dx, self.nx - 1
-            if dy >= 0:
-                j1min, j1max = dy, self.ny - 1
-                j2min, j2max = 0, self.ny - dy - 1
-            else:
-                j1min, j1max = 0, self.ny + dy - 1
-                j2min, j2max = -dy, self.ny - 1
-            zsel = np.where(self.znum == i, self.zmax, 0.0)
-            ztrk[j2min:j2max, i2min:i2max] += zsel[j1min:j1max, i1min:i1max]
-
-        # Select region
-        w = 100
-        xmin, xmax = max(0, int(x0 - w)), min(self.nx - 1, int(x0 + w))
-        ymin, ymax = max(0, int(y0 - w)), min(self.ny - 1, int(y0 + w))
-
-        # Find maximum
-        img = ztrk[ymin:ymax, xmin:xmax]
-        ny, nx = img.shape
-        idx = np.argmax(img)
-        y = int(idx / nx)
-        x = idx - y * nx
-        zmax, zmed, zstd = np.max(img), np.median(img), np.std(img)
-        sigma = (zmax - zmed) / zstd
-        print(x0, y0, sigma)
-        print(x + xmin, y + ymin)
-        fig, ax = plt.subplots()
-        ax.imshow(img, vmin=0, vmax=255)
-        ax.plot(x0 - xmin, y0 - ymin, "r+")
-        ax.plot(x, y, "rx")
-        plt.show()
 
 def decode_line(line):
     p = line.split(" ")
@@ -995,27 +1035,16 @@ def format_position(ra, de):
 
 
 # Inside selection
-def inside_selection_area(tmin, tmax, x0, y0, dxdt, dydt, x, y, dt=2.0, w=10.0):
-    dx, dy = x - x0, y - y0
-    ang = -np.arctan2(dy, dx)
-    r = np.sqrt(dx**2 + dy**2)
-    drdt = r / (tmax - tmin)
+def inside_selection(dx, dy, dxdt, dydt, amax, cmax):
+    ang = -np.arctan2(dydt, dxdt)
     sa, ca = np.sin(ang), np.cos(ang)
-    tmid = 0.5 * (tmin + tmax)
+    a = ca * dx - sa * dy
+    c = sa * dx + ca * dy
 
-    xmid = x0 + dxdt * tmid
-    ymid = y0 + dydt * tmid
+    csel = (np.abs(a) <= amax) & (np.abs(c) <= cmax)
 
-    dx, dy = x0 - xmid, y0 - ymid
-    rm = ca * dx - sa * dy
-    wm = sa * dx + ca * dy
-    dtm = rm / drdt
-
-    if (np.abs(wm) < w) & (np.abs(dtm) < dt):
-        return True
-    else:
-        return False
-
+    return csel
+    
 
 # Angular offsets from spherical angles
 def deproject(l0, b0, l, b):
@@ -1179,3 +1208,47 @@ def cross_along_track_residual(rx, ry, drxdt, drydt, rx0, ry0):
     rmin = (drxdt * (ry - ry0) - drydt * (rx - rx0)) / drdt
 
     return tmin, rmin
+
+
+# Gaussian model
+def model(a, nx, ny):
+    x, y = np.meshgrid(np.arange(nx), np.arange(ny))
+    dx, dy = (x - a[0]) / a[2], (y - a[1]) / a[2]
+    arg = -0.5 * (dx**2 + dy**2)
+    return a[3] * np.exp(arg) + a[4]
+
+
+# Residual function
+def residual(a, img):
+    ny, nx = img.shape
+    mod = model(a, nx, ny)
+    return (img - mod).ravel()
+
+
+# Find peak
+def peakfind(img, w=1.0):
+    # Find approximate location
+    ny, nx = img.shape
+    i = np.argmax(img)
+    y0 = int(i / nx)
+    x0 = i - y0 * nx
+
+    # Image properties
+    imgavg = np.mean(img)
+    imgstd = np.std(img)
+
+    # Estimate
+    a = np.array([x0, y0, w, img[y0, x0] - imgavg, imgavg])
+    q, cov_q, infodict, mesg, ier = optimize.leastsq(residual,
+                                                     a,
+                                                     args=(img),
+                                                     full_output=1)
+
+    # Extract
+    xc, yc, w, amp = q[0], q[1], q[2], q[3]
+
+    # Significance
+    sigma = (amp - imgavg) / (imgstd + 1e-9)
+
+    return xc, yc, w, sigma
+
