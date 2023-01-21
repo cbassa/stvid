@@ -75,7 +75,7 @@ if __name__ == '__main__':
 
     copyfile(classfd_tle, os.path.join(tle_path, time + "_classfd.txt"))
 
-    print("Get int TLEs")
+    print("Get integrated TLEs")
     resp = urlopen("http://www.prismnet.com/~mmccants/tles/inttles.zip")
     zipfile = ZipFile(BytesIO(resp.read()))
     zipfile.extractall(path=tle_path)
@@ -92,6 +92,24 @@ if __name__ == '__main__':
 
     copyfile(int_tle, os.path.join(tle_path, time + "_inttles.txt"))
 
+    print("Get supplemental Starlink TLEs")
+    resp = urlopen("https://celestrak.org/NORAD/elements/supplemental/sup-gp.php?FILE=starlink&FORMAT=tle")
+    starlink_tle = os.path.join(tle_path, "starlink.tle")
+    lines = resp.read().decode("utf-8")
+    with open(starlink_tle, "w") as fp:
+        fp.write(lines)
+
+    copyfile(starlink_tle, os.path.join(tle_path, time + "_starlink.txt"))
+        
+    print("Get supplemental OneWeb TLEs")
+    resp = urlopen("https://celestrak.org/NORAD/elements/supplemental/sup-gp.php?FILE=oneweb&FORMAT=tle")
+    oneweb_tle = os.path.join(tle_path, "oneweb.tle")
+    lines = resp.read().decode("utf-8")
+    with open(oneweb_tle, "w") as fp:
+        fp.write(lines)
+ 
+    copyfile(oneweb_tle, os.path.join(tle_path, time + "_oneweb.txt"))
+    
     print("Create bulk catalog")
     catalogs = [catalog_tle, classfd_tle]
     with open(os.path.join(tle_path, "bulk.tle"), "w") as outfile:
