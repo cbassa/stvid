@@ -184,12 +184,12 @@ def process_loop(fname):
         with open(outfname, "w") as fp:
             for iod_line in o.iod_lines:
                 fp.write(f"{iod_line}\n")
-        if o.catalogname == "catalog":
-            color = "grey"
-        elif o.catalogname == "classfd":
+        if o.catalogname == "classfd":
             color = "blue"
         elif o.catalogname == "unid":
             color = "magenta"
+        else:
+            color = "grey"
         screenoutput_idents.append(colored(o.iod_line, color))
 
     # Generate plots
@@ -225,6 +225,14 @@ if __name__ == "__main__":
                              "--reprocess",
                              help="Remove processed files and start from scratch.",
                              action="store_true")
+    conf_parser.add_argument("-C",
+                             "--cpu_count",
+                             help="Number of threads to use (overrides value from configuration).",
+                             type=int, default=None)
+    conf_parser.add_argument("-w",
+                             "--wait",
+                             help="Delay before processing new files (seconds, default: 10).",
+                             type=int, default=10)
     args = conf_parser.parse_args()
     
     # Read configuration file
@@ -304,15 +312,18 @@ if __name__ == "__main__":
             if(args.batch):
                 sys.exit()
             print("File queue empty, waiting for new files...\r", end = "")
-            time.sleep(10)
+            time.sleep(args.wait)
         except KeyboardInterrupt:
             sys.exit()
 
     # Get number of CPUs for multiprocessing
-    if cfg.has_option("LineDetection", "cpu_count"):
-        cpu_count = cfg.getint("LineDetection", "cpu_count")
+    if not args.cpu_count:
+        if cfg.has_option("LineDetection", "cpu_count"):
+            cpu_count = cfg.getint("LineDetection", "cpu_count")
+        else:
+            cpu_count = mp.cpu_count()
     else:
-        cpu_count = mp.cpu_count()
+        cpu_count = args.cpu_count
     print(f"Processing with {cpu_count} threads")
         
     # Processing loop
@@ -347,6 +358,6 @@ if __name__ == "__main__":
             if(args.batch):
                 sys.exit()
             print("File queue empty, waiting for new files...\r", end = "")
-            time.sleep(10)
+            time.sleep(args.wait)
         except KeyboardInterrupt:
             sys.exit()
