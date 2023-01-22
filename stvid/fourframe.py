@@ -597,8 +597,7 @@ class FourFrame:
                 # Number of selected points and unique times
                 nsel = np.sum(c)
                 nt = len(np.unique(t[c]))
-
-                if (nsel > 0) & (nt > 1):
+                if (nsel > ntrkmin) & (nt > 1):
                     tracks.append(
                         Track(t[c], x[c], y[c], zmax[c], ra[c], dec[c], rx[c], ry[c])
                     )
