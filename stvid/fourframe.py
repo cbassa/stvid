@@ -493,7 +493,7 @@ class FourFrame:
                     if cospar[2] != " ":
                         cospar = f"{cospar[0:2]} {cospar[2:]}"
                 p = Prediction(
-                    satno,
+                    int(satno),
                     cospar,
                     np.asarray(d["mjd"])[c],
                     np.asarray(d["ra"])[c],
@@ -655,7 +655,9 @@ class FourFrame:
 
         # Compute track
         tmid = np.mean(t[c])
-        ztrk = ndimage.gaussian_filter(self.track_and_stack(dxdt, dydt, tmid), 1.0)
+        self.ztrk = ndimage.gaussian_filter(self.track_and_stack(dxdt, dydt, tmid), 1.0)
+        self.ztrkmin = np.mean(self.ztrk) - 2.0 * np.std(self.ztrk)
+        self.ztrkmax = np.mean(self.ztrk) + 8.0 * np.std(self.ztrk)
 
         # Select region
         w = 100
@@ -663,7 +665,7 @@ class FourFrame:
         ymin, ymax = max(0, int(y0 - w)), min(self.ny - 1, int(y0 + w))
 
         # Find peak
-        xo, yo, w, sigma = peakfind(ztrk[ymin:ymax, xmin:xmax])
+        xo, yo, w, sigma = peakfind(self.ztrk[ymin:ymax, xmin:xmax])
         xo += xmin
         yo += ymin
 
@@ -696,7 +698,7 @@ class FourFrame:
         if self.tracked == False:
             tmid = Time(self.mjd, format="mjd") + 0.5 * self.texp * u.s
             pobs = correct_stationary_coordinates(tmid, tobs, pobs, direction=-1)
-        
+
         return Measurement(tobs, pobs.ra.degree, pobs.dec.degree, None, None, None)
         
 
@@ -839,15 +841,23 @@ class FourFrame:
 
     
     def diagnostic_plot(self, predictions, track, obs, cfg):
+        # Set type
+        if track is None and obs is not None:
+            plottype = "track_and_stack"
+        elif track is not None and obs is not None:
+            plottype = "hough"
+        else:
+            plottype = "overview"
+        
         # Get info
-        if track is not None:
+        if plottype == "overview":
+            iod_line = ""
+            outfname = f"{self.froot}_0.png"
+        else:
             iod_line = obs.iod_line
             satno = obs.satno
             catalogname = obs.catalogname
             outfname = f"{self.froot}_{satno:05d}_{catalogname}.png"
-        else:
-            iod_line = ""
-            outfname = f"{self.froot}_0.png"
 
         # Configuration parameters
         color_detected = cfg.get("LineDetection", "color")
@@ -878,14 +888,24 @@ class FourFrame:
             loc="left", color=color,
         )
 
-        ax.imshow(
-            self.zmax,
-            origin="lower",
-            interpolation="none",
-            vmin=self.zmaxmin,
-            vmax=self.zmaxmax,
-            cmap=cmap,
-        )
+        if plottype == "track_and_stack":
+            ax.imshow(
+                self.ztrk,
+                origin="lower",
+                interpolation="none",
+                vmin=self.ztrkmin,
+                vmax=self.ztrkmax,
+                cmap=cmap,
+            )
+        else:
+            ax.imshow(
+                self.zmax,
+                origin="lower",
+                interpolation="none",
+                vmin=self.zmaxmin,
+                vmax=self.zmaxmax,
+                cmap=cmap,
+            )
 
         for p in predictions:
             self.plot_prediction(p, ax, tlefiles, colors, dt=0)

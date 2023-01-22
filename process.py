@@ -95,6 +95,9 @@ def process_loop(fname):
     # Generate predictions
     predictions = ff.generate_satellite_predictions(cfg)
 
+    # Generate overall diagnostic plot
+    ff.diagnostic_plot(predictions, None, None, cfg)
+    
     # Find tracks
     if ff.is_calibrated():
         tracks = ff.find_tracks_by_hough3d(cfg)
@@ -165,17 +168,55 @@ def process_loop(fname):
         # Store observation
         obs.append(Observation(ident.satno, ident.catalogname, iod_line, iod_lines))
 
+    # Create diagnostic plots
+    for track, o in zip(tracks, obs):
+        ff.diagnostic_plot(predictions, track, o, cfg)
+        
     # Check predictions in frame
     for p in predictions:
         if (p.in_frame(ff)) & (p.tlefile=="classfd.tle") & (p.is_identified==False):
-            print(p.satno, p.cospar, p.tlefile)
+            # Track and stack
             m = ff.find_from_track_and_stack(p, cfg)
-            print(m.to_iod_line(ff, p.satno, p.cospar))
-        
+
+            # Skip if no detection
+            if m is None:
+                continue
+
+            # Format IOD line
+            iod_line = m.to_iod_line(ff, p.satno, p.cospar)
+
+            # Find catalog name
+            for abbrev, tfile in zip(abbrevs, tlefiles):
+                if tfile == p.tlefile:
+                    catalogname = abbrev
+            
+            # Add to dict
+            measurement = {"time": m.t.isot,
+                           "ra": float(m.ra),
+                           "dec": float(m.dec)}
+
+            # Identification dictionary
+            ident_dict = {"satno": p.satno,
+                          "cospar": p.cospar,
+                          "tlefile": p.tlefile,
+                          "catalogname": catalogname}
+            ident_dict["measurements"] = [measurement]
+            ident_dict["iod_lines"] = [iod_line]
+            ident_dicts.append(ident_dict)
+            
+            # Store observation
+            o = Observation(p.satno, catalogname, iod_line, [iod_line])
+            obs.append(o)
+
+            # Create diagnostic plot
+            ff.diagnostic_plot(predictions, None, o, cfg)
+
     # Store output
     if ident_dicts is not []:
         output_dict["satellites"] = ident_dicts
 
+        print(output_dict)
+        
         with open(f"{ff.froot}_data.json", "w") as fp:
             json.dump(output_dict, fp)
         
@@ -197,11 +238,6 @@ def process_loop(fname):
         elif o.catalogname == "unid":
             color = "magenta"
         screenoutput_idents.append(colored(o.iod_line, color))
-
-    # Generate plots
-    ff.diagnostic_plot(predictions, None, None, cfg)
-    for track, o in zip(tracks, obs):
-        ff.diagnostic_plot(predictions, track, o, cfg)
 
     return (screenoutput, screenoutput_idents)
 
