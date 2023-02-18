@@ -15,10 +15,10 @@ STVID provides the following features:
 
 ## Table of Contents
 
-1. [Requirements](##requirements)
-1. [Installation](##installation)
-1. [Configuration](##configuration)
-1. [Operation](##operation)
+1. [Requirements](#requirements)
+1. [Installation](#installation)
+1. [Configuration](#configuration)
+1. [Operation](#operation)
 
 ## Installation
 
