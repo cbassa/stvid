@@ -6,6 +6,7 @@ STVID (satellite tools for video) is a set of applications for observing the nig
 ![Example setup and results](img/example_setup.jpg  "Example setup and results")
 
 STVID provides the following features:
+
 -  Automatic start and end of data acquisition
 - Compression of raw video frames using the maximum temporal pixel method ([Gural & Segon 2009](https://ui.adsabs.harvard.edu/abs/2009JIMO...37...28G/abstract))
 - Detection of satellites in position and time using the 3D Hough transform ([Dalitz et al. 2017](https://www.ipol.im/pub/art/2017/208/))
@@ -19,6 +20,18 @@ STVID provides the following features:
 1. [Installation](#installation)
 1. [Configuration](#configuration)
 1. [Operation](#operation)
+
+## Requirements
+
+- A computer desktop or single board computer like a Raspberry PI) with a linux operating system for running STVID
+- An internet connection to allow time synchronization using the Network Time Protocol (NTP)
+- An analog video or digital CMOS camera. Currently supported cameras are:
+	- Any camera working with OpenCV
+	- ZWO ASI cameras
+	- Raspberry Pi HQ camera
+- A fast photographic lens, F/1.8 or faster, capable of delivering a pixel scale of 30 to 60 arsec/pix
+- (optional) A weather proof CCTV housing
+
 
 ## Installation
 
