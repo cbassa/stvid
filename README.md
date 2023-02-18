@@ -20,7 +20,7 @@ STVID provides the following features:
 1. [Installation](#installation)
 1. [Configuration](#configuration)
 1. [Operation](#operation)
-1. [Supported hardware](#supported)
+1. [Supported hardware](#supported-hardware)
 
 ## Requirements
 
@@ -37,6 +37,8 @@ STVID provides the following features:
 ## Installation
 
 To install STVID, several dependencies need to be met. The following sections will detail the installation. The system wide installation commands provided here are specific for the Ubuntu 22.04 operating system, but similar software packages will be available for other operating systems.
+
+<details>
 
 ### Dependencies
 
@@ -138,7 +140,11 @@ cd $HOME/software/stvid                                        # Goto directory
 pip install -r requirements.txt                                # Install python requirements
 ```
 
+</details>	
+	
 ## Configuration
+
+<details>
 
 STVID is configured through a configuration file. A boiler plate configuration file is included as `configuration.ini-dist`. Copy this file to `configuration.ini` using the following command
 
@@ -167,12 +173,18 @@ This section describes the TLE catalog that STVID downloads and how they are use
 #### ZWO ASI cameras
 For ZWO ASI cameras you need to specify the location of the ZWO ASI SDK libraries. For `x64` operating systems this is the `lib/x64/libASICamera2.so` shared library in the directory tree where you installed the SDK.
 
+</details>	
+	
 ## Operation
 TBD
 
 ## Supported hardware
+TBD
 
 ## Todo
+
+<details>
+
 Features to be implemented.
 
 #### High priority
@@ -198,6 +210,8 @@ Features to be implemented.
 * Add video device to udev rules (add `SUBSYSTEM=="video1", GROUP="video", MODE="0660"` in `/etc/udev/rules.d/10-webcam.rules`).
 * Create start up script in `/etc/init.d`. Call capture script as user with `su <username> -c "acquire.py"`.
 
+</details>	
+	
 ## License
 &copy; 2018-2023 Cees Bassa
 
