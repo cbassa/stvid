@@ -145,19 +145,32 @@ STVID is configured through a configuration file. A boiler plate configuration f
 ```bash
 cp configuration.ini-dist configuration.ini          # Copy configuration file
 ```
-### Observer section
 
-- In the `[Observer]` section, provide your COSPAR number if you have one. If not, use a number between 9900 and 9999.
-- Provide your name
-- Provide your site parameters in the WGS84 system, latitude in degrees, longitude in degrees, height in meters. Use at least 4 digits after the decmial in latitude and longitude
+Most parameters in `configuration.ini` do not need to be changed, except for the following:
 
+#### Observer
+- `cospar`: A COSPAR number if you have one, use a number between 9900 and 9999 otherwise.
+- `name`, `latitude`, `longitude`, `height`: Your name and location (latitude, longitude, height) in the WGS84 coordinate frame.
 
-* Copy the `configuration.ini-dist` file to `configuration.ini`
-* Edit `configuration.ini` with your preferred settings
-* Make sure ST_DATADIR is set as an env variable pointing to the /data folder of sattools
+#### Setup
+- `camera_type`: Your camera selection (`ASI` for ZWO ASI cameras, `CV2` for opencv cameras, `PI` for the Raspberry Pi HQ camera).
+- `observations_path`: Directory where you want to store the observations.
 
-## Running
+#### Credentials
+It is highly recommended to use the catalog of two-line elements (TLEs) from [space-track.org](https://www.space-track.org). Use the credentials of your account to download TLEs.
+
+#### Elements
+This section describes the TLE catalog that STVID downloads and how they are used and plotted.
+
+- `tlepath`: Directory where you want to store the TLE catalogs
+
+#### ZWO ASI cameras
+For ZWO ASI cameras you need to specify the location of the ZWO ASI SDK libraries. For `x64` operating systems this is the `lib/x64/libASICamera2.so` shared library in the directory tree where you installed the SDK.
+
+## Operation
 TBD
+
+## Supported hardware
 
 ## Todo
 Features to be implemented.
@@ -186,6 +199,6 @@ Features to be implemented.
 * Create start up script in `/etc/init.d`. Call capture script as user with `su <username> -c "acquire.py"`.
 
 ## License
-&copy; 2018-2022 Cees Bassa
+&copy; 2018-2023 Cees Bassa
 
 Licensed under the [GPLv3](LICENSE).
