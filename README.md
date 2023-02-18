@@ -20,6 +20,7 @@ STVID provides the following features:
 1. [Installation](#installation)
 1. [Configuration](#configuration)
 1. [Operation](#operation)
+1. [Supported hardware](#supported hardware)
 
 ## Requirements
 
@@ -57,7 +58,7 @@ sudo cp hough3dlines /usr/local/bin/                     # Install executable
 make test                                                # Test installation (optional)
 ```
 
-### #satpredict
+#### satpredict
 
 Predictions of satellite positions, using two-line elements (TLEs), are computed using [satpredict](https://github.com/cbassa/satpredict).
 
@@ -70,7 +71,7 @@ make                                                     # Compile application
 sudo make install                                        # Install executable
 ```
 
-### #source-extractor
+#### source-extractor
 
 Stars are detected, and their positions and instrumental fluxes measured, using the `source-extractor` application. Depending on the operating system, this application can be known as the `source-extractor`, `sextractor` or `sex` executables. STVID expects this to be present in the path as `sextractor`, so the executable may need to be copied to the `sextractor` name. On Ubuntu 22.04 it is known as `source-extractor`.
 
@@ -79,7 +80,7 @@ sudo apt install source-extractor                              # Install binary
 sudo cp /usr/bin/source-extractor /usr/local/bin/sextractor    # Copy executable
 ```
 
-### #astrometry.net
+#### astrometry.net
 
 The initial astrometric calibration of the STVID observations is performed with [astrometry.net](http://astrometry.net/). This application can be installed with the following command.
 
@@ -125,7 +126,7 @@ $HOME/ASIStudio_V1.8.run                                       # Execute install
 ```
 The ASIStudio installer will ask where to install the applications and to accept their license. Once installed, run the `ASICap` application with your ZWO ASI camera attached. The application will ask to you to provide the `sudo` credentials to install the `udev` rules setting the necessary user permissions. Once those are set, you should be able to operate your camera from within `ASICap`.
 
-## #STVID installation
+### STVID installation
 
 With the dependencies installed, we can install STVID using the following commands.
 
@@ -137,10 +138,20 @@ cd $HOME/software/stvid                                        # Goto directory
 pip install -r requirements.txt                                # Install python requirements
 ```
 
-
-
-
 ## Configuration
+
+STVID is configured through a configuration file. A boiler plate configuration file is included as `configuration.ini-dist`. Copy this file to `configuration.ini` using the following command
+
+```bash
+cp configuration.ini-dist configuration.ini          # Copy configuration file
+```
+### Observer section
+
+- In the `[Observer]` section, provide your COSPAR number if you have one. If not, use a number between 9900 and 9999.
+- Provide your name
+- Provide your site parameters in the WGS84 system, latitude in degrees, longitude in degrees, height in meters. Use at least 4 digits after the decmial in latitude and longitude
+
+
 * Copy the `configuration.ini-dist` file to `configuration.ini`
 * Edit `configuration.ini` with your preferred settings
 * Make sure ST_DATADIR is set as an env variable pointing to the /data folder of sattools
