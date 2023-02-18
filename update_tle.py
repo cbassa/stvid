@@ -30,8 +30,11 @@ if __name__ == '__main__':
     else:
         cfg.read("configuration.ini")
 
+    # Create TLE locatio
     tle_path = cfg.get("Elements", "tlepath")
-
+    if not os.path.exists(tle_path):
+        os.makedirs(tle_path)
+    
     now = datetime.datetime.utcnow()
     time = now.strftime("%Y%m%d_%H%M%S")
 
