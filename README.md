@@ -37,14 +37,13 @@ STVID provides the following features:
 ## Installation
 <details>
 
-	To install STVID, several dependencies need to be met. The following sections will detail the installation. The system wide installation commands provided here are specific for the Ubuntu 22.04 operating system, but similar software packages will be available for other operating systems.
+To install STVID, several dependencies need to be met. The following sections will detail the installation. The system wide installation commands provided here are specific for the Ubuntu 22.04 operating system, but similar software packages will be available for other operating systems.
 
-	### Dependencies
-
-	The following assumes the dependencies are installed in `$HOME/software`. Adjust this as necessary. To create this directory, run the following command.
-	```bash
-	mkdir -p $HOME/software                                  # Create directory
-	```
+### Dependencies
+The following assumes the dependencies are installed in `$HOME/software`. Adjust this as necessary. To create this directory, run the following command.
+```bash
+mkdir -p $HOME/software                                  # Create directory
+```
 
 #### hough3dlines
 
@@ -143,6 +142,7 @@ pip install -r requirements.txt                                # Install python 
 ## Configuration
 
 <details>
+
 STVID is configured through a configuration file. A boiler plate configuration file is included as `configuration.ini-dist`. Copy this file to `configuration.ini` using the following command
 
 ```bash
