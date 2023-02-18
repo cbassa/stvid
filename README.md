@@ -20,7 +20,7 @@ STVID provides the following features:
 1. [Installation](#installation)
 1. [Configuration](#configuration)
 1. [Operation](#operation)
-1. [Supported hardware](#supported hardware)
+1. [Supported hardware](#supported)
 
 ## Requirements
 
