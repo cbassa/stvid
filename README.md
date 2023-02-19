@@ -65,7 +65,7 @@ make test                                                # Test installation (op
 Predictions of satellite positions, using two-line elements (TLEs), are computed using [satpredict](https://github.com/cbassa/satpredict).
 
 ```bash
-git apt install make                                     # Install dependencies
+sudo apt install make                                     # Install dependencies
 cd $HOME/software                                        # Goto directory
 git clone https://github.com/cbassa/satpredict.git       # Clone repository
 cd $HOME/software/satpredict                             # Goto directory
@@ -115,7 +115,7 @@ For users that will operate ZWO ASI cameras, you will need to download and insta
 
 ```bash
 cd $HOME/software                                              # Goto directory
-bzip2 -cd $HOME/ASI_linux_mac-SDK_V1.28.tar.bz2 | tar xvf -    # Extract archive
+bzip2 -cd $HOME/ASI_linux_mac_SDK_V1.28.tar.bz2 | tar xvf -    # Extract archive
 ```
 
 To operate and focus a ZWO ASI camera, it is recommended to install the ASIStudio software from ZWO ASI. This software will allow you to test the camera indepently from STVID and will help with pointing and focusing by giving you full interactive control of all camera properties. The installation of this software will also ensure that the ZWO ASI camera will get the necessary user permissions for it to operate with STVID.
