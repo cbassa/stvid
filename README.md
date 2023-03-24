@@ -177,6 +177,8 @@ For ZWO ASI cameras you need to specify the location of the ZWO ASI SDK librarie
 	
 ## Operation
 
+<details>
+
 There are three applications in STVID that work together:
 
 - `update_tle.py` to download orbital catalogs of two-line elements (TLEs).
@@ -197,7 +199,8 @@ This will download TLE catalogs from the following sources:
 1. Supplemental TLEs for Starlink satellites in `starlink.tle` from [celestrak.com](https://celestrak.org/NORAD/elements/supplemental/). These are TLEs computed from orbital ephemerides shared by the satellite operators and include predicted manouvers. These TLEs tend to be more accurate than those in `catalog.tle` which are based on observations.
 1. Supplemental TLEs for OneWeb satellites in `oneweb.tle` from [celestrak.com](https://celestrak.org/NORAD/elements/supplemental/). These are TLEs computed from orbital ephemerides shared by the satellite operators and include predicted manouvers. These TLEs tend to be more accurate than those in `catalog.tle` which are based on observations.
 	
-
+</details>
+	
 ## Supported hardware
 TBD
 
