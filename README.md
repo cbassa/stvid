@@ -22,29 +22,6 @@ STVID provides the following features:
 1. [Operation](#operation)
 1. [Supported hardware](#supported-hardware)
 
-## Operation
-
-There are three applications in STVID that work together:
-
-- `update_tle.py` to download orbital catalogs of two-line elements (TLEs).
-- `acquire.py` to capture data from your camera and store them as FITS files.
-- `process.py` to analyse the FITS files and determine satellite positions.
-
-#### Updating TLEs
-
-Assuming you have installed STVID in `$HOME/software/stvid` and your configuration is stored in `configuration.ini`, the TLE catalogs can be updated with the following command.
-```bash
-$HOME/software/stvid/update_tle.py -c $HOME/software/stvid/configuration.ini
-```
-This will download TLE catalogs from the following sources:
-
-1. The master catalog called `catalog.tle` from [https://www.space-track.org](https://www.space-track.org). This requires your space-track.org credentials to be provided in `configuration.ini`.
-1. The classified catalog `classfd.tle` from [Mike McCants](https://www.prismnet.com/~mmccants/tles/index.html). This catalog has TLEs for classified objects not present in `catalog.tle`.
-1. The integrated elements `inttles.tle` from [Mike McCants](https://www.prismnet.com/~mmccants/tles/index.html). These are numerically integrated orbits converted into TLEs for objects at high altitudes.
-1. Supplemental TLEs for Starlink satellites in `starlink.tle` from [celestrak.com](https://celestrak.org/NORAD/elements/supplemental/). These are TLEs computed from orbital ephemerides shared by the satellite operators and include predicted manouvers. These TLEs tend to be more accurate than those in `catalog.tle` which are based on observations.
-1. Supplemental TLEs for OneWeb satellites in `oneweb.tle` from [celestrak.com](https://celestrak.org/NORAD/elements/supplemental/). These are TLEs computed from orbital ephemerides shared by the satellite operators and include predicted manouvers. These TLEs tend to be more accurate than those in `catalog.tle` which are based on observations.
-
-
 ## Requirements
 
 - A computer desktop or single board computer like a Raspberry PI) with a linux operating system for running STVID
@@ -197,6 +174,28 @@ This section describes the TLE catalog that STVID downloads and how they are use
 For ZWO ASI cameras you need to specify the location of the ZWO ASI SDK libraries. For `x64` operating systems this is the `lib/x64/libASICamera2.so` shared library in the directory tree where you installed the SDK.
 
 </details>	
+	
+## Operation
+
+There are three applications in STVID that work together:
+
+- `update_tle.py` to download orbital catalogs of two-line elements (TLEs).
+- `acquire.py` to capture data from your camera and store them as FITS files.
+- `process.py` to analyse the FITS files and determine satellite positions.
+
+#### Updating TLEs
+
+Assuming you have installed STVID in `$HOME/software/stvid` and your configuration is stored in `configuration.ini`, the TLE catalogs can be updated with the following command.
+```bash
+$HOME/software/stvid/update_tle.py -c $HOME/software/stvid/configuration.ini
+```
+This will download TLE catalogs from the following sources:
+
+1. The master catalog called `catalog.tle` from [https://www.space-track.org](https://www.space-track.org). This requires your space-track.org credentials to be provided in `configuration.ini`.
+1. The classified catalog `classfd.tle` from [Mike McCants](https://www.prismnet.com/~mmccants/tles/index.html). This catalog has TLEs for classified objects not present in `catalog.tle`.
+1. The integrated elements `inttles.tle` from [Mike McCants](https://www.prismnet.com/~mmccants/tles/index.html). These are numerically integrated orbits converted into TLEs for objects at high altitudes.
+1. Supplemental TLEs for Starlink satellites in `starlink.tle` from [celestrak.com](https://celestrak.org/NORAD/elements/supplemental/). These are TLEs computed from orbital ephemerides shared by the satellite operators and include predicted manouvers. These TLEs tend to be more accurate than those in `catalog.tle` which are based on observations.
+1. Supplemental TLEs for OneWeb satellites in `oneweb.tle` from [celestrak.com](https://celestrak.org/NORAD/elements/supplemental/). These are TLEs computed from orbital ephemerides shared by the satellite operators and include predicted manouvers. These TLEs tend to be more accurate than those in `catalog.tle` which are based on observations.
 	
 
 ## Supported hardware
