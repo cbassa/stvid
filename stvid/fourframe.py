@@ -976,14 +976,21 @@ def decode_line(line):
 
 # IOD position format 2: RA/DEC = HHMMmmm+DDMMmm MX   (MX in minutes of arc)
 def format_position(ra, de):
-    ram = 60.0 * ra / 15.0
-    rah = int(np.floor(ram / 60.0))
-    ram -= 60.0 * rah
-
+    # Right ascension
+    rah = ra / 15
+    ram = np.mod(60 * rah, 60)
+    ram = np.round(ram * 1000) / 1000
+    ram = np.mod(ram, 60)
+    rah = np.round(rah - ram / 60)
+    rah = np.mod(rah, 24)
+    
+    # Declination
     des = np.sign(de)
-    dem = 60.0 * np.abs(de)
-    ded = int(np.floor(dem / 60.0))
-    dem -= 60.0 * ded
+    dea = np.abs(de)
+    dem = np.mod(60 * dea, 60)
+    dem = np.round(dem * 100) / 100
+    dem = np.mod(dem, 60)
+    ded = np.round(dea - dem / 60)
 
     if des == -1:
         sign = "-"
