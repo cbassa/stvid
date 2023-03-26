@@ -197,6 +197,13 @@ def process_loop(fname):
     for track, o in zip(tracks, obs):
         ff.diagnostic_plot(predictions, track, o, cfg)
 
+    # Clean up
+    del ff
+    for t in tracks:
+        del t
+    for o in obs:
+        del o
+        
     return (screenoutput, screenoutput_idents)
 
 if __name__ == "__main__":

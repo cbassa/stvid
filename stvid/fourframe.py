@@ -326,6 +326,9 @@ class FourFrame:
             # Read header and data
             header = hdu[0].header
             data = hdu[0].data
+
+            # Close FITS file
+            hdu.close()
             
             # Mask specified rows/columns
             if cfg.has_option("LineDetection", "rows_to_mask"):
@@ -391,8 +394,6 @@ class FourFrame:
             except KeyError:
                 self.tracked = False
 
-            hdu.close()
-            
         # Compute image properties
         self.sx = float(np.sqrt(self.cd[0, 0] ** 2 + self.cd[1, 0] ** 2))
         self.sy = float(np.sqrt(self.cd[0, 1] ** 2 + self.cd[1, 1] ** 2))
