@@ -15,7 +15,6 @@ import logging
 import configparser
 import argparse
 
-
 # Capture images from pi
 def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, cfg):
     from picamerax.array import PiRGBArray
