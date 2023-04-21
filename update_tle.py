@@ -62,7 +62,7 @@ if __name__ == '__main__':
     copyfile(catalog_tle, os.path.join(tle_path, time + "_catalog.txt"))
 
     print("Get classified TLEs")
-    resp = urlopen("http://www.prismnet.com/~mmccants/tles/classfd.zip")
+    resp = urlopen("https://mmccants.org/tles/classfd.zip")
     zipfile = ZipFile(BytesIO(resp.read()))
     zipfile.extractall(path=tle_path)
     classfd_tle = os.path.join(tle_path, "classfd.tle")
@@ -79,7 +79,7 @@ if __name__ == '__main__':
     copyfile(classfd_tle, os.path.join(tle_path, time + "_classfd.txt"))
 
     print("Get integrated TLEs")
-    resp = urlopen("http://www.prismnet.com/~mmccants/tles/inttles.zip")
+    resp = urlopen("https://mmccants.org/tles/inttles.zip")
     zipfile = ZipFile(BytesIO(resp.read()))
     zipfile.extractall(path=tle_path)
     int_tle = os.path.join(tle_path, "inttles.tle")
