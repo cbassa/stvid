@@ -1,4 +1,20 @@
 # Changelog
+## dev-20230421
+### Breaking Changes
+No breaking changes.
+
+### Improvements & Fixes
+- Improved documentation (see README.md and INSTALL.md)
+- process: Changed track color of classified objects from grey to blue.
+- process: Added new CLI option `--cpu_count`:
+  "Number of threads to use (overrides value `LineDectection.cpu_count` from configuration)."
+- process: Added new CLI option `--wait`: "Delay before processing new files (seconds, default: 10)."
+- update\_tle: Added creation of TLE directory if it does not exist yet
+- update\_tle: Updated URL of McCants classified TLE files
+- update\_tle: Added download of supplemental Starlink & OneWeb catalogs from Celestrak
+- process: Reduced memory footprint by deleting old FourFrames and closing HDF5 files earlier
+- process: Apply minimum track points filter `LineDetection.min_track_points` to selection
+- process: Fixed rounding bug in IOD position format 2
 
 ## dev-20230104
 ### Breaking Changes
