@@ -2,7 +2,7 @@
 from __future__ import print_function
 import glob
 import numpy as np
-from stvid.stio import fourframe
+from stvid.fourframe import FourFrame
 import configparser
 import argparse
 import os
@@ -13,12 +13,12 @@ from astropy.time import Time
 
 def generate_keogram(path):
     # Get files
-    fnames = sorted(glob.glob(os.path.join(path, "processed/2*.fits")))
+    fnames = sorted(glob.glob(os.path.join(path, "2*.fits")))
 
     # Allocate arrays
     nx = len(fnames)
-    ny = cfg.getint('Camera', 'camera_y')
-    ixmid = cfg.getint('Camera', 'camera_x') // 2
+    ny = cfg.getint(camera_type, "ny")
+    ixmid = cfg.getint(camera_type, "nx") // 2
     keogram = np.zeros(nx * ny).reshape(ny, nx)
     mjds = np.zeros(nx)
 
@@ -28,7 +28,7 @@ def generate_keogram(path):
             print(i, fname)
 
         # Read file
-        ff = fourframe(fname)
+        ff = FourFrame(fname, cfg)
 
         # Extract data
         keogram[:, i] = ff.zavg[:, ixmid]
@@ -64,6 +64,8 @@ if __name__ == "__main__":
         cfg.read([args.conf_file])
     else:
         cfg.read('configuration.ini')
+
+    camera_type = cfg.get("Setup", "camera_type")
 
     # Generate keogram is it does not exist
     if not os.path.exists(os.path.join(args.file_dir, "keogram.npy")):

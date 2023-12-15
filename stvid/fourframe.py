@@ -91,11 +91,19 @@ class Prediction:
             self.prx = self.rx
             self.pry = self.ry
         elif len(self.t) == 2:
-            self.prx = np.polyfit(self.t, self.rx, 1)
-            self.pry = np.polyfit(self.t, self.ry, 1)
+            try:
+                self.prx = np.polyfit(self.t, self.rx, 1)
+                self.pry = np.polyfit(self.t, self.ry, 1)
+            except:
+                self.prx = self.rx
+                self.pry = self.ry
         else:
-            self.prx = np.polyfit(self.t, self.rx, 2)
-            self.pry = np.polyfit(self.t, self.ry, 2)
+            try:
+                self.prx = np.polyfit(self.t, self.rx, 2)
+                self.pry = np.polyfit(self.t, self.ry, 2)
+            except:
+                self.prx = self.rx
+                self.pry = self.ry
 
     def position_and_velocity(self, t):
         # Derivatives
