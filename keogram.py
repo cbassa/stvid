@@ -3,7 +3,7 @@ from __future__ import print_function
 import glob
 import numpy as np
 from stvid.stio import fourframe
-import configparser
+from stvid.config import add_argument_conf_file, load_config
 import argparse
 import os
 import matplotlib.pyplot as plt
@@ -43,11 +43,7 @@ if __name__ == "__main__":
     # Read commandline options
     conf_parser = argparse.ArgumentParser(description='Process captured' +
                                           ' video frames.')
-    conf_parser.add_argument("-c",
-                             "--conf_file",
-                             help="Specify configuration file. If no file" +
-                             " is specified 'configuration.ini' is used.",
-                             metavar="FILE")
+    conf_parser = add_argument_conf_file(conf_parser)
     conf_parser.add_argument("-d",
                              "--directory",
                              help="Specify directory of observations. If no" +
@@ -57,13 +53,7 @@ if __name__ == "__main__":
                              default=".")
 
     args = conf_parser.parse_args()
-
-    # Process commandline options and parse configuration
-    cfg = configparser.ConfigParser(inline_comment_prefixes=('#', ';'))
-    if args.conf_file:
-        cfg.read([args.conf_file])
-    else:
-        cfg.read('configuration.ini')
+    cfg = load_config(args.conf_files)
 
     # Generate keogram is it does not exist
     if not os.path.exists(os.path.join(args.file_dir, "keogram.npy")):

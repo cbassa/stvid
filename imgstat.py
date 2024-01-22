@@ -6,18 +6,16 @@ import matplotlib.dates as mdates
 import astropy.units as u
 from astropy.coordinates import SkyCoord, AltAz, EarthLocation
 from astropy.time import Time
-import configparser
 import argparse
 import os
+
+from stvid.config import add_argument_conf_file, load_config
+
 
 if __name__ == "__main__":
     # Read commandline options
     conf_parser = argparse.ArgumentParser(description='Plot image statistics')
-    conf_parser.add_argument("-c",
-                             "--conf_file",
-                             help="Specify configuration file. If no file" +
-                             " is specified 'configuration.ini' is used.",
-                             metavar="FILE")
+    conf_parser = add_argument_conf_file(conf_parser)
     conf_parser.add_argument("-i",
                              "--input",
                              help="Specify file to be processed. If no file" +
@@ -39,13 +37,7 @@ if __name__ == "__main__":
         default="./imgstat.png")
 
     args = conf_parser.parse_args()
-
-    # Process commandline options and parse configuration
-    cfg = configparser.ConfigParser(inline_comment_prefixes=('#', ';'))
-    if args.conf_file:
-        cfg.read([args.conf_file])
-    else:
-        cfg.read('configuration.ini')
+    cfg = load_config(args.conf_files)
 
     # Move to processing directory
     os.chdir(args.file_dir)

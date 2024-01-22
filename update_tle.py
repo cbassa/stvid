@@ -3,7 +3,6 @@ import re
 import os
 import datetime
 import argparse
-import configparser
 
 from io import BytesIO
 from shutil import copyfile
@@ -11,24 +10,16 @@ from zipfile import ZipFile
 from urllib.request import urlopen
 
 from spacetrack import SpaceTrackClient
+from stvid.config import add_argument_conf_file, load_config
+
 
 if __name__ == '__main__':
-    # Read commandline options
     conf_parser = argparse.ArgumentParser(description="Update TLEs from" +
                                                       " online sources")
-    conf_parser.add_argument("-c", "--conf_file",
-                             help="Specify configuration file. If no file" +
-                             " is specified 'configuration.ini' is used.",
-                             metavar="FILE")
-
+    conf_parser = add_argument_conf_file(conf_parser)
     args = conf_parser.parse_args()
 
-    # Process commandline options and parse configuration
-    cfg = configparser.ConfigParser(inline_comment_prefixes=("#", ";"))
-    if args.conf_file:
-        cfg.read([args.conf_file])
-    else:
-        cfg.read("configuration.ini")
+    cfg = load_config(args.conf_files)
 
     # Create TLE locatio
     tle_path = cfg.get("Elements", "tlepath")

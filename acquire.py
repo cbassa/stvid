@@ -11,6 +11,7 @@ from astropy.time import Time
 from astropy.io import fits
 import astropy.units as u
 from stvid.utils import get_sunset_and_sunrise
+from stvid.config import add_argument_conf_file, load_config
 import logging
 import configparser
 import argparse
@@ -546,12 +547,7 @@ if __name__ == '__main__':
     # Read commandline options
     conf_parser = argparse.ArgumentParser(description="Capture and compress" +
                                                       " live video frames.")
-    conf_parser.add_argument("-c", "--conf_file",
-                             help="Specify configuration file(s). If no file" +
-                             " is specified 'configuration.ini' is used.",
-                             action="append",
-                             nargs="?",
-                             metavar="FILE")
+    conf_parser = add_argument_conf_file(conf_parser)
     conf_parser.add_argument("-t", "--test", 
                              nargs="?",
                              action="store", 
@@ -563,15 +559,8 @@ if __name__ == '__main__':
 
     args = conf_parser.parse_args()
 
-    # Process commandline options and parse configuration
-    cfg = configparser.ConfigParser(inline_comment_prefixes=("#", ";"))
-    
-    conf_file = args.conf_file if args.conf_file else "configuration.ini"
-    result = cfg.read(conf_file)
-
-    if not result:
-        print("Could not read config file: %s\nExiting..." % conf_file)
-        sys.exit()
+    # Parse configuration
+    cfg = load_config(args.conf_files)
 
     # Setup logging
     logFormatter = logging.Formatter("%(asctime)s [%(threadName)-12.12s] " +
@@ -596,7 +585,7 @@ if __name__ == '__main__':
     logger.addHandler(consoleHandler)
     logger.setLevel(logging.DEBUG)
 
-    logger.info("Using config: %s" % conf_file)
+    # Process commandline options
 
     # Testing mode
     if args.test is None:

@@ -21,6 +21,7 @@ from stvid import calibration
 from stvid.fourframe import FourFrame
 from stvid.fourframe import Observation
 from stvid.fourframe import AstrometricCatalog
+from stvid.config import add_argument_conf_file, load_config
 
 from astropy.utils.exceptions import AstropyWarning
 
@@ -210,13 +211,7 @@ if __name__ == "__main__":
     # Read commandline options
     conf_parser = argparse.ArgumentParser(description="Process captured" +
                                           " video frames.")
-    conf_parser.add_argument("-c",
-                             "--conf_file",
-                             help="Specify configuration file. If no file" +
-                             " is specified 'configuration.ini' is used.",
-                             action="append",
-                             nargs="?",
-                             metavar="FILE")
+    conf_parser = add_argument_conf_file(conf_parser)
     conf_parser.add_argument("-d",
                              "--directory",
                              help="Specify directory of observations. If no" +
@@ -241,14 +236,8 @@ if __name__ == "__main__":
                              help="Delay before processing new files (seconds, default: 10).",
                              type=int, default=10)
     args = conf_parser.parse_args()
-    
-    # Read configuration file
-    cfg = configparser.ConfigParser(inline_comment_prefixes=("#", ":"))
-    conf_file = args.conf_file if args.conf_file else "configuration.ini"
-    result = cfg.read(conf_file)
-    if not result:
-        print("Could not read config file: %s\nExiting..." % conf_file)
-        sys.exit()
+
+    cfg = load_config(args.conf_files)
 
     # Set warnings
     warnings.filterwarnings("ignore", category=UserWarning, append=True)
