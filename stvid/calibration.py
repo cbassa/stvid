@@ -2,14 +2,18 @@
 import os
 
 import subprocess
+import sys
 
 import numpy as np
+
+from termcolor import colored
 
 import astropy.units as u
 from astropy import wcs
 from astropy.time import Time
 from astropy.io import fits
 from astropy.coordinates import SkyCoord, ICRS, FK5
+
 
 class AstrometricCatalog:
     """AstrometricCatalog class"""
@@ -124,6 +128,12 @@ def plate_solve(fname, cfg, store_as_fname=None):
         hdu.close()
     except OSError:
         w, t = None, None
+    except subprocess.CalledProcessError as err:
+        print(colored("ERROR: ", "red", attrs=["bold"]) + "solve-field failed.")
+        print("Command: " + colored(command, "cyan"))
+        print("Output:")
+        print(colored(err.output.decode('ascii'), "cyan"))
+        sys.exit(-1)
 
     # Solved
     if w is not None:
