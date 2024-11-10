@@ -135,7 +135,7 @@ With the dependencies installed, we can install STVID using the following comman
 ```bash
 sudo apt install python-is-python3 python3-pip                 # Install python3 and pip
 cd $HOME/software                                              # Goto directory
-git clone https:/github.com/cbassa/stvid.git                   # Clone STVID repository
+git clone https://github.com/cbassa/stvid.git                   # Clone STVID repository
 cd $HOME/software/stvid                                        # Goto directory
 pip install -r requirements.txt                                # Install python requirements
 ```

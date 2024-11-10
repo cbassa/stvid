@@ -27,7 +27,7 @@ def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, c
     slow_CPU = False
 
     # Initialize cv2 device
-    picam2 = Picamera2()
+    picam2 = Picamera2(device_id)
     picam2.configure(picam2.create_preview_configuration(main={"format": 'BGR888', "size": (nx, ny)}))
     picam2.start()
 
@@ -35,11 +35,15 @@ def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, c
     picam2.set_controls({
     "AeEnable": False,
     "AwbEnable": False,
+    "FrameDurationLimits": (100, 200000),
     "ExposureTime": cfg.getint(camera_type, "exposure"),
     "AnalogueGain": cfg.getfloat(camera_type, "analog_gain"),
-    "ColourGains": (cfg.getfloat(camera_type, "awb_gain_red"), cfg.getfloat(camera_type, "awb_gain_blue")),
+    "ColourGains": (cfg.getfloat(camera_type, "awb_gain_blue"), cfg.getfloat(camera_type, "awb_gain_red")),
     "FrameRate": cfg.getfloat(camera_type, "framerate")
     })
+
+    #reduce logging level, the camera stack shows too much debug.
+    Picamera2.set_logging(Picamera2.INFO)
 
     # allow the camera to warmup
     time.sleep(0.1)
@@ -61,8 +65,6 @@ def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, c
             # Get frames
             i = 0
             while True:
-                #reduce logging level, the camera stack shows too much debug.
-                logger.setLevel(logging.INFO)
 
                 # Store start time
                 t0 = float(time.time())
@@ -72,9 +74,6 @@ def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, c
                                     
                 # Compute mid time
                 t = (float(time.time()) + t0) / 2
-
-                # Restore log level
-                logger.setLevel(logging.DEBUG)
 
                 # Skip lost frames
                 if im is not None:
@@ -103,9 +102,9 @@ def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, c
                     break
 
             # Show current camera settings
-            #metadata = picam2.capture_metadata()
-            #controls = {c: metadata[c] for c in ["ExposureTime", "AnalogueGain", "ColourGains"]}
-            #logger.debug(controls)
+            metadata = picam2.capture_metadata()
+            controls = {c: metadata[c] for c in ["ExposureTime", "FrameDuration", "AnalogueGain", "DigitalGain", "ColourGains"]}
+            logger.debug(controls)
 
             if first: 
                 buf = 1
