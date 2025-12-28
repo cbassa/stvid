@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import re
 import os
-import datetime
+from datetime import datetime, UTC
 import argparse
 import configparser
 
@@ -34,17 +34,17 @@ if __name__ == '__main__':
     tle_path = cfg.get("Elements", "tlepath")
     if not os.path.exists(tle_path):
         os.makedirs(tle_path)
-    
-    now = datetime.datetime.utcnow()
-    time = now.strftime("%Y%m%d_%H%M%S")
+
+    # Get current time
+    time = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
 
     print("Get Space Track TLEs")
     catalog_tle = os.path.join(tle_path, "catalog.tle")
     st = SpaceTrackClient(identity=cfg.get("Credentials", "st-username"),
                           password=cfg.get("Credentials", "st-password"))
 
-    data = st.tle_latest(iter_lines=True, epoch=">now-30",
-                         ordinal=1, format="3le")
+    data = st.gp(iter_lines=True, epoch=">now-30",
+                 orderby=["norad_cat_id"], format="3le")
 
     with open(catalog_tle, "w") as fp:
         for line in data:
