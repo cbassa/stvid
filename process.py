@@ -338,7 +338,7 @@ if __name__ == "__main__":
         # Get unprocessed files
         fitsfnames = sorted(glob.glob(os.path.join(args.file_dir, "2*.fits")))
         froots = [os.path.splitext(fitsname)[0] for fitsname in fitsfnames]
-        fnames = [f"{froot}.fits" for froot in froots if not os.path.exists(f"{froot}_0.png")]
+        fnames = [f"{froot}.fits" for froot in froots if not os.path.exists(f"{froot}_0.png")][:100]
 
         # Process files
         p = mp.Pool(processes=cpu_count)
