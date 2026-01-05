@@ -7,3 +7,5 @@ termcolor
 zwoasi
 pyyaml
 spacetrack
+gpiozero>=2.0
+readchar>=4.2.0

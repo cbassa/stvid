@@ -87,3 +87,6 @@ max_velocity_difference_percent = 5.0     # Maximum velocity difference [percent
 min_stars = 20            # Minimum number of stars to attempt plate solve
 max_magnitude = 10.0      # Maximum magnitude of standard stars to use
 solve-field_args = -O -l 10 -z 2 -t 1 --crpix-center # Solve-field arguments
+
+[Shutter]
+pin = 19
