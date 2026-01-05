@@ -38,12 +38,11 @@ device_id = 0           # Device ID
 nx =  800               # Camera horizontal pixel count
 ny =  600               # Camera vertical pixel count
 nframes = 100           # Number of frames for each image
-framerate = 5		# Take 5 frames per second
-exposure = 200000	# Exposure time in us
-awb_gain_red = 2	# Gain for red.
-awb_gain_blue = 2.3	# Gain for blue
-analog_gain = 16	# Analog gain
-digital_gain = 64	# Digital gain
+framerate = 10          # Take 10 frames per second
+exposure = 100000       # Exposure time in us
+awb_gain_red = 2.0      # Gain for red.
+awb_gain_blue = 2.8     # Gain for blue
+analog_gain = 90        # Combination of analog and digital gain. Max 90 for HQ Camera.
 
 [CV2]
 device_id = 0           # Device ID

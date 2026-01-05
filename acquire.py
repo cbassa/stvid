@@ -15,31 +15,36 @@ import logging
 import configparser
 import argparse
 
+
+
 # Capture images from pi
 def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, cfg):
-    from picamerax.array import PiRGBArray
-    from picamerax import PiCamera
+    # Use the Picamera2 lib
+    from picamera2 import Picamera2
 
     # Intialization
     first = True
     slow_CPU = False
 
     # Initialize cv2 device
-    camera = PiCamera(sensor_mode=2)
-    camera.resolution = (nx, ny)    
-    # Turn off any thing automatic.
-    camera.exposure_mode = "off"        
-    camera.awb_mode = "off"
-    # ISO needs to be 0 otherwise analog and digital gain won't work.
-    camera.iso = 0
-    # set the camea settings
-    camera.framerate = cfg.getfloat(camera_type, "framerate")
-    camera.awb_gains = (cfg.getfloat(camera_type, "awb_gain_red"), cfg.getfloat(camera_type, "awb_gain_blue"))    
-    camera.analog_gain = cfg.getfloat(camera_type, "analog_gain")
-    camera.digital_gain = cfg.getfloat(camera_type, "digital_gain")
-    camera.shutter_speed = cfg.getint(camera_type, "exposure")
+    picam2 = Picamera2(device_id)
+    picam2.configure(picam2.create_preview_configuration(main={"format": 'BGR888', "size": (nx, ny)}))
+    picam2.start()
 
-    rawCapture = PiRGBArray(camera, size=(nx, ny))
+    # Turn off anything automatic.
+    picam2.set_controls({
+    "AeEnable": False,
+    "AwbEnable": False,
+    "FrameDurationLimits": (100, 200000),
+    "ExposureTime": cfg.getint(camera_type, "exposure"),
+    "AnalogueGain": cfg.getfloat(camera_type, "analog_gain"),
+    "ColourGains": (cfg.getfloat(camera_type, "awb_gain_blue"), cfg.getfloat(camera_type, "awb_gain_red")),
+    "FrameRate": cfg.getfloat(camera_type, "framerate")
+    })
+
+    #reduce logging level, the camera stack shows too much debug.
+    Picamera2.set_logging(Picamera2.INFO)
+
     # allow the camera to warmup
     time.sleep(0.1)
 
@@ -59,29 +64,30 @@ def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, c
 
             # Get frames
             i = 0
-            for frameA in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
-                            
+            while True:
+
                 # Store start time
-                t0 = float(time.time())                
-                # grab the raw NumPy array representing the image, then initialize the timestamp                
-                frame = frameA.array
+                t0 = float(time.time())
+
+                # Obtain the image from the camera
+                im = picam2.capture_array()
                                     
                 # Compute mid time
                 t = (float(time.time()) + t0) / 2
-                
+
                 # Skip lost frames
-                if frame is not None:
+                if im is not None:
                     # Convert image to grayscale
                     z = np.asarray(cv2.cvtColor(
-                        frame, cv2.COLOR_BGR2GRAY)).astype(np.uint8)
-                    # optionally rotate the frame by 2 * 90 degrees.    
+                        im, cv2.COLOR_BGR2GRAY)).astype(np.uint8)
+                    # optionally rotate the frame by 2 * 90 degrees.
                     # z = np.rot90(z, 2)
-                
+
                     # Display Frame
-                    if live is True:                            
-                        cv2.imshow("Capture", z)    
+                    if live is True:
+                        cv2.imshow("Capture", im)
                         cv2.waitKey(1)
-                    
+
                     # Store results
                     if first:
                         z1[:, :, i] = z
@@ -89,14 +95,17 @@ def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, c
                     else:
                         z2[:, :, i] = z
                         t2[i] = t
-                        
-                # clear the stream in preparation for the next frame
-                rawCapture.truncate(0)
+
                 # count up to nz frames, then break out of the for loop.
                 i += 1
                 if i >= nz:
                     break
-                
+
+            # Show current camera settings
+            metadata = picam2.capture_metadata()
+            controls = {c: metadata[c] for c in ["ExposureTime", "FrameDuration", "AnalogueGain", "DigitalGain", "ColourGains"]}
+            logger.debug(controls)
+
             if first: 
                 buf = 1
             else:
@@ -116,7 +125,7 @@ def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, c
     finally:
         # End capture
         logger.info("Capture: %s - Exiting" % reason)
-        camera.close()
+        picam2.close()
 
 
 
