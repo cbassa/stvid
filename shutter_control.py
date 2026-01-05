@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 import argparse
 import readchar
+import configparser
 
 from stvid.shutter import Shutter
-from stvid.config import add_argument_conf_file, load_config
-
 
 def run_shutter_tui(cfg):
     """Entry point for CLI."""
@@ -37,10 +36,14 @@ def run_shutter_tui(cfg):
 
 def main():
     conf_parser = argparse.ArgumentParser(description="Control the satnogs-eye shutter.")
-    conf_parser = add_argument_conf_file(conf_parser)
-
+    conf_parser.add_argument("-c", "--conf_file",
+                             help="Specify configuration file(s). If no file" +
+                             " is specified 'configuration.ini' is used.",
+                             action="append",
+                             nargs="?",
+                             metavar="FILE")
     args = conf_parser.parse_args()
-    cfg = load_config(args.conf_files)
+    cfg = configparser.ConfigParser(inline_comment_prefixes=("#", ";"))
 
     if not cfg.has_section("Shutter"):
         print("ERROR: Configuration section 'Shutter' not found.")
