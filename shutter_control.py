@@ -35,7 +35,7 @@ def run_shutter_tui(cfg):
     shutter.close()
 
 
-if __name__ == "__main__":
+def main():
     conf_parser = argparse.ArgumentParser(description="Control the satnogs-eye shutter.")
     conf_parser = add_argument_conf_file(conf_parser)
 
@@ -47,3 +47,7 @@ if __name__ == "__main__":
         return
 
     run_shutter_tui(cfg)
+
+    
+if __name__ == "__main__":
+    main()
