@@ -44,6 +44,8 @@ def main():
                              metavar="FILE")
     args = conf_parser.parse_args()
     cfg = configparser.ConfigParser(inline_comment_prefixes=("#", ";"))
+    conf_file = args.conf_file if args.conf_file else "configuration.ini"
+    result = cfg.read(conf_file)
 
     if not cfg.has_section("Shutter"):
         print("ERROR: Configuration section 'Shutter' not found.")
