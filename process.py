@@ -282,6 +282,9 @@ if __name__ == "__main__":
         froots = [os.path.splitext(fitsname)[0] for fitsname in fitsfnames]
         fnames = [f"{froot}.fits" for froot in froots if not os.path.exists(f"{froot}_stars.cat")]
 
+        # Randomize file order
+        np.random.shuffle(fnames)
+        
         # Create reference calibration file
         calfname = os.path.join(args.file_dir, "test.fits")
         if not os.path.exists(calfname):
