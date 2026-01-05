@@ -662,6 +662,13 @@ if __name__ == '__main__':
     else:
         tend = tnow + test_duration * u.s
 
+    # Read shutter config
+    if cfg.has_section("Shutter"):
+        from stvid.shutter import Shutter
+        shutter = Shutter(cfg.getint("Shutter", "pin"))
+    else:
+        shutter = None
+        
     logger.info("Starting data acquisition")
     logger.info("Acquisition will end after "+tend.isot)
 
@@ -699,22 +706,30 @@ if __name__ == '__main__':
                                            args=(image_queue, z1, t1, z2, t2,
                                                  nx, ny, nz, tend.unix, device_id, live, cfg))
 
-    # Start
-    pcapture.start()
-    pcompress.start()
-
-    # End
     try:
-        pcapture.join()
-        pcompress.join()
-    except (KeyboardInterrupt, ValueError):
-        time.sleep(0.1) # Allow a little time for a graceful exit
-    except MemoryError as e:
-        logger.error("Memory error %s" % e)
-    finally:
-        pcapture.terminate()
-        pcompress.terminate()
+        # Open shutter
+        if shutter:
+            shutter.open()
+        
+        # Start
+        pcapture.start()
+        pcompress.start()
 
-    # Release device
-    if live is True:
-        cv2.destroyAllWindows()
+        # End
+        try:
+            pcapture.join()
+            pcompress.join()
+        except (KeyboardInterrupt, ValueError):
+            time.sleep(0.1) # Allow a little time for a graceful exit
+        except MemoryError as e:
+            logger.error("Memory error %s" % e)
+        finally:
+            pcapture.terminate()
+            pcompress.terminate()
+
+        # Release device
+        if live is True:
+            cv2.destroyAllWindows()
+    finally:
+        if shutter:
+            shutter.close()
