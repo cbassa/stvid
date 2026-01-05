@@ -1,5 +1,4 @@
-"""Module for CLI methods."""
-
+#!/usr/bin/env python3
 import argparse
 import readchar
 
