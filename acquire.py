@@ -440,7 +440,11 @@ def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id, cfg
                 time.sleep(0.1)
                 
             # Get next buffer # from the work queue
-            proc_buffer = image_queue.get()
+            try:
+                proc_buffer = image_queue.get(timeout=60)
+            except:
+                logger.debug("Queue timed out")
+                break
             logger.debug("Processing buffer %d" % proc_buffer)
 
             # Log start time
