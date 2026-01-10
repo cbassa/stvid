@@ -10,7 +10,7 @@ from astropy.coordinates import EarthLocation
 from astropy.time import Time
 from astropy.io import fits
 import astropy.units as u
-from stvid.utils import get_sunset_and_sunrise
+from stvid.utils import observe_logic
 import logging
 import configparser
 import argparse
@@ -638,29 +638,24 @@ if __name__ == '__main__':
         refalt_set  = cfg.getfloat("Setup", "alt_sunset") * u.deg
         refalt_rise = cfg.getfloat("Setup", "alt_sunrise") * u.deg
 
-        # FIXME: The following will fail without internet access
-        #        due to failure to download finals2000A.all
-        # Get sunrise and sunset times
-        state, tset, trise = get_sunset_and_sunrise(tnow, loc, refalt_set, refalt_rise)
+        # Aimpoint configuration
+        if cfg.has_section("Aimpoint"):
+            aimpoint_az = cfg.getfloat("Aimpoint", "az_deg") * u.deg
+            aimpoint_alt = cfg.getfloat("Aimpoint", "alt_deg") * u.deg
+            aimpoint_height = cfg.getfloat("Aimpoint", "height_km") * u.km
+        else:
+            aimpoint_az, aimpoint_alt, aimpoint_height = None, None, None
 
-        # Start/end logic
-        if state == "sun never rises":
-            logger.info("The sun never rises. Exiting program.")
-            sys.exit()
-        elif state == "sun never sets":
-            logger.info("The sun never sets.")
-            tend = tnow + 24 * u.h
-        elif (trise < tset):
-            logger.info("The sun is below the horizon.")
-            tend = trise
-        elif (trise >= tset):
-            dt = np.floor((tset - tnow).to(u.s).value)
-            logger.info("The sun is above the horizon. Sunset at %s."
-                        % tset.isot)
-            logger.info("Waiting %.0f seconds." % dt)
-            tend = trise
+        # Get logic
+        action, wait_time, tend, state = observe_logic(tnow, loc, refalt_set, refalt_rise,
+                                                       aimpoint_az, aimpoint_alt, aimpoint_height)
+
+        # Wait for observation start
+        logger.info(state)
+        if action == "wait":
+            logger.info(f"Waiting for {wait_time:.0f} seconds.")
             try:
-                time.sleep(dt)
+                time.sleep(wait_time)
             except KeyboardInterrupt:
                 sys.exit()
     else:

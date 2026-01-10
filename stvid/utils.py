@@ -1,121 +1,163 @@
-#!/usr/bin/env python
-# Common Utilities
-
-from astropy.coordinates import SkyCoord, FK5, get_sun
-from astropy.time import Time
-import astropy.units as u
+#!/usr/bin/env python3
 import numpy as np
-from scipy import interpolate
+from scipy.interpolate import interpolate, CubicSpline
+
+import astropy.units as u
+from astropy.time import Time
+from astropy.coordinates import EarthLocation, get_body, AltAz, ITRS, GCRS
 
 
-# Sunrise/sunset algorithm from Astronomical Algorithms by Jean Meeus
-def get_sunset_and_sunrise(tnow, loc, refalt_set, refalt_rise):
-    # Get time
-    nmjd = 64
-    mjd0 = np.floor(tnow.mjd)
-    mnow = tnow.mjd - mjd0
-    mjd = np.linspace(mjd0 - 1.0, mjd0 + 3.0, nmjd)
-    t = Time(mjd, format='mjd', scale='utc')
+def compute_reference_distance(t, loc, az, alt, height):
+    # Distance to search over
+    distance = np.linspace(0, 5 * height.value) * height.unit
+    asat = AltAz(obstime=t, location=loc, az=az, alt=alt, distance=distance)
+    itrs = asat.transform_to(ITRS(obstime=t))
+    l = EarthLocation.from_geocentric(*itrs.cartesian.xyz)
+    fint = interpolate.interp1d(l.height.to(height.unit), distance.to(height.unit))
 
-    # Get sun position
-    psun = get_sun(t)
+    return fint(height) * height.unit
 
-    # Correct for precession by converting to FK5
-    pos = SkyCoord(ra=psun.ra.degree,
-                   dec=psun.dec.degree,
-                   frame='icrs',
-                   unit='deg').transform_to(FK5(equinox=t))
 
-    # Compute altitude extrema
-    de = np.mean(pos.dec)
-    minalt = np.arcsin(
-        np.sin(loc.lat) * np.sin(de) - np.cos(loc.lat) * np.cos(de))
-    maxalt = np.arcsin(
-        np.sin(loc.lat) * np.sin(de) + np.cos(loc.lat) * np.cos(de))
+def spline_roots(x, y, ydescend, yascend):
+    for y0, sign in zip([ydescend, yascend], [-1, +1]):
+        # Define spline
+        func = CubicSpline(x, y - y0)
 
-    # Never sets, never rises?
-    if minalt > min(refalt_set, refalt_rise):
-        return "sun never sets", t[0], t[0]
-    elif maxalt < max(refalt_set, refalt_rise):
-        return "sun never rises", t[0], t[0]
+        # Find roots
+        xr = func.roots(extrapolate=False)
 
-    # Prevent discontinuities in right ascension
-    dra = pos[-1].ra - pos[0].ra
-    ra = pos.ra.degree
-    if dra < 0.0:
-        c = pos.ra.degree < 180.0
-        ra[c] = pos[c].ra.degree + 360.0
+        # Select based on sign
+        c = np.sign(func.derivative()(xr)) == sign
 
-    # Set up interpolating function
-    fra = interpolate.interp1d(t.mjd, ra)
-    fde = interpolate.interp1d(t.mjd, pos.dec.degree)
+        if sign == +1:
+            xascend = xr[c]
+        elif sign == -1:
+            xdescend = xr[c]
 
-    # Get GMST
-    gmst0 = Time(mjd0, format='mjd',
-                 scale='utc').sidereal_time('mean', 'greenwich')
+    return xascend, xdescend
 
-    # Get transit time
-    mtransit = np.mod(
-        (fra(mjd0) * u.degree - loc.lon - gmst0) / (360.0 * u.degree), 1.0)
-    while True:
-        gmst = gmst0 + 360.985647 * u.deg * mtransit
-        ra = fra(mjd0 + mtransit) * u.deg
-        ha = gmst + loc.lon - ra
-        mtransit -= ha / (360.0 * u.deg)
-        if np.abs(ha.degree) < 1e-9:
-            break
 
-    # Hour angle offset
-    ha0 = np.arccos(
-        (np.sin(refalt_set) - np.sin(loc.lat) * np.sin(np.mean(pos.dec))) /
-        (np.cos(loc.lat) * np.cos(np.mean(pos.dec))))
+def shadow_angle(t, loc, gsun, az, alt, height):
+    # Distance
+    dist = compute_reference_distance(t[0], loc, az, alt, height)
 
-    # Get set time
-    mset = mtransit + ha0 / (360.0 * u.deg)
-    while True:
-        gmst = gmst0 + 360.985647 * u.deg * mset
-        ra = fra(mjd0 + mset) * u.deg
-        de = fde(mjd0 + mset) * u.deg
-        ha = gmst + loc.lon - ra
-        alt = np.arcsin(
-            np.sin(loc.lat) * np.sin(de) +
-            np.cos(loc.lat) * np.cos(de) * np.cos(ha))
-        dm = (alt - refalt_set) / (360.0 * u.deg * np.cos(de) *
-                                   np.cos(loc.lat) * np.sin(ha))
-        mset += dm
+    # Compute satellite position
+    gsat = AltAz(obstime=t, location=loc, az=az, alt=alt, distance=dist).transform_to(
+        GCRS(obstime=t)
+    )
+    psat = gsat.cartesian
+    psun = gsun.cartesian
+    dp = psun - psat
 
-        # Break loop or find sunset on next day
-        if np.abs(dm) < 1e-9:
-            if mset >= mnow:
-                break
-            else:
-                mset += 1.0
+    # Compute satellite offset from horizon
+    angle = np.arccos(-dp.dot(psat) / (dp.norm() * psat.norm()))
+    angle_earth = np.arcsin(6378.135 * u.km / psat.norm())
 
-    # Set set time
-    tset = Time(mjd0 + mset.value, format='mjd', scale='utc')
+    return angle - angle_earth
 
-    # Get rise time
-    mrise = mtransit - ha0 / (360.0 * u.deg)
-    while True:
-        gmst = gmst0 + 360.985647 * u.deg * mrise
-        ra = fra(mjd0 + mrise) * u.deg
-        de = fde(mjd0 + mrise) * u.deg
-        ha = gmst + loc.lon - ra
-        alt = np.arcsin(
-            np.sin(loc.lat) * np.sin(de) +
-            np.cos(loc.lat) * np.cos(de) * np.cos(ha))
-        dm = (alt - refalt_rise) / (360.0 * u.deg * np.cos(de) *
-                                    np.cos(loc.lat) * np.sin(ha))
-        mrise += dm
 
-        # Break loop or find sunrise on next day
-        if np.abs(dm) < 1e-9:
-            if mrise >= mnow:
-                break
-            else:
-                mrise += 1.0
+def observe_logic(tnow, loc, sunaltset, sunaltrise, az, alt, height):
+    # Next 48h to ensure roots are found
+    t = tnow + np.linspace(0, 2, 64) * u.d
 
-    # Set rise time
-    trise = Time(mjd0 + mrise.value, format='mjd', scale='utc')
+    # Sun location
+    gsun = get_body("sun", t, location=loc)
+    asun = gsun.transform_to(AltAz(obstime=t, location=loc))
 
-    return "sun rises and sets", tset, trise
+    # Parameters
+
+    # Solar altitude constraints
+    sunalt = asun.alt
+    if np.min(sunalt) > min(sunaltset, sunaltrise):
+        sunstate = "Sun never sets"
+    elif np.max(sunalt) < max(sunaltset, sunaltrise):
+        sunstate = "Sun never rises"
+    else:
+        sunstate = "Sun rises and sets"
+    trise, tset = Time(spline_roots(t.mjd, sunalt, sunaltset, sunaltrise), format="mjd")
+
+    # Aimpoint constraints
+    if az != None and alt != None and height != None:
+        angle = shadow_angle(t, loc, gsun, az, alt, height)
+        if np.min(angle) > 0:
+            shadowstate = "Aimpoint is always sunlit"
+        elif np.max(angle) < 0:
+            shadowstate = "Aimpoint is never sunlit"
+        else:
+            shadowstate = "Aimpoint eclipses"
+        tegress, tingress = spline_roots(t.mjd, angle, 0, 0)
+        if len(tegress) > 0:
+            tegress = Time(tegress, format="mjd")
+        if len(tingress) > 0:
+            tingress = Time(tingress, format="mjd")
+    else:
+        shadowstate = "Aimpoint is always sunlit"
+        tegress, tingress = [], []
+
+    # Get first value
+    if sunstate == "Sun rises and sets":
+        trise, tset = np.sort(trise)[0], np.sort(tset)[0]
+    if shadowstate == "Aimpoint eclipses":
+        tingress, tegress = np.sort(tingress)[0], np.sort(tegress)[0]
+
+    # Logic
+    if sunstate == "Sun rises and sets" and shadowstate == "Aimpoint eclipses":
+        if tset < tingress < tegress < trise:
+            state = f"The Sun is above the horizon. Sunset at {tset.isot}."
+            wait_time = np.floor((tset - tnow).to(u.s).value)
+            action = "wait"
+            tend = tingress
+        elif tingress < tegress < trise < tset:
+            state = "The Sun is below the horizon and the aimpoint is sunlit."
+            wait_time = 0
+            action = "observe"
+            tend = tingress
+        elif tegress < trise < tset < tingress:
+            state = f"The aimpoint is not sunlit. Shadow egress at {tegress.isot}"
+            wait_time = np.floor((tegress - tnow).to(u.s).value)
+            action = "wait"
+            tend = trise
+        elif trise < tset < tingress < tegress:
+            state = "The Sun is below the horizon and the aimpoint is sunlit."
+            wait_time = 0
+            action = "observe"
+            tend = trise
+    elif (sunstate == "Sun rises and sets" and shadowstate == "Aimpoint is always sunlit"):
+        if tset < trise:
+            state = f"The Sun is above the horizon. Sunset at {tset.isot}."
+            wait_time = np.floor((tset - tnow).to(u.s).value)
+            action = "wait"
+            tend = trise
+        elif trise < tset:
+            state = "The Sun is below the horizon."
+            wait_time = 0
+            action = "observe"
+            tend = trise
+    elif sunstate == "Sun never rises" and shadowstate == "Aimpoint eclipses":
+        if tingress < tegress:
+            state = "The Sun is below the horizon and the aimpoint is sunlit."
+            wait_time = 0
+            action = "observe"
+            tend = tingress
+        elif tegress < tingress:
+            state = "The Sun is below the horizon and the aimpoint is not sunlit."
+            wait_time = np.floor((tegress - tnow).to(u.s).value)
+            action = "wait"
+            tend = trise
+    elif sunstate == "Sun never sets":
+        state = "The Sun never sets."
+        wait_time = 86400
+        action = "wait"
+        tend = tnow + 24 * u.h
+    elif shadowstate == "Aimpoint is never sunlit":
+        state = "The aimpoint is never sunlit."
+        wait_time = 86400
+        action = "wait"
+        tend = tnow + 24 * u.h
+    else:
+        state = "Unknown state."
+        wait_time = 86400
+        action = "wait"
+        tend = tnow + 24 * u.h
+
+    return action, wait_time, tend, state
