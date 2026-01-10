@@ -89,4 +89,9 @@ max_magnitude = 10.0      # Maximum magnitude of standard stars to use
 solve-field_args = -O -l 10 -z 2 -t 1 --crpix-center # Solve-field arguments
 
 [Shutter]
-pin = 19
+pin = 19                  # GPIO pin controlling shutter
+
+[Aimpoint]                # Stop/start when aimpoint is in/out of shadow
+az_deg = 180              # Aimpoint azimuth (deg)
+alt_deg = 60              # Aimpoint altitude (deg)
+height_km = 2000          # Aimpoint orbital height (km)
