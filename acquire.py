@@ -457,7 +457,7 @@ def compress(image_queue, z1base, t1base, z2base, t2base, nx, ny, nz, tend, path
     if not os.path.exists(os.path.join(controlpath, "position.txt")):
         with open(os.path.join(controlpath, "position.txt"), "w") as fp:
             fp.write("\n")
-                          
+            
     with open(os.path.join(controlpath, "state.txt"), "w") as fp:
         fp.write("restart\n")
 
@@ -498,7 +498,7 @@ def compress(image_queue, z1base, t1base, z2base, t2base, nx, ny, nz, tend, path
                     fp.write(line)
 
             # Wait for completed capture buffer to become available
-            while (image_queue.qsize == 0):
+            while image_queue.empty():
                 time.sleep(0.1)
                 
             # Get next buffer # from the work queue
@@ -522,7 +522,7 @@ def compress(image_queue, z1base, t1base, z2base, t2base, nx, ny, nz, tend, path
 
             # Format time
             nfd = "%s.%03d" % (time.strftime("%Y-%m-%dT%T",
-                            time.gmtime(t[0])), int((t[0] - np.floor(t[0])) * 1000))
+                                             time.gmtime(t[0])), int((t[0] - np.floor(t[0])) * 1000))
             t0 = Time(nfd, format="isot")
             dt = t - t[0]
 
@@ -585,7 +585,7 @@ def compress(image_queue, z1base, t1base, z2base, t2base, nx, ny, nz, tend, path
 
             # Write fits file
             hdu = fits.PrimaryHDU(data=np.array([zavg, zstd, zmax, znum]),
-                                header=hdr)
+                                  header=hdr)
             hdu.writeto(os.path.join(filepath, ftemp))
             os.rename(os.path.join(filepath, ftemp), os.path.join(filepath, fname))
 
