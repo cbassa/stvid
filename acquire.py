@@ -39,6 +39,8 @@ def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, c
     logger = setup_logging(os.getcwd())
 
     cfg = configparser.ConfigParser(inline_comment_prefixes=("#", ";"))
+    cfg.read(conf_file)
+    
     from picamerax.array import PiRGBArray
     from picamerax import PiCamera
 
@@ -148,6 +150,9 @@ def capture_cv2(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, 
     logger = setup_logging(os.getcwd())
 
     cfg = configparser.ConfigParser(inline_comment_prefixes=("#", ";"))
+    cfg.read(conf_file)
+
+    z1 = np.ctypeslib.as_array(z1base.get_obj()).reshape(ny, nx, nz)
     # Intialization
     first = True
     slow_CPU = False
@@ -242,6 +247,8 @@ def capture_asi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, 
     logger = setup_logging(os.getcwd())
 
     cfg = configparser.ConfigParser(inline_comment_prefixes=("#", ";"))
+    cfg.read(conf_file)
+    
     import zwoasi as asi
     
     first    = True  # Array flag
@@ -418,6 +425,9 @@ def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id, cfg
     logger = setup_logging(os.getcwd())
 
     cfg = configparser.ConfigParser(inline_comment_prefixes=("#", ";"))
+    cfg.read(conf_file)
+
+    z1 = np.ctypeslib.as_array(z1base.get_obj()).reshape(ny, nx, nz)
     # Force a restart
     controlpath = os.path.join(path, "control")
     if not os.path.exists(controlpath):
