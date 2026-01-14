@@ -34,7 +34,7 @@ def setup_logging(path):
     return logger
 
 # Capture images from pi
-def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, cfg):
+def capture_pi(image_queue, z1base, t1base, z2base, t2base, nx, ny, nz, tend, device_id, live, conf_file):
     global logger
     logger = setup_logging(os.getcwd())
 
@@ -44,6 +44,11 @@ def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, c
     from picamerax.array import PiRGBArray
     from picamerax import PiCamera
 
+    z1 = np.ctypeslib.as_array(z1base.get_obj()).reshape(ny, nx, nz)
+    t1 = np.ctypeslib.as_array(t1base.get_obj())
+    z2 = np.ctypeslib.as_array(z2base.get_obj()).reshape(ny, nx, nz)
+    t2 = np.ctypeslib.as_array(t2base.get_obj())
+    
     # Intialization
     first = True
     slow_CPU = False
@@ -145,7 +150,7 @@ def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, c
 
 
 # Capture images from cv2
-def capture_cv2(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, cfg):
+def capture_cv2(image_queue, z1base, t1base, z2base, t2base, nx, ny, nz, tend, device_id, live, conf_file):
     global logger
     logger = setup_logging(os.getcwd())
 
@@ -153,6 +158,10 @@ def capture_cv2(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, 
     cfg.read(conf_file)
 
     z1 = np.ctypeslib.as_array(z1base.get_obj()).reshape(ny, nx, nz)
+    t1 = np.ctypeslib.as_array(t1base.get_obj())
+    z2 = np.ctypeslib.as_array(z2base.get_obj()).reshape(ny, nx, nz)
+    t2 = np.ctypeslib.as_array(t2base.get_obj())
+    
     # Intialization
     first = True
     slow_CPU = False
@@ -242,7 +251,7 @@ def capture_cv2(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, 
 
 
 # Capture images
-def capture_asi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, cfg):
+def capture_asi(image_queue, z1base, t1base, z2base, t2base, nx, ny, nz, tend, device_id, live, conf_file):
     global logger
     logger = setup_logging(os.getcwd())
 
@@ -250,6 +259,11 @@ def capture_asi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, 
     cfg.read(conf_file)
     
     import zwoasi as asi
+
+    z1 = np.ctypeslib.as_array(z1base.get_obj()).reshape(ny, nx, nz)
+    t1 = np.ctypeslib.as_array(t1base.get_obj())
+    z2 = np.ctypeslib.as_array(z2base.get_obj()).reshape(ny, nx, nz)
+    t2 = np.ctypeslib.as_array(t2base.get_obj())
     
     first    = True  # Array flag
     slow_CPU = False # Performance issue flag
@@ -411,7 +425,7 @@ def capture_asi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, 
         camera.close()
 
 
-def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id, cfg):
+def compress(image_queue, z1base, t1base, z2base, t2base, nx, ny, nz, tend, path, device_id, conf_file):
     """ compress: Aggregate nframes of observations into a single FITS file, with statistics.
 
         ImageHDU[0]: mean pixel value nframes         (zmax)
@@ -428,6 +442,10 @@ def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id, cfg
     cfg.read(conf_file)
 
     z1 = np.ctypeslib.as_array(z1base.get_obj()).reshape(ny, nx, nz)
+    t1 = np.ctypeslib.as_array(t1base.get_obj())
+    z2 = np.ctypeslib.as_array(z2base.get_obj()).reshape(ny, nx, nz)
+    t2 = np.ctypeslib.as_array(t2base.get_obj())
+    
     # Force a restart
     controlpath = os.path.join(path, "control")
     if not os.path.exists(controlpath):
@@ -722,32 +740,40 @@ if __name__ == '__main__':
 
     # Initialize arrays
     z1base = multiprocessing.Array(ctypes.c_uint8, nx * ny * nz)
-    z1 = np.ctypeslib.as_array(z1base.get_obj()).reshape(ny, nx, nz)
     t1base = multiprocessing.Array(ctypes.c_double, nz)
-    t1 = np.ctypeslib.as_array(t1base.get_obj())
     z2base = multiprocessing.Array(ctypes.c_uint8, nx * ny * nz)
-    z2 = np.ctypeslib.as_array(z2base.get_obj()).reshape(ny, nx, nz)
     t2base = multiprocessing.Array(ctypes.c_double, nz)
-    t2 = np.ctypeslib.as_array(t2base.get_obj())
 
     image_queue = multiprocessing.Queue()
 
     # Set processes
     pcompress = multiprocessing.Process(target=compress,
-                                        args=(image_queue, z1, t1, z2, t2, nx, ny,
-                                              nz, tend.unix, path, device_id, cfg))
+                                        name="compress",
+                                        args=(image_queue,
+                                              z1base, t1base, z2base, t2base,
+                                              nx, ny, nz, tend.unix,
+                                              path, device_id, conf_file))
     if camera_type == "PI":
         pcapture = multiprocessing.Process(target=capture_pi,
-                                           args=(image_queue, z1, t1, z2, t2,
-                                                 nx, ny, nz, tend.unix, device_id, live, cfg))
+                                           name="capture_pi",
+                                           args=(image_queue,
+                                                 z1base, t1base, z2base, t2base,
+                                                 nx, ny, nz, tend.unix,
+                                                 device_id, live, conf_file))
     elif camera_type == "CV2":
         pcapture = multiprocessing.Process(target=capture_cv2,
-                                           args=(image_queue, z1, t1, z2, t2,
-                                                 nx, ny, nz, tend.unix, device_id, live, cfg))
+                                           name="capture_cv2",
+                                           args=(image_queue,
+                                                 z1base, t1base, z2base, t2base,
+                                                 nx, ny, nz, tend.unix,
+                                                 device_id, live, conf_file))
     elif camera_type == "ASI":
         pcapture = multiprocessing.Process(target=capture_asi,
-                                           args=(image_queue, z1, t1, z2, t2,
-                                                 nx, ny, nz, tend.unix, device_id, live, cfg))
+                                           name="capture_asi",
+                                           args=(image_queue,
+                                                 z1base, t1base, z2base, t2base,
+                                                 nx, ny, nz, tend.unix,
+                                                 device_id, live, conf_file))
 
     try:
         # Open shutter
