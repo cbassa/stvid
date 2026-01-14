@@ -15,8 +15,30 @@ import logging
 import configparser
 import argparse
 
+def setup_logging(path):
+    logFormatter = logging.Formatter(
+        "%(asctime)s [%(processName)-12.12s] [%(levelname)-5.5s] %(message)s"
+    )
+    logger = logging.getLogger()
+    logger.handlers.clear()
+    logger.setLevel(logging.DEBUG)
+
+    fileHandler = logging.FileHandler(os.path.join(path, "acquire.log"))
+    fileHandler.setFormatter(logFormatter)
+    logger.addHandler(fileHandler)
+
+    consoleHandler = logging.StreamHandler(sys.stdout)
+    consoleHandler.setFormatter(logFormatter)
+    logger.addHandler(consoleHandler)
+
+    return logger
+
 # Capture images from pi
 def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, cfg):
+    global logger
+    logger = setup_logging(os.getcwd())
+
+    cfg = configparser.ConfigParser(inline_comment_prefixes=("#", ";"))
     from picamerax.array import PiRGBArray
     from picamerax import PiCamera
 
@@ -122,6 +144,10 @@ def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, c
 
 # Capture images from cv2
 def capture_cv2(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, cfg):
+    global logger
+    logger = setup_logging(os.getcwd())
+
+    cfg = configparser.ConfigParser(inline_comment_prefixes=("#", ";"))
     # Intialization
     first = True
     slow_CPU = False
@@ -212,6 +238,10 @@ def capture_cv2(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, 
 
 # Capture images
 def capture_asi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, cfg):
+    global logger
+    logger = setup_logging(os.getcwd())
+
+    cfg = configparser.ConfigParser(inline_comment_prefixes=("#", ";"))
     import zwoasi as asi
     
     first    = True  # Array flag
@@ -384,6 +414,10 @@ def compress(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, path, device_id, cfg
 
     Also updates a [observations_path]/control/state.txt for interfacing with satttools/runsched and sattools/slewto
     """
+    global logger
+    logger = setup_logging(os.getcwd())
+
+    cfg = configparser.ConfigParser(inline_comment_prefixes=("#", ";"))
     # Force a restart
     controlpath = os.path.join(path, "control")
     if not os.path.exists(controlpath):
