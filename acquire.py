@@ -608,7 +608,8 @@ def compress(image_queue, z1base, t1base, z2base, t2base, nx, ny, nz, tend, path
 
 # Main function
 if __name__ == '__main__':
-
+    multiprocessing.set_start_method("spawn", force=True)
+    
     # Read commandline options
     conf_parser = argparse.ArgumentParser(description="Capture and compress" +
                                                       " live video frames.")
