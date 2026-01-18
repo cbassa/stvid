@@ -363,9 +363,12 @@ def capture_asi(image_queue, z1base, t1base, z2base, t2base, nx, ny, nz, tend, d
                 slow_CPU = False
 
             # Get settings
-            settings = camera.get_control_values()
-            gain = settings["Gain"]
-            temp = settings["Temperature"] / 10
+            try:
+                settings = camera.get_control_values()
+                gain = settings["Gain"]
+                temp = settings["Temperature"] / 10
+            except:
+                gain, temp = 0, 0
             logger.info("Capturing frame with gain %d, temperature %.1f" % (gain, temp))
 
             # Set gain
