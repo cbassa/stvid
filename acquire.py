@@ -169,7 +169,6 @@ def capture_cv2(image_queue, z1base, t1base, z2base, t2base, nx, ny, nz, tend, d
 
     # Initialize cv2 device
     if cfg.has_option(camera_type, "device_string"):
-        print(cfg.get(camera_type, "device_string"))
         device = cv2.VideoCapture(cfg.get(camera_type, "device_string"))
     else:
         device = cv2.VideoCapture(device_id)
