@@ -163,6 +163,7 @@ def capture_cv2(image_queue, z1base, t1base, z2base, t2base, nx, ny, nz, tend, d
     t2 = np.ctypeslib.as_array(t2base.get_obj())
     
     # Intialization
+    camera_type  = "CV2"
     first = True
     slow_CPU = False
 
