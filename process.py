@@ -48,11 +48,13 @@ def chunk_list(l, n):
         o.append(l[i:i + n])
     return o
 
-def process_loop(fname):
+def process_loop(args):
     """
     Thread to process satobs FourFrame FITS files in a multi-thread compatible manner
     """
 
+    fname, cfg, acat, wref, tref, abbrevs, tlefiles, nstarsmin = args
+    
     # File root
     froot = os.path.splitext(fname)[0]
     
@@ -167,7 +169,7 @@ def process_loop(fname):
 
         
     # Store output
-    if ident_dicts is not []:
+    if ident_dicts:
         output_dict["satellites"] = ident_dicts
 
         with open(f"{ff.froot}_data.json", "w") as fp:
@@ -349,7 +351,21 @@ if __name__ == "__main__":
         try:
             chunks = chunk_list(fnames, cpu_count)
             for chunk in chunks:
-                for result in p.map(process_loop, chunk):
+                work = [
+                    (
+                        fname,
+                        cfg,
+                        acat,
+                        wref,
+                        tref,
+                        abbrevs,
+                        tlefiles,
+                        nstarsmin,
+                    )
+                    for fname in chunk
+                ]
+
+                for result in p.map(process_loop, work):
                     (screenoutput, screenoutput_idents) = result
 
                     if screenoutput is not None:
