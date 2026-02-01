@@ -24,6 +24,12 @@ from stvid.fourframe import AstrometricCatalog
 
 from astropy.utils.exceptions import AstropyWarning
 
+def file_age(fname):
+    tnow = datetime.datetime.now()
+    tfile = datetime.datetime.fromtimestamp(os.path.getctime(fname))
+
+    return tnow - tfile
+
 def number_to_letter(n):
     # 
     if n == 0:
@@ -242,8 +248,12 @@ if __name__ == "__main__":
                              "--wait",
                              help="Delay before processing new files (seconds, default: 10).",
                              type=int, default=10)
+    conf_parser.add_argument("-m",
+                             "--max-wait",
+                             help="Maximum wait time before exiting (seconds, default: 60).",
+                             type=int, default=60)
     args = conf_parser.parse_args()
-    
+
     # Read configuration file
     cfg = configparser.ConfigParser(inline_comment_prefixes=("#", ":"))
     conf_file = args.conf_file if args.conf_file else "configuration.ini"
@@ -319,7 +329,13 @@ if __name__ == "__main__":
         if solved:
             print("Calibration succeeded!")
             break
-            
+
+        # Break when age exceeded
+        if len(fitsfnames) > 0 and file_age(fitsfnames[-1]) > datetime.timedelta(seconds=args.max_wait):
+            print(f"No new files for {args.max_wait} seconds. Exiting calibration loop.")
+            solved = False
+            break
+        
         try:
             if(args.batch):
                 sys.exit()
@@ -328,6 +344,11 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             sys.exit()
 
+    # Exit if calibration failed
+    if not solved:
+        print("Calibration failed. Exiting.")
+        sys.exit()
+            
     # Get number of CPUs for multiprocessing
     if not args.cpu_count:
         if cfg.has_option("LineDetection", "cpu_count"):
@@ -379,6 +400,11 @@ if __name__ == "__main__":
             p.close()
             p.join()
 
+        # Break when age exceeded
+        if len(fitsfnames) > 0 and file_age(fitsfnames[-1]) > datetime.timedelta(seconds=args.max_wait):
+            print(f"No new files for {args.max_wait} seconds. Exiting processing loop.")
+            break
+            
         # Sleep
         try:
             if(args.batch):
