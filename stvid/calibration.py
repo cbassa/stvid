@@ -240,6 +240,10 @@ def calibrate(fname, cfg, astcat, pixcat, wref, tref):
     # Store flags
     pixcat.flag = c
 
+    # Copy PC to CD if CD absent
+    if not w.wcs.has_cd():
+        w.wcs.cd = w.wcs.pc
+    
     # CTYPE
     if order > 1:
         ctype1, ctype2 = "RA---TAN-SIP", "DEC--TAN-SIP"
