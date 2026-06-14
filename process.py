@@ -331,7 +331,8 @@ if __name__ == "__main__":
             break
 
         # Break when age exceeded
-        if len(fitsfnames) > 0 and file_age(fitsfnames[-1]) > datetime.timedelta(seconds=args.max_wait):
+        fitsfnames = sorted(glob.glob(os.path.join(args.file_dir, "2*.fits")))
+        if len(fnames) == 0 and file_age(fitsfnames[-1]) > datetime.timedelta(seconds=args.max_wait):
             print(f"No new files for {args.max_wait} seconds. Exiting calibration loop.")
             solved = False
             break
