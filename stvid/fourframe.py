@@ -134,7 +134,7 @@ class Measurement:
         tstr = (
             nfd.replace("-", "").replace("T", "").replace(":", "").replace(".", "")
         )
-        iod_line = "%s %-9s %04d %s %s 17 25 %s 37 S" % (
+        iod_line = "%s %-9s %04d G %s 17 25 %s 37 S" % (
             format_satno(ident.satno),
             ident.cospar,
             ff.site_id,
