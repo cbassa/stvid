@@ -21,6 +21,7 @@ from stvid import calibration
 from stvid.fourframe import FourFrame
 from stvid.fourframe import Observation
 from stvid.fourframe import AstrometricCatalog
+from stvid.fourframe import format_satno
 
 from astropy.utils.exceptions import AstropyWarning
 
@@ -143,8 +144,11 @@ def process_loop(args):
                       "catalogname": ident.catalogname}
 
         # Save track
-        t.save(f"{ff.froot}_{ident.satno:05d}_{ident.catalogname}.csv", ff)
-
+        t.save(
+            f"{ff.froot}_{format_satno(ident.satno)}_"
+            f"{ident.catalogname}.csv",
+            ff,
+        )
         # Measure single position
         m = t.measure_single_position(ff)
         iod_line = m.to_iod_line(ff, ident)
@@ -185,10 +189,16 @@ def process_loop(args):
     screenoutput_idents = []
     for o in obs:
         # Open file
-        outfname = f"{ff.froot}_{o.satno:05d}_{o.catalogname}.dat"
+        outfname = (
+            f"{ff.froot}_{format_satno(o.satno)}_"
+            f"{o.catalogname}.dat"
+        )
         with open(outfname, "w") as fp:
             fp.write(f"{o.iod_line}\n")
-        outfname = f"{ff.froot}_{o.satno:05d}_{o.catalogname}_m.dat"
+        outfname = (
+            f"{ff.froot}_{format_satno(o.satno)}_"
+            f"{o.catalogname}_m.dat"
+        )
         with open(outfname, "w") as fp:
             for iod_line in o.iod_lines:
                 fp.write(f"{iod_line}\n")
