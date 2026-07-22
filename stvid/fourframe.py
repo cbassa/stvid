@@ -134,8 +134,8 @@ class Measurement:
         tstr = (
             nfd.replace("-", "").replace("T", "").replace(":", "").replace(".", "")
         )
-        iod_line = "%05d %-9s %04d G %s 17 25 %s 37 S" % (
-            ident.satno,
+        iod_line = "%s %-9s %04d G %s 17 25 %s 37 S" % (
+            format_satno(ident.satno),
             ident.cospar,
             ff.site_id,
             tstr,
@@ -749,7 +749,7 @@ class FourFrame:
             iod_line = obs.iod_line
             satno = obs.satno
             catalogname = obs.catalogname
-            outfname = f"{self.froot}_{satno:05d}_{catalogname}.png"
+            outfname = f"{self.froot}_{format_satno(satno)}_{catalogname}.png"
         else:
             iod_line = ""
             outfname = f"{self.froot}_0.png"
@@ -807,7 +807,7 @@ class FourFrame:
             ax.text(
                 track.x0,
                 track.y0,
-                f" {satno:05d}",
+                f" {format_satno(satno)}",
                 color=color_detected,
                 ha="center",
                 in_layout=False,
@@ -890,7 +890,7 @@ class FourFrame:
 
         if self.in_frame(xs[0], ys[0]):
             ax.text(
-                xs[0], ys[0], f" {p.satno:05d} ", color=color, ha=ha, in_layout=False
+                xs[0], ys[0], f" {format_satno(p.satno)} ", color=color, ha=ha, in_layout=False
             )
 
         for state, linestyle in zip(
@@ -973,6 +973,43 @@ def decode_line(line):
     n = int(p[6])
 
     return ax, ay, az, bx, by, bz, n
+
+
+# TLE/IOD Alpha-5 satellite-number alphabet.
+# Positions 10 through 33 correspond to A-Z, omitting I and O.
+_ALPHA5 = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+
+
+def format_satno(satno):
+    """
+    Format a numeric NORAD catalogue number as a five-character field.
+
+    Examples:
+        25544  -> "25544"
+        100000 -> "A0000"
+        102554 -> "A2554"
+        270438 -> "T0438"
+
+    Satellite numbers remain integers internally. Alpha-5 is only used
+    when writing a fixed-width textual field.
+    """
+    satno = int(satno)
+
+    if satno < 0:
+        raise ValueError(f"Invalid satellite number: {satno}")
+
+    if satno < 100000:
+        return f"{satno:05d}"
+
+    prefix = satno // 10000
+    suffix = satno % 10000
+
+    if prefix >= len(_ALPHA5):
+        raise ValueError(
+            f"Satellite number {satno} is outside the Alpha-5 range"
+        )
+
+    return f"{_ALPHA5[prefix]}{suffix:04d}"
 
 
 # IOD position format 2: RA/DEC = HHMMmmm+DDMMmm MX   (MX in minutes of arc)
