@@ -28,7 +28,45 @@ def capture_pi(image_queue, z1, t1, z2, t2, nx, ny, nz, tend, device_id, live, c
 
     # Initialize cv2 device
     picam2 = Picamera2(device_id)
-    picam2.configure(picam2.create_preview_configuration(main={"format": 'BGR888', "size": (nx, ny)}))
+    
+    # Get the sensor modes and show them.
+    sensor_modes = picam2.sensor_modes
+    print('SENSORMODES')
+    print("Sensor resolution:", picam2.sensor_resolution)
+    print("Camera properties:", picam2.camera_properties)
+    for m in sensor_modes:
+        print(m)
+
+    #cropped:
+    #print('Select sensor mode 1 [0]')
+    #sensor_mode = picam2.sensor_modes[0]
+
+    # full FOV. 
+    print('Select sensor mode 3 [2]')
+    sensor_mode = picam2.sensor_modes[2]
+
+    print('SENSORMODES')
+    """
+    This print gives:
+    SENSORMODES
+    Sensor resolution: (4056, 3040)
+    Camera properties: {'Model': 'imx477', 'UnitCellSize': (1550, 1550), 'Location': 2, 'Rotation': 180, 'ColorFilterArrangement': 0, 'PixelArraySize': (4056, 3040), 'PixelArrayActiveAreas': [(8, 16, 4056, 3040)], 'ScalerCropMaximum': (0, 0, 4056, 3040), 'SystemDevices': (20755, 20756, 20757, 20758, 20759, 20760, 20761, 20739, 20740, 20741, 20742, 20743), 'SensorSensitivity': 1.0}
+    {'format': SRGGB10_CSI2P, 'unpacked': 'SRGGB10', 'bit_depth': 10, 'size': (1332, 990), 'fps': 120.05, 'crop_limits': (696, 528, 2664, 1980), 'exposure_limits': (31, 667234896, 20000)}
+    {'format': SRGGB12_CSI2P, 'unpacked': 'SRGGB12', 'bit_depth': 12, 'size': (2028, 1080), 'fps': 50.03, 'crop_limits': (0, 440, 4056, 2160), 'exposure_limits': (60, 674181621, 20000)}
+    {'format': SRGGB12_CSI2P, 'unpacked': 'SRGGB12', 'bit_depth': 12, 'size': (2028, 1520), 'fps': 40.01, 'crop_limits': (0, 0, 4056, 3040), 'exposure_limits': (60, 674181621, 20000)}
+    {'format': SRGGB12_CSI2P, 'unpacked': 'SRGGB12', 'bit_depth': 12, 'size': (4056, 3040), 'fps': 10.0, 'crop_limits': (0, 0, 4056, 3040), 'exposure_limits': (114, 694422939, 20000)}
+    Select sensor mode 1 [0]
+    SENSORMODES
+
+    The crop limits are interesting. Select one which starts with 0, 0, and a small size. This is the third one. Set it as [2] as we count from 0.
+    
+    """
+    
+    picam2.configure(picam2.create_video_configuration(main={"format": 'BGR888', "size": (nx, ny)},
+        sensor={
+            "output_size": sensor_mode["size"],
+            "bit_depth": sensor_mode["bit_depth"],
+        }))
     picam2.start()
 
     # Turn off anything automatic.
